@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Insight System - Multi-Agent Analysis</title>
+    <script src="https://cdn.tailwindcss.com/3.3.0"></script>
+    <style>
+        /* Glassmorphism effects matching implementation */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+        
+        /* Custom gradient background */
+        .gradient-bg {
+            background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 50%, #ddd6fe 100%);
+        }
+        
+        /* Animations from implementation */
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+        
+        .pulse-soft {
+            animation: pulse-soft 2s ease-in-out infinite;
+        }
+        
+        .fade-in-up {
+            animation: fadeInUp 0.3s ease-out;
+        }
+        
+        /* Progress bar animation */
+        .progress-fill {
+            transition: width 0.5s ease-out;
+        }
+        
+        /* Connection lines for org chart */
+        .connection-line {
+            stroke: #e5e7eb;
+            stroke-width: 2;
+            fill: none;
+            stroke-dasharray: 5 5;
+            animation: dash 20s linear infinite;
+        }
+        
+        .connection-line.active {
+            stroke: #3b82f6;
+            stroke-width: 3;
+        }
+        
+        @keyframes dash {
+            to { stroke-dashoffset: -100; }
+        }
+        
+        /* Thinking dots animation */
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+        
+        .thinking-dots::after {
+            content: '.';
+            animation: dots 1.5s infinite;
+        }
+        
+        /* Custom scrollbar matching implementation */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f3f4f6;
+            border-radius: 4px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #9ca3af;
+            border-radius: 4px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+        
+        /* Resizable panel handle */
+        .resize-handle {
+            width: 5px;
+            cursor: col-resize;
+            background: transparent;
+            position: relative;
+        }
+        
+        .resize-handle:hover {
+            background: #e5e7eb;
+        }
+        
+        .resize-handle::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 2px;
+            height: 30px;
+            background: #d1d5db;
+            border-radius: 2px;
+        }
+        
+        /* Tool call envelope styling */
+        .tool-call-envelope {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border-left: 3px solid #3b82f6;
+        }
+        
+        /* Message bubbles matching implementation */
+        .user-message {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .assistant-message {
+            background: white;
+            border: 1px solid #e5e7eb;
+        }
+        
+        /* Code artifact styling */
+        .code-artifact {
+            background: #1f2937;
+            color: #e5e7eb;
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+        
+        /* Welcome state styling */
+        .welcome-gradient {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen overflow-hidden">
+    <!-- Header matching implementation -->
+    <header class="fixed top-0 w-full h-[73px] glass-panel border-b border-gray-200 z-50">
+        <div class="h-full px-6 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-semibold text-gray-900">Health Insight System</h1>
+                    <p class="text-xs text-gray-500 tracking-wide">Multi-Agent Analysis • Powered by Anthropic Claude</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                    <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">Normal Health Status</span>
+                    <span class="text-sm text-gray-600">George Vetticaden</span>
+                </div>
+                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-md">
+                    GV
+                </div>
+                <button class="p-2 hover:bg-white/50 rounded-lg transition-all duration-200">
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Layout - Three Panel Design -->
+    <div class="flex h-screen pt-[73px]">
+        <!-- Left Sidebar - Thread List (320px) -->
+        <aside class="w-80 bg-white/60 backdrop-blur-sm border-r border-gray-200 flex flex-col">
+            <div class="p-4 border-b border-gray-100 bg-white/80">
+                <button class="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium py-3 px-4 rounded-xl flex items-center justify-center space-x-2 transition-all duration-200 shadow-md hover:shadow-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    <span>New Conversation</span>
+                </button>
+            </div>
+            
+            <!-- Search and Filters -->
+            <div class="p-4 space-y-3 bg-white/80">
+                <div class="relative">
+                    <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    <input type="text" placeholder="Search conversations..." class="w-full pl-10 pr-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                </div>
+                
+                <!-- Category Filters -->
+                <div class="flex flex-wrap gap-2">
+                    <button class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium hover:bg-blue-200 transition-colors">All</button>
+                    <button class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium hover:bg-gray-200 transition-colors">Labs</button>
+                    <button class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium hover:bg-gray-200 transition-colors">Medications</button>
+                    <button class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium hover:bg-gray-200 transition-colors">Vitals</button>
+                </div>
+            </div>
+            
+            <!-- Thread List -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar">
+                <div class="px-4 pb-4 space-y-2">
+                    <!-- Date Group -->
+                    <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-2 mb-1">Today</div>
+                    
+                    <!-- Active Thread -->
+                    <div class="p-3 bg-white rounded-lg border-2 border-blue-400 cursor-pointer shadow-sm relative">
+                        <div class="absolute left-0 top-0 bottom-0 w-1 bg-orange-400 rounded-l"></div>
+                        <h3 class="font-medium text-gray-900 text-sm mb-1">Cholesterol Trend Analysis</h3>
+                        <p class="text-xs text-gray-600 line-clamp-2 mb-2">What's my cholesterol trend over the last 15 years? I want to see...</p>
+                        <div class="flex items-center justify-between">
+                            <time class="text-xs text-gray-400">2:36 PM</time>
+                            <span class="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">In Progress</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Other Threads -->
+                    <div class="p-3 bg-white/80 hover:bg-white rounded-lg cursor-pointer transition-all duration-200 group">
+                        <h3 class="font-medium text-gray-900 text-sm mb-1 group-hover:text-blue-600">Medication Review</h3>
+                        <p class="text-xs text-gray-600 line-clamp-2 mb-2">Show all my current medications and their purposes</p>
+                        <div class="flex items-center justify-between">
+                            <time class="text-xs text-gray-400">10:15 AM</time>
+                            <span class="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Complete</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-4 mb-1">Yesterday</div>
+                    
+                    <div class="p-3 bg-white/80 hover:bg-white rounded-lg cursor-pointer transition-all duration-200 group">
+                        <h3 class="font-medium text-gray-900 text-sm mb-1 group-hover:text-blue-600">Blood Pressure Trends</h3>
+                        <p class="text-xs text-gray-600 line-clamp-2 mb-2">Analyze my blood pressure readings from the last 6 months</p>
+                        <div class="flex items-center justify-between">
+                            <time class="text-xs text-gray-400">3:45 PM</time>
+                            <span class="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Complete</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Resize Handle -->
+        <div class="resize-handle hover:bg-blue-200 transition-colors"></div>
+
+        <!-- Center Panel - Chat Interface -->
+        <main class="flex-1 flex flex-col bg-gray-50/50">
+            <!-- Chat Messages Area -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar">
+                <div class="max-w-4xl mx-auto p-6 space-y-4">
+                    <!-- User Message -->
+                    <div class="flex justify-end fade-in-up">
+                        <div class="max-w-[70%]">
+                            <div class="user-message rounded-2xl px-5 py-3 shadow-md">
+                                <p class="text-sm">What's my cholesterol trend over the last 15 years? I want to see trends across the top 4 cholesterol metrics including Triglycerides across that time period</p>
+                            </div>
+                            <time class="text-xs text-gray-500 mt-1 block text-right mr-2">2:36 PM</time>
+                        </div>
+                    </div>
+                    
+                    <!-- System Status Message -->
+                    <div class="flex items-center justify-center fade-in-up">
+                        <div class="px-4 py-2 bg-white rounded-full shadow-sm border border-gray-100">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-2 h-2 bg-blue-500 rounded-full pulse-soft"></div>
+                                <span class="text-sm text-gray-600">Medical team consultation starting</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Assistant Message with Thinking State -->
+                    <div class="flex fade-in-up">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-md">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-3 flex-1 max-w-[70%]">
+                            <div class="assistant-message rounded-2xl px-5 py-3 shadow-sm">
+                                <div class="flex items-center space-x-2 text-sm text-gray-600">
+                                    <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                    </svg>
+                                    <span>Chief Medical Officer is analyzing your query<span class="thinking-dots"></span></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tool Call Envelope -->
+                    <div class="flex fade-in-up">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-3 flex-1 max-w-[70%]">
+                            <div class="tool-call-envelope rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-medium text-blue-700">🔍 Accessing Health Records</span>
+                                    <button class="text-xs text-blue-600 hover:text-blue-800 transition-colors">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="bg-blue-50 rounded p-2 mt-2">
+                                    <code class="text-xs text-blue-800">execute_health_query_v2("cholesterol metrics last 15 years")</code>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Team Assembly Message -->
+                    <div class="flex fade-in-up">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-md">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-3 flex-1 max-w-[70%]">
+                            <div class="assistant-message rounded-2xl px-5 py-3 shadow-sm">
+                                <h3 class="font-semibold text-gray-900 mb-2">Medical Team Assembled</h3>
+                                <p class="text-sm text-gray-700 mb-3">Complexity Assessment: <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">STANDARD</span></p>
+                                <div class="space-y-2">
+                                    <div class="flex items-start space-x-2">
+                                        <span class="text-lg">❤️</span>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-medium text-gray-900">Dr. Heart - Cardiology</p>
+                                            <p class="text-xs text-gray-600">Analyzing complete 15-year cholesterol trends including Total, LDL, HDL, and Triglycerides</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start space-x-2">
+                                        <span class="text-lg">🔬</span>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-medium text-gray-900">Dr. Hormone - Endocrinology</p>
+                                            <p class="text-xs text-gray-600">Investigating metabolic factors and triglyceride fluctuations</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start space-x-2">
+                                        <span class="text-lg">📊</span>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-medium text-gray-900">Dr. Analytics - Data Analysis</p>
+                                            <p class="text-xs text-gray-600">Creating statistical analysis and trend visualizations</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Analysis in Progress -->
+                    <div class="flex items-center justify-center fade-in-up">
+                        <div class="px-4 py-2 bg-white rounded-full shadow-sm border border-gray-100">
+                            <div class="flex items-center space-x-2">
+                                <div class="flex space-x-1">
+                                    <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
+                                    <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
+                                    <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
+                                </div>
+                                <span class="text-sm text-gray-600">Specialists analyzing your health data</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Input Area -->
+            <div class="border-t border-gray-200 bg-white/80 backdrop-blur-sm p-4">
+                <div class="max-w-4xl mx-auto">
+                    <form class="flex items-end space-x-3">
+                        <div class="flex-1">
+                            <textarea 
+                                rows="1" 
+                                placeholder="Ask about your health data..."
+                                disabled
+                                class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                            ></textarea>
+                        </div>
+                        <button type="submit" disabled class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-gray-300 disabled:to-gray-400 text-white p-3 rounded-xl transition-all duration-200 disabled:cursor-not-allowed">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                            </svg>
+                        </button>
+                    </form>
+                    <div class="flex items-center justify-between mt-2">
+                        <p class="text-xs text-gray-500">Specialists are working...</p>
+                        <p class="text-xs text-gray-400">0/2000</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Panel - Medical Team & Visualizations -->
+        <aside class="w-[45%] bg-white/60 backdrop-blur-sm border-l border-gray-200 flex flex-col">
+            <!-- Panel Header with Tabs -->
+            <div class="border-b border-gray-200 bg-white/80">
+                <div class="flex">
+                    <button class="flex-1 px-4 py-3 text-sm font-medium border-b-2 border-blue-500 text-blue-600 transition-all duration-200">
+                        <svg class="w-4 h-4 inline-block mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                        Medical Team
+                    </button>
+                    <button class="flex-1 px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-300 transition-all duration-200">
+                        <svg class="w-4 h-4 inline-block mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        Visualizations (0)
+                    </button>
+                </div>
+                
+                <!-- Query Selector -->
+                <div class="p-3 bg-gray-50/50">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-gray-600">Current Query:</span>
+                        <span class="text-gray-900 font-medium">Cholesterol Trend Analysis</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Medical Team Display with Two Sections -->
+            <div class="flex-1 flex flex-col overflow-hidden">
+                <!-- Section 1: Team Hierarchy & Status (50% height) -->
+                <div class="flex-1 flex flex-col" style="min-height: 50%;">
+                    <!-- Header with Query Selector -->
+                    <div class="px-4 pt-4 pb-2 flex items-center justify-between">
+                        <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wider">Team Hierarchy & Status</h3>
+                        <!-- Compact Query Selector -->
+                        <div class="flex items-center space-x-2">
+                            <button class="p-1 hover:bg-gray-100 rounded transition-colors">
+                                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                                </svg>
+                            </button>
+                            <div class="relative">
+                                <select class="appearance-none bg-white border border-gray-200 rounded px-3 py-1 pr-8 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option>Query 1 of 1 • 2:36 PM • Cholesterol trend...</option>
+                                </select>
+                                <svg class="absolute right-2 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </div>
+                            <button class="p-1 hover:bg-gray-100 rounded transition-colors" disabled>
+                                <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                            </button>
+                            <div class="w-4 h-4">
+                                <svg class="w-4 h-4 text-blue-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Medical Team Org Chart -->
+                    <div class="flex-1 px-4 pb-4 overflow-y-auto custom-scrollbar">
+                        <div class="bg-white rounded-lg shadow-sm p-4 relative" style="min-height: 300px;">
+                            <!-- SVG for connection lines -->
+                            <svg class="absolute inset-0 w-full h-full" style="z-index: 0;">
+                                <!-- Top specialists to CMO -->
+                                <path d="M 100 80 Q 200 120 200 160" class="connection-line active" fill="none" />
+                                <path d="M 200 80 Q 200 120 200 160" class="connection-line active" fill="none" />
+                                <path d="M 300 80 Q 200 120 200 160" class="connection-line active" fill="none" />
+                                <!-- CMO to bottom specialists -->
+                                <path d="M 200 200 Q 200 240 100 280" class="connection-line" fill="none" />
+                                <path d="M 200 200 Q 200 240 200 280" class="connection-line" fill="none" />
+                                <path d="M 200 200 Q 200 240 300 280" class="connection-line" fill="none" />
+                            </svg>
+                            
+                            <!-- Top Row Specialists -->
+                            <div class="relative flex justify-around mb-20" style="padding: 0 20px;">
+                                <!-- Cardiologist -->
+                                <div class="w-36 h-20 bg-white border-2 border-blue-400 rounded-lg p-2 shadow-md transform scale-105 fade-in-up" style="animation-delay: 0.1s;">
+                                    <div class="flex items-start space-x-2">
+                                        <div class="w-8 h-8 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                            <span class="text-sm">❤️</span>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-xs font-medium text-gray-900 truncate">Dr. Heart</p>
+                                            <p class="text-xs text-gray-500 truncate">Cardiologist</p>
+                                            <div class="flex items-center mt-1">
+                                                <svg class="w-3 h-3 text-blue-600 animate-spin mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                                </svg>
+                                                <span class="text-xs text-blue-600">75%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-1 w-full bg-gray-200 rounded-full h-1">
+                                        <div class="bg-blue-500 h-1 rounded-full progress-fill" style="width: 75%"></div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Endocrinologist -->
+                                <div class="w-36 h-20 bg-white border-2 border-blue-400 rounded-lg p-2 shadow-md transform scale-105 fade-in-up" style="animation-delay: 0.2s;">
+                                    <div class="flex items-start space-x-2">
+                                        <div class="w-8 h-8 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                            <span class="text-sm">🔬</span>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-xs font-medium text-gray-900 truncate">Dr. Hormone</p>
+                                            <p class="text-xs text-gray-500 truncate">Endocrinologist</p>
+                                            <div class="flex items-center mt-1">
+                                                <svg class="w-3 h-3 text-blue-600 animate-spin mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                                </svg>
+                                                <span class="text-xs text-blue-600">40%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-1 w-full bg-gray-200 rounded-full h-1">
+                                        <div class="bg-blue-500 h-1 rounded-full progress-fill" style="width: 40%"></div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Data Analyst -->
+                                <div class="w-36 h-20 bg-white border border-gray-300 rounded-lg p-2 shadow-sm opacity-50 fade-in-up" style="animation-delay: 0.3s;">
+                                    <div class="flex items-start space-x-2">
+                                        <div class="w-8 h-8 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                            <span class="text-sm">📊</span>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-xs font-medium text-gray-900 truncate">Dr. Analytics</p>
+                                            <p class="text-xs text-gray-500 truncate">Data Analyst</p>
+                                            <div class="flex items-center mt-1">
+                                                <svg class="w-3 h-3 text-gray-400 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                </svg>
+                                                <span class="text-xs text-gray-400">Waiting</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Dr. Vitality (CMO) in Center -->
+                            <div class="absolute" style="left: 50%; top: 160px; transform: translateX(-50%);">
+                                <div class="w-36 h-20 bg-white border-2 border-green-300 rounded-lg p-2 shadow-lg">
+                                    <div class="flex items-start space-x-2">
+                                        <div class="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                            </svg>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-xs font-medium text-gray-900 truncate">Dr. Vitality</p>
+                                            <p class="text-xs text-gray-500 truncate">Chief Med Officer</p>
+                                            <div class="flex items-center mt-1">
+                                                <svg class="w-3 h-3 text-green-600 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                                </svg>
+                                                <span class="text-xs text-green-600">100%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Bottom Row Specialists (Empty placeholders for now) -->
+                            <div class="relative flex justify-around mt-40" style="padding: 0 20px;">
+                                <!-- Empty slots for additional specialists -->
+                            </div>
+                        </div>
+                        
+                        <!-- Active Agent Status Bar -->
+                        <div class="mt-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-3">
+                            <div class="flex items-center space-x-3 mb-2">
+                                <span class="text-lg">❤️</span>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-900">Dr. Heart - Cardiologist</p>
+                                    <p class="text-xs text-gray-600">Analyzing 15-year cholesterol trends including Total, LDL, HDL, and Triglycerides</p>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-xs text-gray-600">Agent Progress</span>
+                                        <span class="text-xs font-medium text-blue-600">75%</span>
+                                    </div>
+                                    <div class="w-full bg-blue-200 rounded-full h-1.5">
+                                        <div class="bg-blue-500 h-1.5 rounded-full progress-fill" style="width: 75%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-xs text-gray-600">Overall Team Progress</span>
+                                        <span class="text-xs font-medium text-green-600">45%</span>
+                                    </div>
+                                    <div class="w-full bg-green-200 rounded-full h-1.5">
+                                        <div class="bg-green-500 h-1.5 rounded-full progress-fill" style="width: 45%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Resizable Divider -->
+                <div class="h-1 bg-gray-200 hover:bg-gray-300 cursor-row-resize flex items-center justify-center">
+                    <div class="w-12 h-1 bg-gray-400 rounded-full"></div>
+                </div>
+                
+                <!-- Section 2: Analysis Results (50% height) -->
+                <div class="flex-1 flex flex-col" style="min-height: 50%;">
+                    <div class="px-4 pt-2 pb-2">
+                        <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wider">Analysis Results</h3>
+                    </div>
+                    
+                    <div class="flex-1 px-4 pb-4 overflow-y-auto custom-scrollbar">
+                        <!-- Completed Analyses -->
+                        <div class="space-y-3 mb-4">
+                            <p class="text-xs text-gray-500 uppercase tracking-wider">Completed Analyses</p>
+                            
+                            <!-- No completed analyses yet -->
+                            <div class="bg-gray-50 rounded-lg p-8 text-center">
+                                <svg class="w-12 h-12 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                                </svg>
+                                <p class="text-sm text-gray-500">No completed analyses yet</p>
+                                <p class="text-xs text-gray-400 mt-1">Analyses will appear here as specialists complete their work</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Live Streaming Section (Terminal Style) -->
+                        <div class="space-y-3">
+                            <p class="text-xs text-gray-500 uppercase tracking-wider">Live Streaming</p>
+                            
+                            <div class="bg-gray-900 rounded-lg overflow-hidden">
+                                <div class="bg-gray-800 px-3 py-2 flex items-center justify-between">
+                                    <span class="text-xs text-gray-400 font-mono">LIVE STREAM - Dr. Heart</span>
+                                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                </div>
+                                <div class="p-3 font-mono text-xs text-green-400 overflow-y-auto" style="max-height: 200px;">
+                                    <div class="fade-in-up">$ Accessing cholesterol lab results...</div>
+                                    <div class="fade-in-up" style="animation-delay: 0.5s;">$ Found 47 cholesterol readings from 2009-2024</div>
+                                    <div class="fade-in-up" style="animation-delay: 1s;">$ Analyzing Total Cholesterol trends...</div>
+                                    <div class="fade-in-up" style="animation-delay: 1.5s;">$ Analyzing LDL patterns...</div>
+                                    <div class="fade-in-up" style="animation-delay: 2s;">$ Analyzing HDL variations...</div>
+                                    <div class="fade-in-up" style="animation-delay: 2.5s;">$ Processing Triglyceride data<span class="animate-pulse">█</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Toggle Panel Button -->
+            <button class="absolute top-1/2 -left-3 transform -translate-y-1/2 bg-white border border-gray-200 rounded-full p-1.5 shadow-md hover:shadow-lg transition-all duration-200">
+                <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </button>
+        </aside>
+    </div>
+
+    <script>
+        // Simulate progress updates
+        let cardiologyProgress = 75;
+        let endocrinologyProgress = 40;
+        let analyticsStarted = false;
+        
+        setInterval(() => {
+            // Update Cardiology
+            if (cardiologyProgress < 100) {
+                cardiologyProgress += Math.random() * 2;
+                if (cardiologyProgress > 100) cardiologyProgress = 100;
+                
+                document.querySelectorAll('.bg-red-500').forEach(bar => {
+                    bar.style.width = `${cardiologyProgress}%`;
+                });
+                
+                // Update percentage displays
+                const cardioPercents = document.querySelectorAll('.text-red-600');
+                cardioPercents.forEach(el => {
+                    if (el.classList.contains('font-medium')) {
+                        el.textContent = `${Math.round(cardiologyProgress)}%`;
+                    }
+                });
+            }
+            
+            // Update Endocrinology
+            if (endocrinologyProgress < 100) {
+                endocrinologyProgress += Math.random() * 3;
+                if (endocrinologyProgress > 100) endocrinologyProgress = 100;
+                
+                document.querySelectorAll('.bg-purple-500').forEach(bar => {
+                    bar.style.width = `${endocrinologyProgress}%`;
+                });
+                
+                // Update percentage displays
+                const endoPercents = document.querySelectorAll('.text-purple-600');
+                endoPercents.forEach(el => {
+                    if (el.classList.contains('font-medium')) {
+                        el.textContent = `${Math.round(endocrinologyProgress)}%`;
+                    }
+                });
+            }
+            
+            // Start Analytics when others are done
+            if (cardiologyProgress === 100 && endocrinologyProgress === 100 && !analyticsStarted) {
+                analyticsStarted = true;
+                // Would trigger analytics specialist here
+            }
+        }, 500);
+    </script>
+</body>
+</html>

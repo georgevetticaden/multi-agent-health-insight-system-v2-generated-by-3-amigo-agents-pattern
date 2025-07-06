@@ -1,0 +1,24 @@
+## Example Pattern for Correlation Analysis:
+```javascript
+const HealthVisualization = () => {
+  // Embed correlation data from analysis
+  const correlationData = [
+    {
+      date: "2025-04-07",
+      hba1c: 6.1,
+      weight: 226.62,
+      metforminDose: 500
+    },
+    // ... more data points
+  ];
+
+  // Create scatter plot or dual-axis chart
+  // Show correlation coefficients
+  // Highlight key relationships
+  return (
+    <div className="p-6 space-y-6">
+      {/* Correlation charts and statistics */}
+    </div>
+  );
+};
+```

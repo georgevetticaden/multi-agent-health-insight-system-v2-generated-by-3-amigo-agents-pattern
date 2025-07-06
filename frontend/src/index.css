@@ -1,0 +1,315 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 text-gray-900 antialiased;
+  }
+}
+
+@layer components {
+  /* Light mode chat messages */
+  .chat-message {
+    @apply px-4 py-3 rounded-xl shadow-sm;
+  }
+  
+  .chat-message-user {
+    @apply bg-blue-500 text-white ml-auto;
+  }
+  
+  .chat-message-assistant {
+    @apply bg-white border border-gray-200;
+  }
+  
+  /* Light mode cards */
+  .visualization-card {
+    @apply bg-white rounded-xl shadow-sm p-6 border border-gray-200;
+  }
+  
+  .health-metric-card {
+    @apply bg-white rounded-lg shadow-sm p-4 border border-gray-200 hover:shadow-md transition-shadow;
+  }
+  
+  /* Light mode glassmorphism */
+  .glass-health {
+    @apply bg-white/70 backdrop-blur-sm border border-white/80;
+  }
+  
+  .glass-subtle {
+    @apply bg-gray-50/80 backdrop-blur-sm border border-gray-200/80;
+  }
+  
+  /* Health card styles */
+  .health-card {
+    @apply bg-white/90 rounded-xl shadow-sm border border-gray-200;
+  }
+  
+  /* Health status colors */
+  .status-normal {
+    @apply bg-green-50 border-green-200 text-green-700;
+  }
+  
+  .status-warning {
+    @apply bg-yellow-50 border-yellow-200 text-yellow-700;
+  }
+  
+  .status-critical {
+    @apply bg-red-50 border-red-200 text-red-700;
+  }
+  
+  /* Specialist cards */
+  .specialist-card {
+    @apply transition-all duration-300 bg-white/90 hover:bg-white hover:shadow-md;
+  }
+  
+  /* Subtle thinking animation for light mode */
+  @keyframes pulse-soft {
+    0%, 100% { 
+      box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.1); 
+    }
+    50% { 
+      box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.1); 
+    }
+  }
+  
+  .thinking {
+    animation: pulse-soft 2s infinite;
+  }
+  
+  /* Prose styles for markdown content */
+  .prose h1 { 
+    @apply text-2xl font-bold mb-4 mt-6 text-gray-900; 
+  }
+  .prose h2 { 
+    @apply text-xl font-semibold mb-3 mt-5 text-gray-900; 
+  }
+  .prose h3 { 
+    @apply text-lg font-medium mb-2 mt-4 text-gray-900; 
+  }
+  .prose p { 
+    @apply mb-4 leading-relaxed text-gray-800; 
+  }
+  .prose ul { 
+    @apply list-disc pl-6 mb-4 space-y-1 text-gray-800; 
+  }
+  .prose ol { 
+    @apply list-decimal pl-6 mb-4 space-y-1 text-gray-800; 
+  }
+  .prose li { 
+    @apply mb-1; 
+  }
+  .prose strong { 
+    @apply font-semibold text-gray-900; 
+  }
+  .prose em { 
+    @apply italic; 
+  }
+  .prose blockquote { 
+    @apply border-l-4 border-gray-300 pl-4 italic my-4 text-gray-700; 
+  }
+  
+  /* Tool call styles */
+  .tool-call-inline {
+    @apply bg-blue-50 border border-blue-200 rounded-lg my-2;
+  }
+  
+  .tool-call-expanded {
+    @apply bg-white border-t border-blue-200;
+  }
+  
+  /* Button styles */
+  .btn-primary {
+    @apply bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg font-medium transition-colors;
+  }
+  
+  /* Input styles */
+  .input-primary {
+    @apply bg-gray-50 border border-gray-300 px-4 py-2 rounded-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+  }
+  
+  /* Thread item styles */
+  .thread-item {
+    @apply bg-white/80 px-4 py-3 rounded-lg cursor-pointer hover:bg-white transition-colors shadow-sm;
+  }
+  
+  .thread-item-active {
+    @apply border-l-4 border-blue-500 shadow-md bg-white;
+  }
+  
+  .thread-item-unread {
+    @apply border-l-4 border-orange-500;
+  }
+}
+
+/* Gradient background utility */
+.gradient-health-subtle {
+  background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 50%, #ddd6fe 100%);
+  min-height: 100vh;
+}
+
+/* Custom scrollbar for health theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-400 rounded;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-500;
+}
+
+/* Soft pulse animation for CMO avatar */
+@keyframes pulse-soft {
+  0%, 100% { 
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+    opacity: 1;
+  }
+  50% { 
+    box-shadow: 0 0 0 20px rgba(59, 130, 246, 0);
+    opacity: 0.9;
+  }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 3s ease-in-out infinite;
+}
+
+/* Specialist card animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Scale animations */
+.scale-102 {
+  transform: scale(1.02);
+}
+
+/* Progress bars */
+.progress-smooth {
+  transition: width 0.5s ease-out;
+}
+
+/* Tab animations */
+@keyframes tabSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Agent card animations */
+@keyframes activePulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+}
+
+/* Connection line animations */
+@keyframes dashAnimation {
+  to {
+    stroke-dashoffset: -10;
+  }
+}
+
+/* Streaming cursor animation */
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+/* Fade in animation for streaming lines */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Stagger animation helper */
+.stagger-animation > * {
+  animation: fadeInUp 0.5s ease-out forwards;
+  opacity: 0;
+}
+
+.stagger-animation > *:nth-child(1) { animation-delay: 0.1s; }
+.stagger-animation > *:nth-child(2) { animation-delay: 0.2s; }
+.stagger-animation > *:nth-child(3) { animation-delay: 0.3s; }
+.stagger-animation > *:nth-child(4) { animation-delay: 0.4s; }
+.stagger-animation > *:nth-child(5) { animation-delay: 0.5s; }
+.stagger-animation > *:nth-child(6) { animation-delay: 0.6s; }
+.stagger-animation > *:nth-child(7) { animation-delay: 0.7s; }
+
+/* Connection lines for org chart */
+.connection-line {
+  stroke: #e5e7eb;
+  transition: stroke 0.3s;
+}
+
+.connection-line.active {
+  stroke: #3b82f6;
+  animation: dashAnimation 1s linear infinite;
+}
+
+/* Highlight animation for scrolled-to messages */
+.highlight-message {
+  animation: highlightPulse 2s ease-out;
+}
+
+@keyframes highlightPulse {
+  0% {
+    background-color: rgba(59, 130, 246, 0.1);
+    border-radius: 0.5rem;
+  }
+  50% {
+    background-color: rgba(59, 130, 246, 0.2);
+    border-radius: 0.5rem;
+  }
+  100% {
+    background-color: transparent;
+  }
+}

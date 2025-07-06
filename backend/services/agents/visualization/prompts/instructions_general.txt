@@ -1,0 +1,45 @@
+## Component Structure:
+const HealthVisualization = () => {
+  // Extract data from the medical analysis
+  const rawData = [
+    // IMPORTANT: Use the EXACT values mentioned in the medical analysis
+    // Example: If analysis says "cholesterol was 149 mg/dL on April 7, 2025"
+    { date: "2025-04-07", metric: "Total Cholesterol", value: 149, unit: "mg/dL" },
+    // Add all data points mentioned in the synthesis
+  ];
+  
+  // Process and visualize the data
+  // ... rest of component
+};
+
+## Available Components (already imported):
+- Recharts: LineChart, BarChart, AreaChart, PieChart, ScatterChart, ComposedChart, Line, Bar, Area, Pie, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceArea, Cell
+- Lucide icons: Activity, Heart, TrendingUp, TrendingDown, AlertCircle, CheckCircle, Info, Calendar, Clock, User, Droplet, Pill, Scale, Brain, Shield, Target, AlertTriangle, ArrowUp, ArrowDown
+- React hooks: useState, useEffect
+
+## Quality Requirements:
+- Must be visually compelling and professional
+- Must directly answer the user's query
+- Must match the data and findings in the medical analysis
+- Include proper error handling for edge cases
+- Use Tailwind CSS for beautiful styling
+- Add hover effects and interactivity where appropriate
+
+IMPORTANT: 
+- Start DIRECTLY with: const HealthVisualization = () => {
+- DO NOT include imports or exports
+- DO NOT use a data prop - embed the data
+- Keep under 400 lines for reliable generation
+- Ensure ALL JSX syntax is valid (use &lt; for < in text)
+- Include proper TypeScript-style data structure even though this is JavaScript
+
+CRITICAL JSX RULES TO AVOID BABEL ERRORS:
+- NEVER use template literals inside JSX attributes
+- BAD: className={`flex ${isActive ? 'bg-blue' : 'bg-gray'}`}
+- GOOD: className={isActive ? 'flex bg-blue' : 'flex bg-gray'}
+- GOOD: className={'flex ' + (isActive ? 'bg-blue' : 'bg-gray')}
+- For complex className logic, compute it BEFORE the JSX:
+  const cardClass = 'flex items-center ' + (isActive ? 'bg-blue' : 'bg-gray');
+  return <div className={cardClass}>
+
+Generate the COMPLETE component with embedded data that tells the story from the medical analysis.

@@ -1,0 +1,230 @@
+# Environment variables
+.env
+.env.local
+.env.production
+.env.development
+.env.test
+*.env
+# But allow example files
+!.env.example
+!*.env.example
+
+# API Keys and Secrets
+**/secrets/
+**/credentials/
+*.key
+*.pem
+*.cert
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.ruff_cache/
+*.pyc
+
+# Node.js / Frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+lerna-debug.log*
+.npm
+.yarn
+dist/
+dist-ssr/
+*.local
+
+# IDE and Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+*.sublime-project
+.history/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Logs
+logs/
+*.log
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Test Coverage
+coverage/
+*.lcov
+.nyc_output
+
+# Production builds
+build/
+dist/
+out/
+
+# Temporary files
+*.tmp
+*.temp
+.temp/
+.tmp/
+tmp/
+temp/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Health Data (HIPAA Compliance)
+**/patient_data/
+**/health_records/
+**/phi/
+**/medical_data/
+*.hl7
+*.dicom
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+
+# Cache
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+.vuepress/dist
+.serverless/
+.fusebox/
+.dynamodb/
+.tern-port
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# Snowflake credentials
+snowflake_config.json
+snowflake_credentials.json
+
+# Anthropic API keys
+anthropic_key.txt
+claude_api_key.txt
+
+# SSL Certificates
+*.crt
+*.csr
+*.key
+*.p12
+*.pfx
+
+# Compiled files
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# Package files
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# OS generated files
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+.eslintcache
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*

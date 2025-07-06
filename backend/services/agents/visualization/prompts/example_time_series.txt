@@ -1,0 +1,39 @@
+## Example Pattern for Time Series:
+```javascript
+const HealthVisualization = () => {
+  const [selectedMetrics, setSelectedMetrics] = useState({
+    total: true,
+    ldl: true,
+    hdl: true,
+    triglycerides: true
+  });
+
+  // Embed the exact data from the analysis
+  const rawData = [
+    { date: "2013-12-23", total: 163, ldl: 84, hdl: 20, triglycerides: 426 },
+    { date: "2014-03-12", total: 133, ldl: 70, hdl: 27, triglycerides: 179 },
+    // ... more data points
+  ];
+
+  // IMPORTANT: Compute className strings BEFORE JSX to avoid Babel errors
+  const getMetricCardClass = (isNormal) => {
+    return 'rounded-lg p-4 ' + (isNormal ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200');
+  };
+  
+  const getTrendClass = (trend) => {
+    return 'flex items-center gap-1 ' + (trend < 0 ? 'text-green-600' : 'text-red-600');
+  };
+
+  // Create metric cards with latest values
+  // Create line chart with reference ranges
+  // Add key findings section
+  return (
+    <div className="p-6 bg-gray-50">
+      {/* Example of correct className usage */}
+      <div className={getMetricCardClass(true)}>
+        {/* Content */}
+      </div>
+    </div>
+  );
+};
+```

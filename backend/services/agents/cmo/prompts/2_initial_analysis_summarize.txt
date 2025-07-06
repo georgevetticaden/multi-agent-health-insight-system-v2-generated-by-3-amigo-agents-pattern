@@ -1,0 +1,16 @@
+Based on your initial data gathering and analysis, provide a structured assessment of this health query.
+
+Format your response using XML tags as follows:
+
+<complexity>[SIMPLE/STANDARD/COMPLEX/COMPREHENSIVE]</complexity>
+
+<approach>
+Describe your recommended approach including:
+- Which medical specialists should be involved
+- What specific data points need investigation
+- Any correlations to explore
+- Key health concerns to address
+- Timeframes to consider
+</approach>
+
+Be concise but thorough in your approach description. This will guide the specialist team's investigation.

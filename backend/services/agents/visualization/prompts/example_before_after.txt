@@ -1,0 +1,34 @@
+## Example Pattern for Before/After Analysis:
+```javascript
+const HealthVisualization = () => {
+  // Embed before/after data from analysis
+  const beforeAfterData = [
+    {
+      date: "2021-03-15",
+      metric: "HbA1c",
+      value: 6.1,
+      period: "before",
+      daysFromStart: -78
+    },
+    {
+      date: "2023-02-20",
+      metric: "HbA1c", 
+      value: 5.7,
+      period: "after",
+      daysFromStart: 624
+    },
+    // ... more data points
+  ];
+
+  const medicationStart = "2021-06-01";
+
+  // Create timeline with medication start marked
+  // Show before/after statistics
+  // Highlight improvements/changes
+  return (
+    <div className="p-6 space-y-6">
+      {/* Before/after visualization with reference line */}
+    </div>
+  );
+};
+```

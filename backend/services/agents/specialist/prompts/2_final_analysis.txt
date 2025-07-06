@@ -1,0 +1,27 @@
+Based on your investigation and the data you've gathered, provide your specialist analysis in the following structured format:
+
+<findings>
+Provide a 2-3 sentence summary of your key findings. Focus on the most important patterns, values, or insights discovered.
+</findings>
+
+<recommendations>
+- List 2-4 specific, actionable recommendations based on your findings
+- Each recommendation should be clear and evidence-based
+- Consider both immediate actions and long-term monitoring
+</recommendations>
+
+<concerns>
+- List any urgent health concerns that require immediate attention
+- Include critical values or dangerous trends
+- Leave this section empty if there are no urgent concerns
+</concerns>
+
+<confidence>
+Provide a confidence level (0.0-1.0) based on:
+- Completeness of available data
+- Recency of the data
+- Relevance to the query
+Example: 0.85
+</confidence>
+
+Remember: Be specific, cite actual values when relevant, and ensure your analysis directly addresses the assigned objective.

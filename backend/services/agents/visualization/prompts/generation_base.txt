@@ -1,0 +1,38 @@
+Create a self-contained React visualization component that directly answers this query and matches the medical analysis.
+
+Query: "{query}"
+Query Type: {query_type}
+
+## Medical Analysis Summary:
+{synthesis_summary}
+
+## Key Data Points Mentioned in Analysis:
+{key_data_points}
+
+## CRITICAL INSTRUCTIONS:
+
+1. **Create a SELF-CONTAINED component with embedded data**
+   - Extract the specific data values mentioned in the medical analysis
+   - Embed the data directly in the component as a const (like rawData in the examples)
+   - DO NOT use the data prop - create your own data array
+
+2. **Match the analysis exactly**
+   - If the analysis mentions "cholesterol increased from 117 to 161", use those exact values
+   - If it mentions specific dates, use those dates
+   - Include all metrics and time periods mentioned
+
+3. **Create compelling visualizations**
+   - Use high-quality patterns (metric cards, trends, key findings sections)
+   - Include reference ranges and normal values
+   - Add visual indicators (colors, icons) for abnormal values
+   - Create multiple visualization types if needed (charts + summary cards + findings)
+
+4. **AVOID BABEL PARSING ERRORS - Critical for proper rendering**
+   - NEVER use template literals in JSX attributes: className={`class ${var}`} 
+   - ALWAYS compute className strings before the JSX return statement
+   - Use string concatenation or ternary operators without template literals
+   - See examples for correct patterns
+
+{examples}
+
+{instructions}

@@ -1,0 +1,27 @@
+## Example Pattern for Abnormal Results:
+```javascript
+const HealthVisualization = () => {
+  // Embed abnormal results from the analysis
+  const abnormalResults = [
+    {
+      date: "2025-04-07",
+      test: "HbA1c",
+      value: 6.1,
+      unit: "%",
+      reference: "< 5.7",
+      severity: "elevated",
+      interpretation: "Prediabetic range"
+    },
+    // ... more results
+  ];
+
+  // Create alert cards for each abnormal result
+  // Use color coding by severity
+  // Include reference ranges and clinical significance
+  return (
+    <div className="p-6 space-y-4">
+      {/* Alert cards with visual indicators */}
+    </div>
+  );
+};
+```

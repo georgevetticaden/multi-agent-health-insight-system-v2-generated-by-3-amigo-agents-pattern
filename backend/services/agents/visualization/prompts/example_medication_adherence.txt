@@ -1,0 +1,33 @@
+## Example Pattern for Medication Adherence:
+```javascript
+const HealthVisualization = () => {
+  // Embed medication and adherence data
+  const medicationData = [
+    {
+      date: "2021-06-01",
+      medication: "Metformin",
+      dose: "500mg",
+      event: "started"
+    },
+    // ... more data
+  ];
+  
+  const adherenceGaps = [
+    {
+      start: "2018-03-01",
+      end: "2019-09-01",
+      days: 541,
+      medication: "Rosuvastatin"
+    }
+  ];
+
+  // Create timeline visualization
+  // Show gaps as shaded areas
+  // Correlate with lab values if mentioned
+  return (
+    <div className="p-6 space-y-6">
+      {/* Timeline chart with gaps highlighted */}
+    </div>
+  );
+};
+```

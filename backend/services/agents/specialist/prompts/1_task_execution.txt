@@ -1,0 +1,18 @@
+You have been assigned the following task by the Chief Medical Officer:
+
+Objective: {objective}
+
+Context: {context}
+
+Expected Output: {expected_output}
+
+Maximum Tool Calls Allowed: {max_tool_calls}
+
+Instructions:
+1. Use the execute_health_query_v2 tool to gather relevant data for your analysis
+2. Focus on retrieving specific values, not just dates or test names
+3. Consider the time periods mentioned in the objective
+4. Make evidence-based findings supported by actual data
+5. Stay within your tool call limit - make each query count
+
+Begin your investigation now.

@@ -14,28 +14,42 @@
 
 This Multi-Agent Health Insight System was **entirely generated** using the innovative [3 Amigo Agents Pattern](https://github.com/georgevetticaden/3-amigo-agents) - a collaborative AI development methodology where specialized agents work together to create production-ready applications.
 
+### 📸 System in Action
+
+<p align="center">
+  <img src="docs/images/app-screenshots/home_page.png" alt="Multi-Agent Health Insight System Home Page" width="800" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+  <br>
+  <em>Welcome interface showcasing the three-panel layout with sample health queries</em>
+</p>
+
+<p align="center">
+  <img src="docs/images/app-screenshots/health-query-response-with-medical-team-hier-view.png" alt="Multi-Agent Medical Team in Action" width="800" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-top: 20px;">
+  <br>
+  <em>Real-time multi-agent orchestration: CMO coordinates 8 medical specialists analyzing health data with live status updates</em>
+</p>
+
 ### 🤝 The 3 Amigo Agents Pattern
 
-The **3 Amigo Agents Pattern** revolutionizes software development by using three specialized AI agents that collaborate just like a human development team:
+The **3 Amigo Agents Pattern** is a collaborative AI development methodology where three specialized agents work together like a development team:
 
 1. **📋 Product Manager (PM) Agent**: Defines requirements, architecture, and specifications
 2. **🎨 UX/UI Designer Agent**: Creates user experience designs and interface prototypes  
 3. **👨‍💻 Implementation Agent**: Writes production-ready code following the PM and UX specifications
 
-This project showcases the pattern's effectiveness in creating sophisticated multi-agent AI applications with real-time visualization, comprehensive testing, and beautiful user interfaces.
+This project demonstrates how the pattern can create multi-agent AI applications with real-time visualization and responsive user interfaces.
 
 ### 🎯 What This System Demonstrates
 
 - **🤖 Multi-Agent Orchestration**: CMO delegates to 8 specialized medical agents
 - **⚡ Real-Time Updates**: Live SSE streaming shows agent thinking and progress
 - **📊 Dynamic Visualizations**: AI-generated React charts from health data
-- **🧪 Comprehensive Testing**: Evaluation framework with AI-powered analysis
-- **🎨 Beautiful UI**: Medical-themed interface with glassmorphism and animations
+- **🧪 Testing Framework**: Evaluation tools with automated analysis
+- **🎨 Medical UI**: Health-themed interface with glassmorphism effects
 - **🔧 Production Ready**: Full-stack TypeScript with error handling and optimization
 
 ## 🏗️ Generated System Architecture
 
-The 3 Amigo Agents created this sophisticated architecture:
+The 3 Amigo Agents created this architecture:
 
 ```mermaid
 graph TB
@@ -333,11 +347,11 @@ Want to use this pattern for your own projects?
 
 ### Benefits of the 3 Amigo Agents Pattern
 
-1. **🚀 Rapid Development**: Generate complete applications in hours, not weeks
-2. **📐 Consistent Quality**: Systematic approach ensures best practices
-3. **🎨 Professional Design**: UX agent creates polished, user-friendly interfaces
-4. **📋 Clear Requirements**: PM agent ensures comprehensive specifications
-5. **⚡ Production Ready**: Implementation agent generates enterprise-grade code
+1. **🚀 Faster Development**: Generate working applications quickly
+2. **📐 Consistent Quality**: Systematic approach follows established patterns
+3. **🎨 Professional Design**: UX agent creates clean, user-friendly interfaces
+4. **📋 Clear Requirements**: PM agent provides detailed specifications
+5. **⚡ Production Ready**: Implementation agent generates deployable code
 
 ## 📄 License
 

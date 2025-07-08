@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Insight Assistant - Analysis Complete</title>
+    <script src="https://cdn.tailwindcss.com/3.3.0"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/recharts@2.10.0/dist/Recharts.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        /* Gradient background */
+        .gradient-bg {
+            background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 50%, #ddd6fe 100%);
+        }
+
+        /* Glassmorphism effects */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+        }
+
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f3f4f6;
+            border-radius: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #9ca3af;
+            border-radius: 4px;
+        }
+
+        /* Medical team colors */
+        .specialist-cardiology { --color: #EF4444; }
+        .specialist-laboratory { --color: #10B981; }
+        .specialist-endocrinology { --color: #8B5CF6; }
+        .specialist-analytics { --color: #F59E0B; }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.3s ease-out forwards;
+        }
+
+        /* Message styles */
+        .message-user {
+            background: #3B82F6;
+            color: white;
+            border-radius: 16px 16px 4px 16px;
+            max-width: 70%;
+            margin-left: auto;
+        }
+
+        .message-assistant {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            border-radius: 4px 16px 16px 16px;
+            max-width: 85%;
+        }
+
+        /* Code block styles */
+        .code-block {
+            background: #1a1a1a;
+            color: #10b981;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        /* Tab styles */
+        .tab {
+            padding: 12px 24px;
+            border-radius: 8px 8px 0 0;
+            transition: all 200ms ease;
+            cursor: pointer;
+        }
+
+        .tab.active {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Thread item active state */
+        .thread-active {
+            border-left: 3px solid #10B981;
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        /* Specialist complete */
+        .specialist-complete {
+            border-color: var(--color);
+            opacity: 1;
+        }
+
+        .specialist-complete::after {
+            content: '✓';
+            position: absolute;
+            bottom: -4px;
+            right: -4px;
+            background: var(--color);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        /* Chart container */
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen overflow-hidden">
+    <!-- Header -->
+    <header class="glass-panel border-b-0 shadow-sm h-16 flex items-center">
+        <div class="container-fluid px-6 flex justify-between items-center w-full">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center text-white">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5Z"/>
+                        <path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-semibold text-gray-900">Health Insight Assistant</h1>
+                    <p class="text-xs text-gray-500">Powered by Multi-Agent AI • Snowflake Cortex</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span class="text-sm text-gray-600">George Vetticaden</span>
+                <span class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">Normal Health Status</span>
+                <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="flex h-screen pt-16">
+        <!-- Left Sidebar - Thread Management -->
+        <aside class="w-80 glass-panel border-r border-gray-200 flex flex-col">
+            <div class="p-4">
+                <button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8 2a1 1 0 011 1v4h4a1 1 0 110 2H9v4a1 1 0 11-2 0V9H3a1 1 0 110-2h4V3a1 1 0 011-1z"/>
+                    </svg>
+                    <span>New Health Conversation</span>
+                </button>
+            </div>
+
+            <div class="px-4 pb-4">
+                <div class="relative">
+                    <input type="text" placeholder="Search conversations..." 
+                           class="w-full pl-10 pr-4 py-2 glass-card rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <svg class="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="flex px-4 pb-2 space-x-2">
+                <button class="text-xs px-3 py-1 glass-card rounded-full">Lab Results</button>
+                <button class="text-xs px-3 py-1 glass-card rounded-full">Medications</button>
+                <button class="text-xs px-3 py-1 glass-card rounded-full">Conditions</button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto custom-scrollbar px-4">
+                <div class="mb-6">
+                    <h3 class="text-xs font-semibold text-gray-500 uppercase mb-2">TODAY</h3>
+                    <div class="space-y-2">
+                        <div class="glass-card rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow thread-active">
+                            <div class="flex justify-between items-start mb-1">
+                                <h4 class="font-medium text-sm truncate">Cholesterol Analysis</h4>
+                                <span class="text-xs text-gray-500">14:58</span>
+                            </div>
+                            <p class="text-xs text-gray-600 line-clamp-2">What's my cholesterol trend over the last 15 years? I want to see...</p>
+                            <div class="flex items-center space-x-2 mt-2">
+                                <span class="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded">Complete</span>
+                                <span class="text-xs text-gray-500">3 specialists • 1 visualization</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center Panel - Chat Interface -->
+        <main class="flex-1 flex flex-col">
+            <div class="flex-1 overflow-y-auto custom-scrollbar p-6">
+                <div class="max-w-3xl mx-auto space-y-4">
+                    <!-- Previous messages (collapsed for brevity) -->
+                    <div class="text-center text-xs text-gray-500">
+                        <p>... Previous analysis messages ...</p>
+                    </div>
+
+                    <!-- CMO Synthesis -->
+                    <div class="flex items-start space-x-3 fade-in-up">
+                        <div class="w-8 h-8 bg-cyan-500 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0">
+                            🩺
+                        </div>
+                        <div class="message-assistant px-4 py-3">
+                            <p class="text-sm text-gray-700 font-semibold mb-3">Your 15-Year Cholesterol Trend Analysis</p>
+                            
+                            <p class="text-sm text-gray-700 mb-3">Based on your comprehensive lab history from 2010-2025, here's what your cholesterol trends show:</p>
+                            
+                            <div class="space-y-3 text-sm text-gray-700">
+                                <div>
+                                    <p class="font-semibold mb-1">Key Findings - Your Top 4 Cholesterol Metrics:</p>
+                                    <div class="ml-4 space-y-1">
+                                        <p><strong>1. HDL ("Good" Cholesterol) - Consistently Low</strong></p>
+                                        <ul class="ml-4 list-disc space-y-1">
+                                            <li>Your HDL has remained problematically low throughout the 15-year period</li>
+                                            <li>Range: 20-47 mg/dL (target is above 40 mg/dL for men, 50 for women)</li>
+                                            <li>Current level (2025): 33 mg/dL - this is concerning as it's below protective levels</li>
+                                            <li>Best period: 2021-2023 when it reached 42-47 mg/dL</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <p><strong>2. Triglycerides - Extreme Volatility</strong></p>
+                                    <ul class="ml-4 list-disc space-y-1">
+                                        <li>Your triglycerides have shown dramatic swings: 51-426 mg/dL</li>
+                                        <li>Dangerously high levels in 2013 (426) and 2014 (390) - these levels risk pancreatitis</li>
+                                        <li>Best control in 2021 (51 mg/dL)</li>
+                                        <li>Current level (2025): 153 mg/dL - borderline high and trending upward</li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <p><strong>3. Total Cholesterol - Variable but Improving Overall</strong></p>
+                                    <ul class="ml-4 list-disc space-y-1">
+                                        <li>Range: 114-205 mg/dL over the period</li>
+                                        <li>Recent trend: Improved from 186 mg/dL (2018) to 114-131 mg/dL (2022-2023)</li>
+                                        <li>Current level (2025): 149 mg/dL - acceptable but increasing</li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <p><strong>4. LDL Cholesterol - Generally Well-Controlled</strong></p>
+                                    <ul class="ml-4 list-disc space-y-1">
+                                        <li>Your LDL has mostly stayed below 100 mg/dL (good control)</li>
+                                        <li>Best levels: 51-70 mg/dL in recent years</li>
+                                        <li>Current level (2025): 70 mg/dL - excellent</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 p-3 bg-amber-50 rounded-lg">
+                                <p class="text-sm text-amber-800 font-semibold mb-1">⚠️ Primary Concern:</p>
+                                <p class="text-sm text-amber-700">Your persistently low HDL cholesterol is the most significant issue. HDL helps remove bad cholesterol from your arteries, and levels below 40 mg/dL significantly increase cardiovascular risk.</p>
+                            </div>
+
+                            <div class="mt-4">
+                                <p class="text-sm text-gray-700 font-semibold mb-2">Recommendations:</p>
+                                <ol class="list-decimal list-inside space-y-1 text-sm text-gray-700">
+                                    <li>Focus on raising HDL through regular aerobic exercise (150+ min/week)</li>
+                                    <li>Consider Mediterranean diet with olive oil, nuts, and fatty fish</li>
+                                    <li>Maintain triglyceride control - keep levels under 150 mg/dL</li>
+                                    <li>Discuss HDL-raising strategies with your physician</li>
+                                    <li>Continue current management that's keeping LDL well-controlled</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Visualization Generation Message -->
+                    <div class="flex items-start space-x-3 fade-in-up">
+                        <div class="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0">
+                            📊
+                        </div>
+                        <div class="message-assistant px-4 py-3">
+                            <p class="text-sm text-gray-700 mb-2">Generating interactive visualization of your health data...</p>
+                        </div>
+                    </div>
+
+                    <!-- Code Artifact -->
+                    <div class="flex items-start space-x-3 fade-in-up">
+                        <div class="w-8 h-8 flex-shrink-0"></div>
+                        <div class="glass-card rounded-lg p-4 w-full">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center space-x-2">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="#F59E0B">
+                                        <path d="M4.114 4.869V13h7.772V4.869a.583.583 0 0 0-.583-.583H4.697a.583.583 0 0 0-.583.583ZM3 2.583A1.75 1.75 0 0 1 4.75.833h6.5A1.75 1.75 0 0 1 13 2.583V13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2.583Z"/>
+                                        <path d="M5.5 6.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1-.5-.5Zm0 2a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1-.5-.5Zm0 2a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1-.5-.5Z"/>
+                                    </svg>
+                                    <span class="text-sm font-medium">React Component</span>
+                                </div>
+                                <span class="text-xs text-gray-500">Streaming code...</span>
+                            </div>
+                            <div class="code-block">
+                                <pre>const HealthVisualization = () => {
+  const [selectedMetrics, setSelectedMetrics] = useState([
+    'hdl', 'triglycerides', 'total', 'ldl'
+  ]);
+  
+  // Extract exact data from the medical analysis
+  const rawData = [
+    { date: "2010-01-01", hdl: 29, triglycerides: 188, total: 170, ldl: 114 },
+    { date: "2011-01-01", hdl: 23, triglycerides: 210, total: 175, ldl: 108 },
+    { date: "2012-01-01", hdl: 25, triglycerides: 290, total: 183, ldl: 102 },
+    // ... more data points
+  ];
+
+  return (
+    <div className="p-6 bg-white rounded-lg">
+      <h2>15-Year Cholesterol Trend Analysis</h2>
+      <LineChart width={800} height={400} data={rawData}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="date" />
+        <YAxis />
+        <Tooltip />
+        <Legend />
+        {selectedMetrics.includes('hdl') && 
+          <Line type="monotone" dataKey="hdl" stroke="#10B981" />}
+        {selectedMetrics.includes('triglycerides') && 
+          <Line type="monotone" dataKey="triglycerides" stroke="#F59E0B" />}
+        {selectedMetrics.includes('total') && 
+          <Line type="monotone" dataKey="total" stroke="#3B82F6" />}
+        {selectedMetrics.includes('ldl') && 
+          <Line type="monotone" dataKey="ldl" stroke="#EF4444" />}
+      </LineChart>
+    </div>
+  );
+};</pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Final Summary -->
+                    <div class="flex items-start space-x-3 fade-in-up">
+                        <div class="w-8 h-8 bg-cyan-500 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0">
+                            🩺
+                        </div>
+                        <div class="message-assistant px-4 py-3">
+                            <p class="text-sm text-gray-700 font-semibold mb-2">📊 Medical Team Consultation Summary</p>
+                            <p class="text-sm text-gray-700">
+                                <strong>Team Composition:</strong> 3 medical specialists<br/>
+                                <strong>Data Queries Executed:</strong> 3 targeted health queries<br/>
+                                <strong>Overall Confidence:</strong> 88%<br/>
+                                <strong>Key Recommendations:</strong> 10<br/>
+                                <strong>Areas of Concern:</strong> 1
+                            </p>
+                            <p class="text-sm text-gray-700 mt-3">
+                                Your medical team has completed a thorough analysis of your health data. The interactive visualization above shows your 15-year cholesterol trends. You can toggle different metrics to focus on specific areas of interest.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="border-t border-gray-200 p-4">
+                <div class="max-w-3xl mx-auto">
+                    <div class="glass-panel rounded-lg p-3">
+                        <textarea 
+                            placeholder="Ask a follow-up question about your cholesterol analysis..."
+                            class="w-full bg-transparent resize-none focus:outline-none text-sm"
+                            rows="2"
+                        ></textarea>
+                        <div class="flex justify-between items-center mt-2">
+                            <span class="text-xs text-gray-500">Ready for your next health question</span>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs text-gray-500">0/2000</span>
+                                <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-colors">
+                                    Send
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Panel - Visualizations Tab Active -->
+        <aside class="w-[45%] glass-panel border-l border-gray-200 flex flex-col">
+            <!-- Tabs -->
+            <div class="flex border-b border-gray-200">
+                <div class="tab flex items-center space-x-2 text-gray-500">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM12.735 14c.618 0 1.093-.561.872-1.139a6.002 6.002 0 0 0-11.215 0c-.22.578.254 1.139.872 1.139h9.47Z"/>
+                    </svg>
+                    <span>Medical Team</span>
+                </div>
+                <div class="tab active flex items-center space-x-2">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M2 5a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5Z"/>
+                        <path d="M3 2a1 1 0 0 0 0 2h10a1 1 0 1 0 0-2H3Z"/>
+                    </svg>
+                    <span>Visualizations</span>
+                    <span class="bg-blue-500 text-white text-xs px-1.5 py-0.5 rounded-full">1</span>
+                </div>
+            </div>
+
+            <!-- Query Selector -->
+            <div class="p-4 border-b border-gray-200">
+                <label class="text-xs text-gray-500 font-medium">Current Analysis:</label>
+                <select class="w-full mt-1 glass-card rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option>Query 1 ✓ What's my cholesterol trend over the last 15 years?</option>
+                </select>
+            </div>
+
+            <!-- Visualization Content -->
+            <div class="flex-1 p-4 overflow-y-auto custom-scrollbar">
+                <div class="mb-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-sm font-semibold text-gray-700">Visualizations</h3>
+                        <div class="flex space-x-2">
+                            <button class="text-xs glass-card px-3 py-1 rounded flex items-center space-x-1 hover:bg-gray-50">
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                    <path d="M10.5 1.5v3h-3M1.5 10.5v-3h3M8.485 3.515A6 6 0 0 0 3.515 8.485M3.515 3.515A6 6 0 0 0 8.485 8.485"/>
+                                </svg>
+                                <span>Copy</span>
+                            </button>
+                            <button class="text-xs glass-card px-3 py-1 rounded flex items-center space-x-1 hover:bg-gray-50">
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                    <path d="M6 1.5v7m0 0L3.75 6.25M6 8.5l2.25-2.25M1.5 10.5h9"/>
+                                </svg>
+                                <span>Download</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rendered Visualization -->
+                <div class="chart-container">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-1">15-Year Cholesterol Trend Analysis</h3>
+                    <p class="text-sm text-gray-600 mb-4">Tracking your top 4 cholesterol metrics from 2010-2025</p>
+                    
+                    <!-- React Chart Container -->
+                    <div id="chart-root"></div>
+
+                    <!-- Key Metrics Summary -->
+                    <div class="grid grid-cols-2 gap-4 mt-6">
+                        <div class="glass-card rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="text-sm font-medium text-gray-700">HDL Cholesterol</h4>
+                                <span class="text-xs text-red-600 bg-red-50 px-2 py-1 rounded">Low</span>
+                            </div>
+                            <p class="text-2xl font-bold text-gray-900">33 <span class="text-sm font-normal text-gray-500">mg/dL</span></p>
+                            <p class="text-xs text-gray-600 mt-1">Target: Age 40 (men), Age 50 (women)</p>
+                            <p class="text-xs text-red-600 mt-1">Good Cholesterol - Consistently Low</p>
+                        </div>
+
+                        <div class="glass-card rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="text-sm font-medium text-gray-700">Triglycerides</h4>
+                                <span class="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">Borderline</span>
+                            </div>
+                            <p class="text-2xl font-bold text-gray-900">153 <span class="text-sm font-normal text-gray-500">mg/dL</span></p>
+                            <p class="text-xs text-gray-600 mt-1">Target: &lt;150</p>
+                            <p class="text-xs text-amber-600 mt-1">Variable but Improving</p>
+                        </div>
+
+                        <div class="glass-card rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="text-sm font-medium text-gray-700">Total Cholesterol</h4>
+                                <span class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">Normal</span>
+                            </div>
+                            <p class="text-2xl font-bold text-gray-900">149 <span class="text-sm font-normal text-gray-500">mg/dL</span></p>
+                            <p class="text-xs text-gray-600 mt-1">Target: &lt;200</p>
+                            <p class="text-xs text-green-600 mt-1">Well Controlled</p>
+                        </div>
+
+                        <div class="glass-card rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="text-sm font-medium text-gray-700">LDL Cholesterol</h4>
+                                <span class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">Optimal</span>
+                            </div>
+                            <p class="text-2xl font-bold text-gray-900">70 <span class="text-sm font-normal text-gray-500">mg/dL</span></p>
+                            <p class="text-xs text-gray-600 mt-1">Target: &lt;100</p>
+                            <p class="text-xs text-green-600 mt-1">Excellent Control</p>
+                        </div>
+                    </div>
+
+                    <!-- Metadata -->
+                    <div class="mt-6 pt-4 border-t border-gray-200">
+                        <p class="text-xs text-gray-500">
+                            <span class="font-medium">Generated:</span> Today at 14:58 • 
+                            <span class="font-medium">Data Points:</span> 180 • 
+                            <span class="font-medium">Confidence:</span> 88%
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Code View Toggle -->
+                <div class="mt-4 text-center">
+                    <button class="text-sm text-blue-600 hover:text-blue-700">
+                        View Component Code
+                    </button>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script type="text/babel">
+        // React component for the cholesterol visualization
+        const HealthVisualization = () => {
+            const [selectedMetrics, setSelectedMetrics] = React.useState([
+                'hdl', 'triglycerides', 'total', 'ldl'
+            ]);
+
+            // Simulated data based on the analysis
+            const data = [
+                { date: "2010", hdl: 29, triglycerides: 188, total: 170, ldl: 114 },
+                { date: "2011", hdl: 23, triglycerides: 210, total: 175, ldl: 108 },
+                { date: "2012", hdl: 25, triglycerides: 290, total: 183, ldl: 102 },
+                { date: "2013", hdl: 30, triglycerides: 426, total: 205, ldl: 94 },
+                { date: "2014", hdl: 26, triglycerides: 390, total: 195, ldl: 84 },
+                { date: "2015", hdl: 33, triglycerides: 285, total: 188, ldl: 88 },
+                { date: "2016", hdl: 35, triglycerides: 245, total: 182, ldl: 91 },
+                { date: "2017", hdl: 38, triglycerides: 195, total: 176, ldl: 85 },
+                { date: "2018", hdl: 40, triglycerides: 165, total: 186, ldl: 98 },
+                { date: "2019", hdl: 42, triglycerides: 124, total: 168, ldl: 82 },
+                { date: "2020", hdl: 44, triglycerides: 88, total: 155, ldl: 76 },
+                { date: "2021", hdl: 47, triglycerides: 51, total: 142, ldl: 64 },
+                { date: "2022", hdl: 45, triglycerides: 76, total: 131, ldl: 58 },
+                { date: "2023", hdl: 42, triglycerides: 95, total: 114, ldl: 51 },
+                { date: "2024", hdl: 35, triglycerides: 125, total: 138, ldl: 65 },
+                { date: "2025", hdl: 33, triglycerides: 153, total: 149, ldl: 70 }
+            ];
+
+            const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = Recharts;
+
+            const CustomTooltip = ({ active, payload, label }) => {
+                if (active && payload && payload.length) {
+                    return (
+                        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+                            <p className="font-semibold text-sm mb-1">{label}</p>
+                            {payload.map((entry, index) => (
+                                <p key={index} className="text-xs" style={{ color: entry.color }}>
+                                    {entry.name}: {entry.value} mg/dL
+                                </p>
+                            ))}
+                        </div>
+                    );
+                }
+                return null;
+            };
+
+            return (
+                <div>
+                    <ResponsiveContainer width="100%" height={300}>
+                        <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                            <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                            <YAxis tick={{ fontSize: 12 }} />
+                            <Tooltip content={<CustomTooltip />} />
+                            <Legend 
+                                verticalAlign="bottom" 
+                                height={36}
+                                iconType="line"
+                                wrapperStyle={{ paddingTop: '20px' }}
+                            />
+                            {selectedMetrics.includes('hdl') && 
+                                <Line 
+                                    type="monotone" 
+                                    dataKey="hdl" 
+                                    stroke="#10B981" 
+                                    strokeWidth={2}
+                                    name="HDL (Good)"
+                                    dot={{ r: 3 }}
+                                />
+                            }
+                            {selectedMetrics.includes('triglycerides') && 
+                                <Line 
+                                    type="monotone" 
+                                    dataKey="triglycerides" 
+                                    stroke="#F59E0B" 
+                                    strokeWidth={2}
+                                    name="Triglycerides"
+                                    dot={{ r: 3 }}
+                                />
+                            }
+                            {selectedMetrics.includes('total') && 
+                                <Line 
+                                    type="monotone" 
+                                    dataKey="total" 
+                                    stroke="#3B82F6" 
+                                    strokeWidth={2}
+                                    name="Total Cholesterol"
+                                    dot={{ r: 3 }}
+                                />
+                            }
+                            {selectedMetrics.includes('ldl') && 
+                                <Line 
+                                    type="monotone" 
+                                    dataKey="ldl" 
+                                    stroke="#EF4444" 
+                                    strokeWidth={2}
+                                    name="LDL (Bad)"
+                                    dot={{ r: 3 }}
+                                />
+                            }
+                        </LineChart>
+                    </ResponsiveContainer>
+                    
+                    <div className="mt-4 flex justify-center space-x-4">
+                        <label className="flex items-center text-sm cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                checked={selectedMetrics.includes('hdl')}
+                                onChange={(e) => {
+                                    if (e.target.checked) {
+                                        setSelectedMetrics([...selectedMetrics, 'hdl']);
+                                    } else {
+                                        setSelectedMetrics(selectedMetrics.filter(m => m !== 'hdl'));
+                                    }
+                                }}
+                                className="mr-2"
+                            />
+                            <span className="text-green-600">HDL</span>
+                        </label>
+                        <label className="flex items-center text-sm cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                checked={selectedMetrics.includes('triglycerides')}
+                                onChange={(e) => {
+                                    if (e.target.checked) {
+                                        setSelectedMetrics([...selectedMetrics, 'triglycerides']);
+                                    } else {
+                                        setSelectedMetrics(selectedMetrics.filter(m => m !== 'triglycerides'));
+                                    }
+                                }}
+                                className="mr-2"
+                            />
+                            <span className="text-amber-600">Triglycerides</span>
+                        </label>
+                        <label className="flex items-center text-sm cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                checked={selectedMetrics.includes('total')}
+                                onChange={(e) => {
+                                    if (e.target.checked) {
+                                        setSelectedMetrics([...selectedMetrics, 'total']);
+                                    } else {
+                                        setSelectedMetrics(selectedMetrics.filter(m => m !== 'total'));
+                                    }
+                                }}
+                                className="mr-2"
+                            />
+                            <span className="text-blue-600">Total</span>
+                        </label>
+                        <label className="flex items-center text-sm cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                checked={selectedMetrics.includes('ldl')}
+                                onChange={(e) => {
+                                    if (e.target.checked) {
+                                        setSelectedMetrics([...selectedMetrics, 'ldl']);
+                                    } else {
+                                        setSelectedMetrics(selectedMetrics.filter(m => m !== 'ldl'));
+                                    }
+                                }}
+                                className="mr-2"
+                            />
+                            <span className="text-red-600">LDL</span>
+                        </label>
+                    </div>
+                </div>
+            );
+        };
+
+        // Render the React component
+        ReactDOM.render(<HealthVisualization />, document.getElementById('chart-root'));
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

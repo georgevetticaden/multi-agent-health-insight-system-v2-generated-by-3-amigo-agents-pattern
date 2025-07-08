@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Insight Assistant - Analysis in Progress</title>
+    <script src="https://cdn.tailwindcss.com/3.3.0"></script>
+    <style>
+        /* Gradient background */
+        .gradient-bg {
+            background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 50%, #ddd6fe 100%);
+        }
+
+        /* Glassmorphism effects */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+        }
+
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f3f4f6;
+            border-radius: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #9ca3af;
+            border-radius: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+
+        /* Medical team colors */
+        .specialist-cardiology { --color: #EF4444; }
+        .specialist-laboratory { --color: #10B981; }
+        .specialist-endocrinology { --color: #8B5CF6; }
+        .specialist-analytics { --color: #F59E0B; }
+        .specialist-preventive { --color: #F97316; }
+        .specialist-pharmacy { --color: #FB923C; }
+        .specialist-nutrition { --color: #84CC16; }
+        .specialist-general { --color: #06B6D4; }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes thinking-pulse {
+            0%, 100% { opacity: 0.4; transform: scale(0.95); }
+            50% { opacity: 1; transform: scale(1.05); }
+        }
+
+        @keyframes dot-pulse {
+            0%, 60%, 100% { opacity: 0.3; }
+            30% { opacity: 1; }
+        }
+
+        @keyframes progress-fill {
+            from { width: 0; }
+            to { width: var(--progress); }
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.3s ease-out forwards;
+        }
+
+        .thinking-pulse {
+            animation: thinking-pulse 2s ease-in-out infinite;
+        }
+
+        /* Thinking dots */
+        .thinking-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #3B82F6;
+            margin: 0 2px;
+            animation: dot-pulse 1.4s ease-in-out infinite;
+        }
+
+        .thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+        .thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        /* Message styles */
+        .message-user {
+            background: #3B82F6;
+            color: white;
+            border-radius: 16px 16px 4px 16px;
+            max-width: 70%;
+            margin-left: auto;
+        }
+
+        .message-assistant {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            border-radius: 4px 16px 16px 16px;
+            max-width: 85%;
+        }
+
+        /* Tool call styles */
+        .tool-call {
+            background: rgba(59, 130, 246, 0.08);
+            border: 1px dashed #3B82F6;
+            border-radius: 8px;
+        }
+
+        /* Progress bar */
+        .progress-bar {
+            height: 4px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--color);
+            animation: progress-fill 1s ease-out forwards;
+        }
+
+        /* Specialist card */
+        .specialist-card {
+            border: 3px solid var(--color);
+            background: white;
+            position: relative;
+            transition: all 300ms ease;
+        }
+
+        .specialist-card.active {
+            animation: thinking-pulse 2s ease-in-out infinite;
+            box-shadow: 0 0 0 4px rgba(var(--color-rgb), 0.2);
+        }
+
+        /* Tab styles */
+        .tab {
+            padding: 12px 24px;
+            border-radius: 8px 8px 0 0;
+            transition: all 200ms ease;
+            cursor: pointer;
+        }
+
+        .tab.active {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Terminal styles */
+        .terminal {
+            background: #1a1a1a;
+            color: #10b981;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 16px;
+            border-radius: 8px;
+            height: 200px;
+            overflow-y: auto;
+        }
+
+        .terminal-line {
+            margin: 4px 0;
+            opacity: 0;
+            animation: fadeInUp 0.3s ease-out forwards;
+        }
+
+        /* Thread item active state */
+        .thread-active {
+            border-left: 3px solid #3B82F6;
+            background: rgba(59, 130, 246, 0.05);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen overflow-hidden">
+    <!-- Header -->
+    <header class="glass-panel border-b-0 shadow-sm h-16 flex items-center">
+        <div class="container-fluid px-6 flex justify-between items-center w-full">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center text-white">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5Z"/>
+                        <path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-semibold text-gray-900">Health Insight Assistant</h1>
+                    <p class="text-xs text-gray-500">Powered by Multi-Agent AI • Snowflake Cortex</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span class="text-sm text-gray-600">George Vetticaden</span>
+                <span class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">Normal Health Status</span>
+                <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="flex h-screen pt-16">
+        <!-- Left Sidebar - Thread Management -->
+        <aside class="w-80 glass-panel border-r border-gray-200 flex flex-col">
+            <div class="p-4">
+                <button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8 2a1 1 0 011 1v4h4a1 1 0 110 2H9v4a1 1 0 11-2 0V9H3a1 1 0 110-2h4V3a1 1 0 011-1z"/>
+                    </svg>
+                    <span>New Health Conversation</span>
+                </button>
+            </div>
+
+            <div class="px-4 pb-4">
+                <div class="relative">
+                    <input type="text" placeholder="Search conversations..." 
+                           class="w-full pl-10 pr-4 py-2 glass-card rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <svg class="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="flex px-4 pb-2 space-x-2">
+                <button class="text-xs px-3 py-1 glass-card rounded-full">Lab Results</button>
+                <button class="text-xs px-3 py-1 glass-card rounded-full">Medications</button>
+                <button class="text-xs px-3 py-1 glass-card rounded-full">Conditions</button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto custom-scrollbar px-4">
+                <div class="mb-6">
+                    <h3 class="text-xs font-semibold text-gray-500 uppercase mb-2">TODAY</h3>
+                    <div class="space-y-2">
+                        <div class="glass-card rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow thread-active">
+                            <div class="flex justify-between items-start mb-1">
+                                <h4 class="font-medium text-sm truncate">Cholesterol Analysis</h4>
+                                <span class="text-xs text-gray-500">14:56</span>
+                            </div>
+                            <p class="text-xs text-gray-600 line-clamp-2">What's my cholesterol trend over the last 15 years? I want to see...</p>
+                            <div class="flex items-center space-x-2 mt-2">
+                                <span class="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded">In Progress</span>
+                                <span class="text-xs text-gray-500">3 specialists active</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <h3 class="text-xs font-semibold text-gray-500 uppercase mb-2">YESTERDAY</h3>
+                    <div class="space-y-2">
+                        <div class="glass-card rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow">
+                            <div class="flex justify-between items-start mb-1">
+                                <h4 class="font-medium text-sm truncate">Blood Pressure Review</h4>
+                                <span class="text-xs text-gray-500">16:42</span>
+                            </div>
+                            <p class="text-xs text-gray-600 line-clamp-2">Analyze my blood pressure patterns and correlation with...</p>
+                            <div class="flex items-center space-x-2 mt-2">
+                                <span class="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded">Complete</span>
+                                <span class="text-xs text-gray-500">5 insights</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center Panel - Chat Interface -->
+        <main class="flex-1 flex flex-col">
+            <div class="flex-1 overflow-y-auto custom-scrollbar p-6">
+                <div class="max-w-3xl mx-auto space-y-4">
+                    <!-- User Message -->
+                    <div class="flex justify-end fade-in-up">
+                        <div class="message-user px-4 py-3">
+                            <p class="text-sm">What's my cholesterol trend over the last 15 years? I want to see trends across the top 4 cholesterol metrics including Triglycerides across that time period (standard)</p>
+                        </div>
+                    </div>
+
+                    <!-- System Status -->
+                    <div class="text-center text-sm text-gray-500 fade-in-up" style="animation-delay: 0.1s;">
+                        <p>🏥 Medical Team Consultation Starting</p>
+                    </div>
+
+                    <!-- Assistant Thinking -->
+                    <div class="flex items-start space-x-3 fade-in-up" style="animation-delay: 0.2s;">
+                        <div class="w-8 h-8 bg-cyan-500 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0">
+                            🩺
+                        </div>
+                        <div class="message-assistant px-4 py-3">
+                            <p class="text-sm text-gray-700 mb-2">Chief Medical Officer is reviewing your query...</p>
+                            <div class="flex items-center space-x-1">
+                                <span class="thinking-dot"></span>
+                                <span class="thinking-dot"></span>
+                                <span class="thinking-dot"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tool Call -->
+                    <div class="flex items-start space-x-3 fade-in-up" style="animation-delay: 0.3s;">
+                        <div class="w-8 h-8 flex-shrink-0"></div>
+                        <div class="tool-call px-4 py-3 text-sm">
+                            <div class="flex items-center space-x-2 mb-2">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="#3B82F6">
+                                    <path d="M13.5 3a.5.5 0 0 1 .5.5V11H2V3.5a.5.5 0 0 1 .5-.5h11zm-11-1A1.5 1.5 0 0 0 1 3.5V12h14V3.5A1.5 1.5 0 0 0 13.5 2h-11zM0 12.5h16a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 12.5z"/>
+                                </svg>
+                                <span class="font-medium text-blue-700">Tool Call: execute_health_query_v2</span>
+                                <span class="ml-auto text-xs text-green-600">✓ Complete</span>
+                            </div>
+                            <div class="text-xs text-gray-600 space-y-1">
+                                <p><span class="font-medium">Query:</span> "cholesterol trend analysis 15 years"</p>
+                                <p><span class="font-medium">Status:</span> Successfully retrieved 180 data points</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CMO Response -->
+                    <div class="flex items-start space-x-3 fade-in-up" style="animation-delay: 0.4s;">
+                        <div class="w-8 h-8 bg-cyan-500 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0">
+                            🩺
+                        </div>
+                        <div class="message-assistant px-4 py-3">
+                            <p class="text-sm text-gray-700">✓ CMO assessment complete - health data accessed successfully</p>
+                        </div>
+                    </div>
+
+                    <!-- Creating Medical Team -->
+                    <div class="flex items-start space-x-3 fade-in-up" style="animation-delay: 0.5s;">
+                        <div class="w-8 h-8 bg-cyan-500 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0">
+                            🩺
+                        </div>
+                        <div class="message-assistant px-4 py-3">
+                            <p class="text-sm text-gray-700 font-medium mb-2">📋 Creating Medical Team Strategy</p>
+                            <p class="text-sm text-gray-700 mb-3">Complexity Assessment: <span class="font-semibold text-amber-600">STANDARD</span></p>
+                            <p class="text-sm text-gray-700 mb-2">Assigning specialists based on your query...</p>
+                        </div>
+                    </div>
+
+                    <!-- Medical Team Assembled -->
+                    <div class="flex items-start space-x-3 fade-in-up" style="animation-delay: 0.6s;">
+                        <div class="w-8 h-8 bg-cyan-500 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0">
+                            🩺
+                        </div>
+                        <div class="message-assistant px-4 py-3">
+                            <p class="text-sm text-gray-700 font-medium mb-3">👥 Medical Team Assembled</p>
+                            <p class="text-sm text-gray-700 mb-2">Your consultation will include:</p>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex items-start">
+                                    <span class="text-red-500 mr-2">1. ❤️ Cardiology</span>
+                                    <span class="text-gray-600">- Analyze complete 15-year cholesterol trends including Total Cholesterol, LDL, HDL, and Triglycerides...</span>
+                                </div>
+                                <div class="flex items-start">
+                                    <span class="text-purple-500 mr-2">2. 🧬 Endocrinology</span>
+                                    <span class="text-gray-600">- Investigate metabolic factors contributing to extreme triglyceride fluctuations (51-426 mg/dL) and c...</span>
+                                </div>
+                                <div class="flex items-start">
+                                    <span class="text-amber-500 mr-2">3. 📊 Data Analysis</span>
+                                    <span class="text-gray-600">- Create comprehensive statistical analysis and visualization of 15-year lipid trends showing correlat...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Specialists Beginning -->
+                    <div class="flex items-start space-x-3 fade-in-up" style="animation-delay: 0.7s;">
+                        <div class="w-8 h-8 bg-cyan-500 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0">
+                            🩺
+                        </div>
+                        <div class="message-assistant px-4 py-3">
+                            <p class="text-sm text-gray-700 font-medium mb-2">🩺 Specialists Beginning Analysis</p>
+                            <p class="text-sm text-gray-700">Each specialist will query your health records for relevant data...</p>
+                        </div>
+                    </div>
+
+                    <!-- Cardiology Analyzing -->
+                    <div class="flex items-start space-x-3 fade-in-up" style="animation-delay: 0.8s;">
+                        <div class="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0">
+                            ❤️
+                        </div>
+                        <div class="message-assistant px-4 py-3">
+                            <p class="text-sm text-gray-700">Cardiology is analyzing your health data...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="border-t border-gray-200 p-4">
+                <div class="max-w-3xl mx-auto">
+                    <div class="glass-panel rounded-lg p-3">
+                        <textarea 
+                            placeholder="Ask about your health data..."
+                            class="w-full bg-transparent resize-none focus:outline-none text-sm"
+                            rows="2"
+                            disabled
+                        ></textarea>
+                        <div class="flex justify-between items-center mt-2">
+                            <span class="text-xs text-gray-500">Specialists are analyzing your health data...</span>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs text-gray-500">0/2000</span>
+                                <button class="bg-gray-300 text-gray-500 px-4 py-1.5 rounded-lg text-sm font-medium cursor-not-allowed" disabled>
+                                    Send
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Panel - Medical Team / Visualizations -->
+        <aside class="w-[45%] glass-panel border-l border-gray-200 flex flex-col">
+            <!-- Tabs -->
+            <div class="flex border-b border-gray-200">
+                <div class="tab active flex items-center space-x-2">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM12.735 14c.618 0 1.093-.561.872-1.139a6.002 6.002 0 0 0-11.215 0c-.22.578.254 1.139.872 1.139h9.47Z"/>
+                    </svg>
+                    <span>Medical Team</span>
+                </div>
+                <div class="tab flex items-center space-x-2 text-gray-500">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M2 5a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5Z"/>
+                        <path d="M3 2a1 1 0 0 0 0 2h10a1 1 0 1 0 0-2H3Z"/>
+                    </svg>
+                    <span>Visualizations</span>
+                    <span class="bg-gray-200 text-gray-600 text-xs px-1.5 py-0.5 rounded-full">0</span>
+                </div>
+            </div>
+
+            <!-- Query Selector -->
+            <div class="p-4 border-b border-gray-200">
+                <label class="text-xs text-gray-500 font-medium">Current Analysis:</label>
+                <select class="w-full mt-1 glass-card rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option>Query 1 - What's my cholesterol trend over the last 15 years?</option>
+                </select>
+            </div>
+
+            <!-- Medical Team Content -->
+            <div class="flex-1 flex flex-col">
+                <!-- Team Hierarchy Section -->
+                <div class="flex-1 p-4 overflow-hidden">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-4">TEAM HIERARCHY & STATUS</h3>
+                    
+                    <!-- Team Visualization -->
+                    <div class="relative h-80 mb-4">
+                        <!-- CMO in center -->
+                        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                            <div class="specialist-card specialist-general rounded-full w-20 h-20 flex items-center justify-center">
+                                <span class="text-3xl">🩺</span>
+                            </div>
+                            <p class="text-xs text-center mt-2 font-medium">Dr. Vitality</p>
+                            <p class="text-xs text-center text-gray-500">Chief Medical</p>
+                            <div class="mt-1 flex justify-center">
+                                <span class="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded">100%</span>
+                            </div>
+                        </div>
+
+                        <!-- Cardiology (Active) -->
+                        <div class="absolute left-1/4 top-1/4">
+                            <div class="specialist-card specialist-cardiology rounded-full w-16 h-16 flex items-center justify-center active" style="--color: #EF4444; --color-rgb: 239, 68, 68;">
+                                <span class="text-2xl">❤️</span>
+                            </div>
+                            <p class="text-xs text-center mt-2 font-medium">Dr. Heart</p>
+                            <p class="text-xs text-center text-gray-500">Cardiology</p>
+                            <div class="mt-1 flex justify-center">
+                                <span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded">10%</span>
+                            </div>
+                        </div>
+
+                        <!-- Endocrinology (Waiting) -->
+                        <div class="absolute right-1/4 top-1/4">
+                            <div class="specialist-card specialist-endocrinology rounded-full w-16 h-16 flex items-center justify-center opacity-50" style="--color: #8B5CF6;">
+                                <span class="text-2xl">🧬</span>
+                            </div>
+                            <p class="text-xs text-center mt-2 font-medium">Dr. Hormone</p>
+                            <p class="text-xs text-center text-gray-500">Endocrinology</p>
+                            <div class="mt-1 flex justify-center">
+                                <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">0%</span>
+                            </div>
+                        </div>
+
+                        <!-- Data Analysis (Waiting) -->
+                        <div class="absolute left-1/2 bottom-1/4 -translate-x-1/2">
+                            <div class="specialist-card specialist-analytics rounded-full w-16 h-16 flex items-center justify-center opacity-50" style="--color: #F59E0B;">
+                                <span class="text-2xl">📊</span>
+                            </div>
+                            <p class="text-xs text-center mt-2 font-medium">Dr. Analytics</p>
+                            <p class="text-xs text-center text-gray-500">Data Analysis</p>
+                            <div class="mt-1 flex justify-center">
+                                <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">0%</span>
+                            </div>
+                        </div>
+
+                        <!-- Connection Lines -->
+                        <svg class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: -1;">
+                            <line x1="50%" y1="50%" x2="25%" y2="25%" stroke="#EF4444" stroke-width="2" stroke-dasharray="5,5" opacity="0.3"/>
+                            <line x1="50%" y1="50%" x2="75%" y2="25%" stroke="#8B5CF6" stroke-width="2" stroke-dasharray="5,5" opacity="0.1"/>
+                            <line x1="50%" y1="50%" x2="50%" y2="75%" stroke="#F59E0B" stroke-width="2" stroke-dasharray="5,5" opacity="0.1"/>
+                        </svg>
+                    </div>
+
+                    <!-- Active Agent Status -->
+                    <div class="glass-card rounded-lg p-3 mb-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-red-500">❤️</span>
+                                <span class="font-medium text-sm">Dr. Heart - Cardiology</span>
+                                <span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded">Active</span>
+                            </div>
+                            <span class="text-sm font-medium">10%</span>
+                        </div>
+                        <p class="text-xs text-gray-600 mb-2">Current task: Starting analysis...</p>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="--progress: 10%; --color: #EF4444;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Status Legend -->
+                    <div class="flex justify-center space-x-4 text-xs">
+                        <div class="flex items-center space-x-1">
+                            <div class="w-2 h-2 bg-gray-300 rounded-full"></div>
+                            <span>Waiting</span>
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                            <span>Active</span>
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span>Complete</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Divider (Resizable in real app) -->
+                <div class="h-px bg-gray-200"></div>
+
+                <!-- Analysis Results Section -->
+                <div class="h-1/2 p-4 overflow-y-auto custom-scrollbar">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-4">ANALYSIS RESULTS</h3>
+                    
+                    <!-- Empty State -->
+                    <div class="flex flex-col items-center justify-center h-32 text-gray-400">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                        </svg>
+                        <p class="text-sm mt-2">No completed analyses yet</p>
+                        <p class="text-xs mt-1">Analyses will appear here as specialists complete their work</p>
+                    </div>
+
+                    <!-- Live Terminal -->
+                    <div class="mt-4">
+                        <p class="text-xs text-gray-500 mb-2">Live Streaming:</p>
+                        <div class="terminal">
+                            <div class="terminal-line" style="animation-delay: 0s;">
+                                > CMO is analyzing your query...
+                            </div>
+                            <div class="terminal-line" style="animation-delay: 0.5s;">
+                                > Tool Call: execute_health_query_v2
+                            </div>
+                            <div class="terminal-line" style="animation-delay: 1s;">
+                                > Retrieved 180 cholesterol data points
+                            </div>
+                            <div class="terminal-line" style="animation-delay: 1.5s;">
+                                > Dr. Heart (Cardiology) activated
+                            </div>
+                            <div class="terminal-line" style="animation-delay: 2s;">
+                                > Analyzing lipid panel trends...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // Simulate progress updates
+        let progress = 10;
+        const progressInterval = setInterval(() => {
+            progress += Math.random() * 15;
+            if (progress > 75) {
+                clearInterval(progressInterval);
+                progress = 75;
+            }
+            
+            const progressBar = document.querySelector('.progress-fill');
+            if (progressBar) {
+                progressBar.style.setProperty('--progress', `${progress}%`);
+            }
+            
+            // Update percentage display
+            const percentDisplay = document.querySelector('.specialist-card.active').parentElement.querySelector('.bg-red-100');
+            if (percentDisplay) {
+                percentDisplay.textContent = `${Math.round(progress)}%`;
+            }
+        }, 2000);
+
+        // Add new terminal lines
+        const terminal = document.querySelector('.terminal');
+        const messages = [
+            '> Checking medication history...',
+            '> Found 23 relevant medications',
+            '> Correlating with lab results...',
+            '> Dr. Heart progress: 25%'
+        ];
+        
+        let messageIndex = 0;
+        setInterval(() => {
+            if (messageIndex < messages.length) {
+                const line = document.createElement('div');
+                line.className = 'terminal-line';
+                line.textContent = messages[messageIndex];
+                terminal.appendChild(line);
+                terminal.scrollTop = terminal.scrollHeight;
+                messageIndex++;
+            }
+        }, 3000);
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

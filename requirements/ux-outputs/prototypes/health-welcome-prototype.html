@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Insight Assistant - Welcome</title>
+    <script src="https://cdn.tailwindcss.com/3.3.0"></script>
+    <style>
+        /* Gradient background */
+        .gradient-bg {
+            background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 50%, #ddd6fe 100%);
+        }
+
+        /* Glassmorphism effects */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+        }
+
+        .glass-button {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.6);
+            transition: all 200ms ease;
+        }
+
+        .glass-button:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        /* Medical team colors */
+        .specialist-cardiology { background: #EF4444; color: white; }
+        .specialist-laboratory { background: #10B981; color: white; }
+        .specialist-endocrinology { background: #8B5CF6; color: white; }
+        .specialist-analytics { background: #F59E0B; color: white; }
+        .specialist-preventive { background: #F97316; color: white; }
+        .specialist-pharmacy { background: #FB923C; color: white; }
+        .specialist-nutrition { background: #84CC16; color: white; }
+        .specialist-general { background: #06B6D4; color: white; }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(0.98); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        .pulse-soft {
+            animation: pulse-soft 3s ease-in-out infinite;
+        }
+
+        .float {
+            animation: float 4s ease-in-out infinite;
+        }
+
+        /* Specialist positioning */
+        .specialist-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            position: absolute;
+            transition: all 300ms ease;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .specialist-circle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Query card hover effect */
+        .query-card {
+            transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .query-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+        }
+
+        /* Typing animation */
+        @keyframes typing {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+
+        .typing {
+            overflow: hidden;
+            white-space: nowrap;
+            animation: typing 2s steps(40, end);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <!-- Header -->
+    <header class="glass-panel border-b-0 shadow-sm">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center text-white">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5Z"/>
+                        <path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-semibold text-gray-900">Health Insight Assistant</h1>
+                    <p class="text-xs text-gray-500">Powered by Multi-Agent AI • Snowflake Cortex</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2 glass-button px-4 py-2 rounded-lg">
+                    <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span class="text-sm text-gray-700">Medical Team Status: Ready</span>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <span class="text-sm text-gray-600">George Vetticaden</span>
+                    <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 text-sm font-medium">
+                        GV
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-12">
+        <!-- Hero Section -->
+        <div class="text-center mb-16 fade-in-up">
+            <h2 class="text-5xl font-bold text-gray-900 mb-4">Your Personal Medical Team Awaits</h2>
+            <p class="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+                Experience the power of 8 specialized AI medical professionals working together to provide 
+                comprehensive health insights. Ask any health question and watch your medical team analyze 
+                your data in real-time.
+            </p>
+            <button class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1">
+                <span class="flex items-center space-x-2">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/>
+                    </svg>
+                    <span>Start Health Analysis</span>
+                </span>
+            </button>
+        </div>
+
+        <!-- Medical Team Preview -->
+        <div class="mb-16">
+            <h3 class="text-2xl font-semibold text-center text-gray-900 mb-8">Meet Your Medical Team</h3>
+            <div class="glass-panel rounded-2xl p-8 relative" style="height: 500px;">
+                <!-- CMO in center -->
+                <div class="specialist-circle specialist-general" style="left: 50%; top: 50%; transform: translate(-50%, -50%); width: 100px; height: 100px; font-size: 40px;">
+                    <span>🩺</span>
+                </div>
+                <div class="absolute text-center" style="left: 50%; top: calc(50% + 60px); transform: translateX(-50%);">
+                    <p class="font-semibold">Dr. Vitality</p>
+                    <p class="text-xs text-gray-600">Chief Medical Officer</p>
+                </div>
+
+                <!-- Specialists in circle -->
+                <div class="specialist-circle specialist-cardiology float" style="left: 50%; top: 15%; transform: translateX(-50%);">
+                    <span>❤️</span>
+                </div>
+                <div class="absolute text-center" style="left: 50%; top: calc(15% + 45px); transform: translateX(-50%);">
+                    <p class="text-sm font-medium">Dr. Heart</p>
+                    <p class="text-xs text-gray-600">Cardiology</p>
+                </div>
+
+                <div class="specialist-circle specialist-endocrinology float" style="left: 75%; top: 25%; animation-delay: 0.5s;">
+                    <span>🧬</span>
+                </div>
+                <div class="absolute text-center" style="left: 75%; top: calc(25% + 45px); transform: translateX(-50%);">
+                    <p class="text-sm font-medium">Dr. Hormone</p>
+                    <p class="text-xs text-gray-600">Endocrinology</p>
+                </div>
+
+                <div class="specialist-circle specialist-analytics float" style="left: 85%; top: 50%; animation-delay: 1s;">
+                    <span>📊</span>
+                </div>
+                <div class="absolute text-center" style="left: 85%; top: calc(50% + 45px); transform: translateX(-50%);">
+                    <p class="text-sm font-medium">Dr. Analytics</p>
+                    <p class="text-xs text-gray-600">Data Analysis</p>
+                </div>
+
+                <div class="specialist-circle specialist-preventive float" style="left: 75%; top: 75%; animation-delay: 1.5s;">
+                    <span>🛡️</span>
+                </div>
+                <div class="absolute text-center" style="left: 75%; top: calc(75% + 45px); transform: translateX(-50%);">
+                    <p class="text-sm font-medium">Dr. Prevention</p>
+                    <p class="text-xs text-gray-600">Preventive</p>
+                </div>
+
+                <div class="specialist-circle specialist-laboratory float" style="left: 50%; top: 85%; animation-delay: 2s;">
+                    <span>🧪</span>
+                </div>
+                <div class="absolute text-center" style="left: 50%; top: calc(85% + 45px); transform: translateX(-50%);">
+                    <p class="text-sm font-medium">Dr. Lab</p>
+                    <p class="text-xs text-gray-600">Laboratory</p>
+                </div>
+
+                <div class="specialist-circle specialist-pharmacy float" style="left: 25%; top: 75%; animation-delay: 2.5s;">
+                    <span>💊</span>
+                </div>
+                <div class="absolute text-center" style="left: 25%; top: calc(75% + 45px); transform: translateX(-50%);">
+                    <p class="text-sm font-medium">Dr. Pharma</p>
+                    <p class="text-xs text-gray-600">Pharmacy</p>
+                </div>
+
+                <div class="specialist-circle specialist-nutrition float" style="left: 15%; top: 50%; animation-delay: 3s;">
+                    <span>🥗</span>
+                </div>
+                <div class="absolute text-center" style="left: 15%; top: calc(50% + 45px); transform: translateX(-50%);">
+                    <p class="text-sm font-medium">Dr. Nutrition</p>
+                    <p class="text-xs text-gray-600">Nutrition</p>
+                </div>
+
+                <div class="specialist-circle bg-gray-300 float" style="left: 25%; top: 25%; animation-delay: 3.5s;">
+                    <span>👤</span>
+                </div>
+                <div class="absolute text-center" style="left: 25%; top: calc(25% + 45px); transform: translateX(-50%);">
+                    <p class="text-sm font-medium">Dr. Primary</p>
+                    <p class="text-xs text-gray-600">General Practice</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Example Queries -->
+        <div class="mb-16">
+            <h3 class="text-2xl font-semibold text-center text-gray-900 mb-8">Try These Example Questions</h3>
+            <div class="grid md:grid-cols-3 gap-6">
+                <div class="glass-card rounded-xl p-6 query-card cursor-pointer">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <span class="text-2xl">❤️</span>
+                        </div>
+                        <span class="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">STANDARD</span>
+                    </div>
+                    <h4 class="font-semibold text-gray-900 mb-2">What's my 15-year cholesterol trend?</h4>
+                    <p class="text-sm text-gray-600 mb-4">
+                        Analyze complete cholesterol trends including Total Cholesterol, LDL, HDL, and Triglycerides 
+                        across your health history.
+                    </p>
+                    <div class="text-xs text-gray-500">
+                        <p>✓ Trend analysis over time</p>
+                        <p>✓ Reference range comparisons</p>
+                        <p>✓ Medication correlations</p>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-xl p-6 query-card cursor-pointer">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                            <span class="text-2xl">💊</span>
+                        </div>
+                        <span class="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded">SIMPLE</span>
+                    </div>
+                    <h4 class="font-semibold text-gray-900 mb-2">Review my medications</h4>
+                    <p class="text-sm text-gray-600 mb-4">
+                        Get a comprehensive review of all current medications including interactions, 
+                        adherence patterns, and effectiveness.
+                    </p>
+                    <div class="text-xs text-gray-500">
+                        <p>✓ Drug interaction check</p>
+                        <p>✓ Adherence analysis</p>
+                        <p>✓ Side effect monitoring</p>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-xl p-6 query-card cursor-pointer">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <span class="text-2xl">🧬</span>
+                        </div>
+                        <span class="text-xs font-medium text-purple-600 bg-purple-50 px-2 py-1 rounded">COMPLEX</span>
+                    </div>
+                    <h4 class="font-semibold text-gray-900 mb-2">Comprehensive health assessment</h4>
+                    <p class="text-sm text-gray-600 mb-4">
+                        Full analysis of all health metrics, risk factors, and personalized recommendations 
+                        from your entire medical team.
+                    </p>
+                    <div class="text-xs text-gray-500">
+                        <p>✓ Complete lab analysis</p>
+                        <p>✓ Risk score calculations</p>
+                        <p>✓ Preventive recommendations</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Grid -->
+        <div class="mb-16">
+            <h3 class="text-2xl font-semibold text-center text-gray-900 mb-8">Powered by Advanced AI</h3>
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="glass-panel rounded-xl p-6 text-center">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2">
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        </svg>
+                    </div>
+                    <h4 class="font-semibold text-gray-900 mb-2">Real-time Analysis</h4>
+                    <p class="text-sm text-gray-600">Watch as specialists analyze your health data in parallel</p>
+                </div>
+
+                <div class="glass-panel rounded-xl p-6 text-center">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2">
+                            <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                        </svg>
+                    </div>
+                    <h4 class="font-semibold text-gray-900 mb-2">Health Visualizations</h4>
+                    <p class="text-sm text-gray-600">Interactive charts and trends for all your health metrics</p>
+                </div>
+
+                <div class="glass-panel rounded-xl p-6 text-center">
+                    <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2">
+                            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                        </svg>
+                    </div>
+                    <h4 class="font-semibold text-gray-900 mb-2">Comprehensive History</h4>
+                    <p class="text-sm text-gray-600">Access all your health consultations and insights</p>
+                </div>
+
+                <div class="glass-panel rounded-xl p-6 text-center">
+                    <div class="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2">
+                            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <h4 class="font-semibold text-gray-900 mb-2">Evidence-Based</h4>
+                    <p class="text-sm text-gray-600">Recommendations backed by your actual health data</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Call to Action -->
+        <div class="text-center glass-panel rounded-2xl p-12">
+            <h3 class="text-3xl font-bold text-gray-900 mb-4">Ready to Get Started?</h3>
+            <p class="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+                Your personal medical team is standing by. Ask any health question and receive 
+                comprehensive insights from 8 specialized AI doctors working together for you.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <button class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200">
+                    Start Your Health Analysis
+                </button>
+                <button class="glass-button font-semibold py-3 px-6 rounded-xl">
+                    Learn More About Our Team
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-20 pb-8">
+        <div class="container mx-auto px-6 text-center text-sm text-gray-500">
+            <p>© 2024 Health Insight Assistant. AI-powered health analysis for informational purposes.</p>
+            <p class="mt-2">Always consult with healthcare professionals for medical decisions.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Add interactive animations
+        document.querySelectorAll('.query-card').forEach(card => {
+            card.addEventListener('click', function() {
+                this.style.transform = 'scale(0.98)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                    // In real app, would navigate to main interface
+                    console.log('Navigate to main app with query:', this.querySelector('h4').textContent);
+                }, 150);
+            });
+        });
+
+        // Animate specialist connections on hover
+        document.querySelectorAll('.specialist-circle').forEach(specialist => {
+            specialist.addEventListener('mouseenter', function() {
+                // In real app, would show connection lines to CMO
+                console.log('Show connections for:', this.querySelector('span').textContent);
+            });
+        });
+    </script>
+</body>
+</html>

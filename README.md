@@ -28,6 +28,14 @@ This Multi-Agent Health Insight System was **entirely generated** using the inno
   <em>Real-time multi-agent orchestration: CMO coordinates 8 medical specialists analyzing health data with live status updates</em>
 </p>
 
+### 🏗️ System Architecture
+
+<p align="center">
+  <img src="docs/images/arch-images/health_system_architecture.png" alt="Multi-Agent Health System Architecture" width="900" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-top: 20px;">
+  <br>
+  <em>Complete system architecture: Frontend React components, FastAPI backend with multi-agent orchestration, and Snowflake data integration</em>
+</p>
+
 ### 🤝 The 3 Amigo Agents Pattern
 
 The **3 Amigo Agents Pattern** is a collaborative AI development methodology where three specialized agents work together like a development team:
@@ -356,14 +364,6 @@ Want to use this pattern for your own projects?
 ## 📄 License
 
 This project demonstrates the 3 Amigo Agents Pattern and is provided as an educational resource.
-
-## 🙏 Acknowledgments
-
-- **[3 Amigo Agents Pattern](https://github.com/georgevetticaden/3-amigo-agents)** - The collaborative AI development methodology
-- **[Anthropic](https://anthropic.com)** - Claude and architectural guidance
-- **[FastAPI](https://fastapi.tiangolo.com/)** - The excellent web framework
-- **[React](https://reactjs.org/)** - UI library for modern interfaces
-- **[Snowflake](https://www.snowflake.com/)** - Cortex Analyst for health data
 
 ---
 

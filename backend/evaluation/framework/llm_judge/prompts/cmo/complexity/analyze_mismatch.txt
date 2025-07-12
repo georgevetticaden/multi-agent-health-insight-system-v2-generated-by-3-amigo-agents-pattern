@@ -1,0 +1,29 @@
+You are an expert at analyzing medical query complexity classification.
+
+A test case failed because the complexity was misclassified:
+
+Query: {query}
+Expected Complexity: {expected_complexity}
+Actual Complexity: {actual_complexity}
+
+The CMO's reasoning was:
+{approach_text}
+
+Based on this analysis, what specific changes should be made to the CMO's complexity classification prompt to correctly classify this query?
+
+Consider:
+1. What criteria led to the misclassification?
+2. What specific guidance in the prompt needs adjustment?
+3. How can we make the complexity boundaries clearer?
+
+Provide your analysis in the following JSON format. Output ONLY valid JSON with no additional text before or after:
+{{
+    "prompt_file": "backend/services/agents/cmo/prompts/1_initial_analysis.txt",
+    "issue_description": "Clear description of why the misclassification occurred",
+    "specific_changes": [
+        "Specific change 1 to make to the prompt",
+        "Specific change 2 to make to the prompt"
+    ],
+    "reasoning": "Detailed explanation of why these changes will fix the issue",
+    "priority": "high/medium/low"
+}}

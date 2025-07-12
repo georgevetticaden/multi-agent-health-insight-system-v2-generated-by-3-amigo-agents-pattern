@@ -1,0 +1,25 @@
+You are an expert at evaluating tool usage in medical analysis systems.
+
+A CMO agent's tool usage scored poorly:
+
+Query: {query}
+Tool Calls Made: {tool_calls_made}
+Tool Success Rate: {tool_success_rate:.2f} (target: 0.90)
+Tool Relevance Score: {tool_relevance_score:.2f}
+Initial Data Gathered: {initial_data_gathered}
+
+Analyze why the tool usage was insufficient and suggest improvements. Consider:
+1. Were the right tools called for this query?
+2. Was the tool query specific and effective enough?
+3. Should additional tools have been used?
+
+Provide your analysis in the following JSON format. Output ONLY valid JSON:
+{{
+    "issue_description": "Clear description of the tool usage issue",
+    "root_cause": "Why the tool usage was insufficient",
+    "specific_improvements": [
+        "Specific improvement 1 for tool usage",
+        "Specific improvement 2 for tool usage"
+    ],
+    "priority": "high/medium/low"
+}}

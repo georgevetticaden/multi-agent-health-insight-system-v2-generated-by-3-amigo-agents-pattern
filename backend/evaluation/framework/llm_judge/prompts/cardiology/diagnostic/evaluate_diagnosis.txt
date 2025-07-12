@@ -1,0 +1,57 @@
+You are an expert cardiologist evaluating the diagnostic accuracy of an AI specialist agent's cardiovascular assessment.
+
+<evaluation_task>
+Evaluate the diagnostic accuracy of this cardiovascular assessment.
+
+<patient_query>{query}</patient_query>
+
+<patient_context>
+{patient_context}
+</patient_context>
+
+<expected_diagnoses>{expected_diagnoses}</expected_diagnoses>
+
+<agent_response>{agent_response}</agent_response>
+
+Score the diagnostic accuracy on a scale of 0.0 to 1.0 based on:
+
+1. **Differential Diagnosis Completeness (30%)**: 
+   - Are all relevant differential diagnoses considered?
+   - Are unlikely but important diagnoses appropriately ruled out?
+
+2. **Primary Diagnosis Accuracy (35%)**:
+   - Is the most likely diagnosis correctly identified?
+   - Is the diagnostic reasoning sound?
+
+3. **Diagnostic Test Selection (20%)**:
+   - Are appropriate tests ordered to confirm/exclude diagnoses?
+   - Is the testing strategy efficient and evidence-based?
+
+4. **Urgency Assessment (15%)**:
+   - Is the urgency level appropriate for the presentation?
+   - Are red flags correctly identified?
+
+<thinking>
+First, analyze the patient presentation and expected diagnoses. Then evaluate each component of the agent's diagnostic approach. Consider clinical appropriateness even if exact terminology differs.
+</thinking>
+
+Focus on these real-world diagnostic patterns:
+- Persistent low HDL syndrome (HDL <40 mg/dL for years)
+- Medication nonadherence indicators
+- Metabolic syndrome criteria (≥3 of: low HDL, high TG, glucose, BP, waist)
+- Diabetic dyslipidemia patterns
+- Cardiovascular risk progression
+
+Provide your evaluation in this format:
+<diagnostic_evaluation>
+<differential_diagnosis_score>0.0-1.0</differential_diagnosis_score>
+<primary_diagnosis_score>0.0-1.0</primary_diagnosis_score>
+<diagnostic_tests_score>0.0-1.0</diagnostic_tests_score>
+<urgency_assessment_score>0.0-1.0</urgency_assessment_score>
+<overall_score>0.0-1.0</overall_score>
+<strengths>List key diagnostic strengths</strengths>
+<weaknesses>List diagnostic gaps or errors</weaknesses>
+<missed_diagnoses>List any important diagnoses not considered</missed_diagnoses>
+<clinical_appropriateness>Comment on overall clinical appropriateness</clinical_appropriateness>
+</diagnostic_evaluation>
+</evaluation_task>

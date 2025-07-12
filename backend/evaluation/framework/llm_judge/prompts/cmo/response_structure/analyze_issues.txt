@@ -1,0 +1,23 @@
+You are an expert at evaluating XML response structures.
+
+A CMO agent's response had structural issues:
+
+Query: {query}
+Structure Errors: {structure_errors}
+Response Content: {response_content_sample}
+
+Analyze the structural issues and suggest improvements. Consider:
+1. What XML formatting rules were violated?
+2. How can the response structure be made more consistent?
+3. What prompt adjustments would ensure proper XML formatting?
+
+Provide your analysis in the following JSON format. Output ONLY valid JSON:
+{{
+    "issue_description": "Clear description of the structure issue",
+    "structure_errors": ["List of specific structural errors"],
+    "specific_improvements": [
+        "Specific improvement 1 for response structure",
+        "Specific improvement 2 for response structure"
+    ],
+    "priority": "high/medium/low"
+}}

@@ -1,0 +1,574 @@
+{
+  "evaluation_type": "real-world",
+  "timestamp": "2025-06-28T03:44:25.917826",
+  "results": {
+    "individual_results": [
+      {
+        "test_case_id": "standard_001",
+        "query": "What's my cholesterol trend over my entire data? I want to see trends across the top 4 cholesterol metrics including Triglycerides across that time period",
+        "success": true,
+        "expected_complexity": "STANDARD",
+        "actual_complexity": "standard",
+        "complexity_correct": true,
+        "expected_specialties": "{'cardiology', 'data_analysis', 'endocrinology'}",
+        "actual_specialties": "{'cardiology', 'data_analysis', 'endocrinology'}",
+        "specialty_precision": 1.0,
+        "specialty_recall": 1.0,
+        "specialty_f1": 1.0,
+        "analysis_quality_score": 0.8333333333333335,
+        "quality_breakdown": {
+          "data_gathering": 1.0,
+          "context_awareness": 1.0,
+          "specialist_rationale": 1.0,
+          "comprehensive_approach": 0.3333333333333333,
+          "concern_identification": 1.0
+        },
+        "tool_calls_made": 1,
+        "tool_success_rate": 1.0,
+        "tool_relevance_score": 0.9,
+        "response_valid": true,
+        "structure_errors": [],
+        "total_response_time_ms": 56143.239,
+        "tokens_used": 550,
+        "approach_text": "Detailed medical approach including:\n\n**What specialists are needed and why:**\n- **Primary Care Physician/Internist**: To oversee overall cardiovascular risk assessment and coordinate care\n- **Cardiologist**: Given the significant fluctuations in triglycerides (ranging from 51 to 426 mg/dL) and periods of low HDL cholesterol, cardiovascular specialist input would be valuable for risk stratification\n\n**Key data points to investigate:**\n1. **Time span**: Data covers approximately 11 years (2013-2025)\n2. **Critical trends identified**:\n   - Total Cholesterol: Shows improvement from higher values (187 mg/dL in 2016) to more recent optimal levels (110-149 mg/dL in 2021-2025)\n   - LDL Cholesterol: Generally well-controlled, ranging from 54-122 mg/dL\n   - HDL Cholesterol: Concerning pattern of frequently low values, with multiple readings below 40 mg/dL (flagged as \"OUT OF RANGE\")\n   - Triglycerides: Highly variable with concerning spikes (426 mg/dL in 2013, 390 mg/dL in 2014) and more recent moderate elevation (153 mg/dL in April 2025)\n\n**Potential correlations to explore:**\n- Relationship between triglyceride spikes and HDL suppression\n- Impact of interventions between 2014-2021 that led to improved control\n- Recent trend reversal in 2025 with increasing triglycerides\n\n**Any immediate concerns noted:**\n1. **Historically very high triglycerides** (>400 mg/dL) which pose pancreatitis risk\n2. **Persistently low HDL cholesterol** (frequently <40 mg/dL), which is a significant cardiovascular risk factor\n3. **Recent upward trend** in triglycerides (153 mg/dL in April 2025 vs 53-86 mg/dL in 2022-2023)\n4. **Metabolic syndrome indicators**: The combination of high triglycerides and low HDL suggests possible metabolic dysfunction\n\nThis warrants a comprehensive trend analysis with visual representation to better understand the patterns and guide therapeutic decisions.",
+        "initial_data_gathered": {
+          "execute_health_query_v2_1": {
+            "query": "Show me all cholesterol-related lab results including total cholesterol, LDL, HDL, and triglycerides with their dates and values, ordered by date",
+            "result_count": 162,
+            "has_data": true
+          }
+        },
+        "analysis_time_ms": 31003.858999999997,
+        "specialist_tasks": [
+          {
+            "specialist": "cardiology",
+            "objective": "Analyze complete cholesterol panel trends (Total, LDL, HDL, Triglycerides) from 2013 to present, identifying cardiovascular risk patterns and intervention points",
+            "context": "Patient has 11 years of cholesterol data showing concerning patterns including historically very high triglycerides (>400 mg/dL), persistently low HDL (<40 mg/dL), and recent upward triglyceride trend...",
+            "expected_output": "1) Complete trend analysis with all cholesterol values from 2013-2025, 2) Identification of high-risk periods and cardiovascular risk assessment, 3) Analysis of intervention effectiveness between 2014-2021, 4) Recommendations for addressing recent triglyceride increase",
+            "priority": 1,
+            "max_tool_calls": 5
+          },
+          {
+            "specialist": "data_analysis",
+            "objective": "Create comprehensive visualization and statistical analysis of cholesterol trends from 2013-2025, calculating averages, identifying patterns, and correlating changes",
+            "context": "Patient has 162 cholesterol-related lab results over 11 years. Need to analyze trends for Total Cholesterol, LDL, HDL, and Triglycerides, with special attention to the dramatic improvement period (201...",
+            "expected_output": "1) Trend graphs for all 4 cholesterol metrics from 2013-2025, 2) Statistical analysis including yearly averages and variability, 3) Correlation analysis between triglycerides and HDL levels, 4) Identification of significant trend changes and inflection points",
+            "priority": 2,
+            "max_tool_calls": 5
+          },
+          {
+            "specialist": "endocrinology",
+            "objective": "Evaluate metabolic syndrome indicators and insulin resistance patterns based on triglyceride/HDL ratio trends from 2013-2025",
+            "context": "Patient shows classic metabolic syndrome pattern with high triglycerides (up to 426 mg/dL) and low HDL (frequently <40 mg/dL). The triglyceride/HDL ratio is a marker of insulin resistance. Recent trig...",
+            "expected_output": "1) Calculate triglyceride/HDL ratios for all available data points from 2013-2025, 2) Assessment of insulin resistance risk based on ratios, 3) Correlation with any glucose or HbA1c data, 4) Recommendations for metabolic evaluation",
+            "priority": 3,
+            "max_tool_calls": 5
+          }
+        ],
+        "task_creation_success": true,
+        "task_creation_time_ms": 25137.457000000002,
+        "task_creation_error": null,
+        "task_count": 3,
+        "task_quality_score": 1.0,
+        "task_quality_breakdown": {
+          "task_count_score": 1.0,
+          "task_definition_score": 1.0,
+          "priority_order_score": 1.0,
+          "specialist_coverage_score": 1.0
+        },
+        "error_message": null,
+        "approach_mentioned_specialties": "{'cardiology'}",
+        "key_data_points": [
+          "hdl_cholesterol",
+          "ldl_cholesterol",
+          "total_cholesterol",
+          "triglycerides",
+          "trends",
+          "date_range"
+        ],
+        "real_world_comparison": {
+          "actual_complexity": "STANDARD",
+          "actual_specialists": [
+            "cardiology",
+            "endocrinology",
+            "data_analysis"
+          ],
+          "complexity_match": true,
+          "specialist_match_score": 1.0,
+          "key_findings": "57 HDL, 51 LDL measurements over 12 years"
+        }
+      },
+      {
+        "test_case_id": "standard_002",
+        "query": "Show my abnormal lab results from labs this year?",
+        "success": true,
+        "expected_complexity": "STANDARD",
+        "actual_complexity": "standard",
+        "complexity_correct": true,
+        "expected_specialties": "{'laboratory_medicine', 'preventive_medicine', 'endocrinology'}",
+        "actual_specialties": "{'cardiology', 'laboratory_medicine', 'endocrinology'}",
+        "specialty_precision": 0.9,
+        "specialty_recall": 0.9,
+        "specialty_f1": 0.9,
+        "analysis_quality_score": 0.675,
+        "quality_breakdown": {
+          "data_gathering": 1.0,
+          "context_awareness": 0.5,
+          "specialist_rationale": 1.0,
+          "comprehensive_approach": 0.0,
+          "concern_identification": 1.0
+        },
+        "tool_calls_made": 1,
+        "tool_success_rate": 1.0,
+        "tool_relevance_score": 0.9,
+        "response_valid": true,
+        "structure_errors": [],
+        "total_response_time_ms": 53672.653,
+        "tokens_used": 514,
+        "approach_text": "Detailed medical approach including:\n\n**Specialists Needed:**\n1. **Internal Medicine/Primary Care** - For overall assessment and coordination of care\n2. **Endocrinology** - Due to elevated HbA1c (6.1%) indicating prediabetes or early diabetes\n3. **Nephrology consultation consideration** - Due to elevated Blood Urea Nitrogen (BUN) at 23 mg/dL\n\n**Key Data Points to Investigate:**\n1. **Metabolic Panel Trends:**\n   - Need to examine complete metabolic panel including creatinine, eGFR, and electrolytes\n   - BUN/Creatinine ratio to assess kidney function\n   - Fasting glucose levels to correlate with HbA1c findings\n\n2. **Diabetes Risk Assessment:**\n   - HbA1c of 6.1% is in the prediabetic range (5.7-6.4%)\n   - Need to review any previous HbA1c values for trend analysis\n   - Check for other metabolic syndrome markers (lipid panel, blood pressure)\n\n3. **Kidney Function Evaluation:**\n   - Elevated BUN needs context with creatinine levels\n   - Calculate eGFR if available\n   - Review for proteinuria or other kidney function markers\n\n**Potential Correlations to Explore:**\n- Relationship between elevated BUN and HbA1c (early diabetic nephropathy risk)\n- Hydration status affecting BUN levels\n- Dietary protein intake influence on BUN\n- Medication effects on both kidney function and glucose metabolism\n\n**Immediate Concerns Noted:**\n1. **Prediabetes/Early Diabetes:** HbA1c of 6.1% requires lifestyle intervention and monitoring\n2. **Mild Kidney Function Concern:** BUN elevation needs further evaluation with complete renal panel\n3. **Risk Stratification:** Patient needs cardiovascular risk assessment given metabolic abnormalities\n\n**Next Steps:**\n- Query for complete metabolic panel results\n- Look for any previous HbA1c values for comparison\n- Check for additional cardiovascular risk factors\n- Review medications that might affect these values",
+        "initial_data_gathered": {
+          "execute_health_query_v2_1": {
+            "query": "Show all laboratory test results from 2025 with abnormal values or results outside normal range",
+            "result_count": 3,
+            "has_data": true
+          }
+        },
+        "analysis_time_ms": 27431.045000000002,
+        "specialist_tasks": [
+          {
+            "specialist": "laboratory_medicine",
+            "objective": "Retrieve and analyze all abnormal laboratory test results from 2024-2025, focusing on the identified elevated HbA1c (6.1%) and BUN (23 mg/dL) values, and identify any other out-of-range results",
+            "context": "Initial query found 3 abnormal results in 2025. Need to expand search to include 2024 for trend analysis. Focus on metabolic panel, kidney function tests, glucose-related tests, and any other abnormal...",
+            "expected_output": "Complete list of all abnormal lab results with: test names, numeric values, reference ranges, dates, and clinical significance of deviations",
+            "priority": 1,
+            "max_tool_calls": 5
+          },
+          {
+            "specialist": "endocrinology",
+            "objective": "Assess diabetes risk and metabolic status based on HbA1c of 6.1% and related glucose metabolism markers, determining if this represents new-onset prediabetes or progression of existing condition",
+            "context": "HbA1c of 6.1% indicates prediabetes (range 5.7-6.4%). Need to evaluate glucose trends, previous HbA1c values for comparison, and associated metabolic syndrome markers. Also assess for other endocrine ...",
+            "expected_output": "Diabetes risk assessment with HbA1c trend analysis, fasting glucose correlation, metabolic syndrome evaluation, and recommendations for monitoring frequency",
+            "priority": 2,
+            "max_tool_calls": 5
+          },
+          {
+            "specialist": "cardiology",
+            "objective": "Evaluate cardiovascular risk factors given the presence of prediabetes (HbA1c 6.1%) and mild kidney dysfunction (elevated BUN), including assessment of lipid profile and blood pressure trends",
+            "context": "Prediabetes and kidney dysfunction are significant cardiovascular risk factors. Need comprehensive evaluation of lipid panels, blood pressure trends, and any cardiac-specific markers. The elevated BUN...",
+            "expected_output": "Cardiovascular risk stratification score, lipid profile analysis with targets, blood pressure assessment, and recommendations for cardiac screening if indicated",
+            "priority": 3,
+            "max_tool_calls": 5
+          }
+        ],
+        "task_creation_success": true,
+        "task_creation_time_ms": 24326.362,
+        "task_creation_error": null,
+        "task_count": 3,
+        "task_quality_score": 0.8999999999999999,
+        "task_quality_breakdown": {
+          "task_count_score": 1.0,
+          "task_definition_score": 1.0,
+          "priority_order_score": 1.0,
+          "specialist_coverage_score": 0.6666666666666666
+        },
+        "error_message": null,
+        "approach_mentioned_specialties": "{'endocrinology'}",
+        "key_data_points": [
+          "lab_results",
+          "abnormal_flags",
+          "current_year",
+          "reference_ranges"
+        ],
+        "real_world_comparison": {
+          "actual_complexity": "STANDARD",
+          "actual_specialists": [
+            "endocrinology",
+            "laboratory_medicine",
+            "preventive_medicine"
+          ],
+          "complexity_match": true,
+          "specialist_match_score": 0.7,
+          "key_findings": "Found 4 abnormal values including prediabetes"
+        },
+        "quality_analysis": {
+          "prompt_file": "backend/services/agents/cmo/prompts/1_initial_analysis.txt",
+          "issue_description": "The CMO's analysis focuses heavily on metabolic and kidney issues but fails to provide a comprehensive review of all abnormal lab results from the current year as requested",
+          "root_cause": "The analysis fixated on specific abnormal values (HbA1c and BUN) without systematically addressing all abnormal results or providing a complete temporal analysis for the year",
+          "weak_components": {
+            "comprehensive_approach": "Failed to establish a systematic framework for reviewing all abnormal lab results, missing potential patterns across different lab categories and time periods throughout the year"
+          },
+          "specific_improvements": [
+            "Add instruction in prompt: 'Create a comprehensive timeline of ALL abnormal lab results for the specified time period'",
+            "Add instruction in prompt: 'Categorize abnormal results by laboratory type (hematology, chemistry, immunology, etc.)'",
+            "Modify section in prompt: 'Include trend analysis for each abnormal result if multiple data points exist'",
+            "Add instruction in prompt: 'Compare each abnormal result against reference ranges and indicate degree of abnormality'",
+            "Add instruction in prompt: 'Review normal results that are trending toward abnormal ranges'"
+          ],
+          "expected_impact": "These improvements will ensure a complete review of all abnormal lab results, provide better temporal context, and identify patterns that might be clinically relevant across different laboratory categories",
+          "priority": "high"
+        }
+      },
+      {
+        "test_case_id": "complex_001",
+        "query": "Analyze cholesterol relevant medication adherence patterns over that time period and how do they correlate with these cholesterol lab results.",
+        "success": true,
+        "expected_complexity": "COMPLEX",
+        "actual_complexity": "complex",
+        "complexity_correct": true,
+        "expected_specialties": "{'pharmacy', 'endocrinology', 'cardiology', 'data_analysis', 'laboratory_medicine'}",
+        "actual_specialties": "{'pharmacy', 'endocrinology', 'cardiology', 'data_analysis', 'laboratory_medicine'}",
+        "specialty_precision": 1.0,
+        "specialty_recall": 1.0,
+        "specialty_f1": 1.0,
+        "analysis_quality_score": 0.75,
+        "quality_breakdown": {
+          "data_gathering": 1.0,
+          "context_awareness": 1.0,
+          "specialist_rationale": 1.0,
+          "comprehensive_approach": 0.0,
+          "concern_identification": 1.0
+        },
+        "tool_calls_made": 1,
+        "tool_success_rate": 1.0,
+        "tool_relevance_score": 0.9,
+        "response_valid": true,
+        "structure_errors": [],
+        "total_response_time_ms": 76056.402,
+        "tokens_used": 815,
+        "approach_text": "Detailed medical approach including:\n\n**What specialists are needed and why:**\n1. **Cardiologist/Lipidologist** - Primary specialist needed for comprehensive lipid management analysis, medication optimization, and cardiovascular risk assessment\n2. **Clinical Pharmacist** - To analyze medication adherence patterns, dosing changes, and potential drug interactions\n3. **Endocrinologist** - May be needed given the metabolic nature of dyslipidemia and potential underlying metabolic conditions\n\n**Key data points to investigate:**\n1. **Medication Timeline Analysis:**\n   - Multiple medication changes noted (rosuvastatin doses: 5mg, 10mg, 20mg; ezetimibe 10mg added)\n   - Need to correlate medication changes with lab results\n   - Gaps in medication records suggest potential adherence issues\n\n2. **Lab Result Trends:**\n   - LDL cholesterol: Improved from 122 mg/dL (Sept 2021) to 85 mg/dL (April 2025)\n   - HDL cholesterol: Persistently low (33-47 mg/dL), often below target\n   - Triglycerides: Variable, ranging from 51-426 mg/dL\n   - Recent worsening: April 2025 shows deterioration in lipid profile\n\n3. **Medication Adherence Patterns:**\n   - Gaps between medication prescriptions (e.g., no records between Oct 2024 and April 2024)\n   - Combination therapy started (rosuvastatin + ezetimibe) but timing unclear\n\n**Potential correlations to explore:**\n1. **Statin intensity changes vs. LDL response**\n2. **Addition of ezetimibe timing vs. lipid improvements**\n3. **Medication gaps vs. lipid profile deterioration**\n4. **Seasonal or temporal patterns in adherence**\n5. **Provider changes and their impact on medication continuity**\n\n**Immediate concerns noted:**\n1. **Recent lipid profile deterioration** (April 2025): \n   - LDL increased to 85 mg/dL\n   - HDL decreased to 33 mg/dL (below normal)\n   - Triglycerides elevated to 153 mg/dL\n\n2. **Medication adherence gaps** suggesting potential non-compliance\n\n3. **Persistently low HDL** throughout the monitoring period\n\n4. **Historical very high triglycerides** (up to 426 mg/dL) indicating possible metabolic syndrome or genetic lipid disorder\n\nThis requires a comprehensive analysis of medication adherence patterns, temporal correlations with lab results, and assessment of treatment effectiveness over the 10+ year period of available data.",
+        "initial_data_gathered": {
+          "execute_health_query_v2_1": {
+            "query": "Show me all cholesterol-related medications and cholesterol lab test results with dates, including total cholesterol, LDL, HDL, and triglycerides values over time",
+            "result_count": 206,
+            "has_data": true
+          }
+        },
+        "analysis_time_ms": 35199.958,
+        "specialist_tasks": [
+          {
+            "specialist": "pharmacy",
+            "objective": "Analyze medication adherence patterns for cholesterol medications (statins and ezetimibe) from 2013 to present, identifying prescription gaps, dose changes, and potential non-adherence periods",
+            "context": "Initial data shows multiple rosuvastatin dose changes (5mg, 10mg, 20mg) and addition of ezetimibe 10mg. Notable gaps in medication records between Oct 2024 and April 2024. Need to map complete medicat...",
+            "expected_output": "1) Complete medication timeline with start/stop dates, 2) Adherence percentage calculations for each period, 3) Identification of all prescription gaps >30 days, 4) Documentation of all dose changes with dates, 5) Analysis of medication combination therapy timing",
+            "priority": 1,
+            "max_tool_calls": 5
+          },
+          {
+            "specialist": "laboratory_medicine",
+            "objective": "Extract and analyze all cholesterol lab results (Total, LDL, HDL, Triglycerides) from 2013 to present, establishing baseline values, trends, and variability patterns",
+            "context": "Lab data shows LDL improvement from 122 mg/dL (Sept 2021) to 85 mg/dL (April 2025), persistently low HDL (33-47 mg/dL), and highly variable triglycerides (51-426 mg/dL). Recent April 2025 results show...",
+            "expected_output": "1) Complete chronological listing of all lipid panel results with dates, 2) Calculated percentage changes between consecutive tests, 3) Identification of out-of-range values with clinical significance, 4) Statistical analysis of variability for each lipid component, 5) Flagging of concerning trends or sudden changes",
+            "priority": 1,
+            "max_tool_calls": 5
+          },
+          {
+            "specialist": "data_analysis",
+            "objective": "Perform statistical correlation analysis between medication changes/adherence patterns and cholesterol lab result changes over the entire data period",
+            "context": "Need to correlate medication timeline (dose changes, gaps, combination therapy) with lab result trends. Focus on temporal relationships between medication modifications and subsequent lab values, typi...",
+            "expected_output": "1) Correlation coefficients between medication adherence and lipid values, 2) Timeline visualization showing medication changes overlaid with lab results, 3) Statistical significance of LDL response to dose changes, 4) Analysis of lab result changes following medication gaps, 5) Identification of best and worst response periods",
+            "priority": 2,
+            "max_tool_calls": 5
+          },
+          {
+            "specialist": "cardiology",
+            "objective": "Assess cardiovascular risk implications of lipid patterns and medication response, identifying periods of inadequate control and treatment optimization opportunities",
+            "context": "Patient shows persistently low HDL (<40 mg/dL), history of very high triglycerides (up to 426 mg/dL), and recent lipid profile deterioration despite combination therapy. LDL goal achievement needs eva...",
+            "expected_output": "1) Cardiovascular risk assessment based on lipid profiles over time, 2) Identification of periods meeting/not meeting treatment goals, 3) Analysis of HDL dysfunction and triglyceride patterns suggesting metabolic syndrome, 4) Recommendations for treatment intensification periods, 5) Assessment of statin response adequacy",
+            "priority": 2,
+            "max_tool_calls": 5
+          },
+          {
+            "specialist": "endocrinology",
+            "objective": "Investigate metabolic factors affecting lipid control, including diabetes markers, thyroid function, and metabolic syndrome components",
+            "context": "Very high triglycerides (426 mg/dL) and persistently low HDL suggest possible metabolic syndrome or secondary causes of dyslipidemia. Need to evaluate for diabetes, insulin resistance, or thyroid dysf...",
+            "expected_output": "1) Complete metabolic profile assessment with HbA1c and glucose trends, 2) Thyroid function correlation with lipid changes, 3) Metabolic syndrome criteria evaluation over time, 4) Identification of secondary dyslipidemia causes, 5) Impact of glycemic control on lipid parameters",
+            "priority": 3,
+            "max_tool_calls": 5
+          }
+        ],
+        "task_creation_success": true,
+        "task_creation_time_ms": 40855.446,
+        "task_creation_error": null,
+        "task_count": 5,
+        "task_quality_score": 0.8999999999999999,
+        "task_quality_breakdown": {
+          "task_count_score": 1.0,
+          "task_definition_score": 1.0,
+          "priority_order_score": 0.5,
+          "specialist_coverage_score": 1.0
+        },
+        "error_message": null,
+        "approach_mentioned_specialties": "{'cardiology', 'pharmacy', 'endocrinology'}",
+        "key_data_points": [
+          "statin_history",
+          "medication_switches",
+          "ldl_correlation",
+          "hdl_patterns",
+          "triglyceride_response",
+          "adherence_gaps"
+        ],
+        "real_world_comparison": {
+          "actual_complexity": "COMPLEX",
+          "actual_specialists": [
+            "pharmacy",
+            "cardiology",
+            "laboratory_medicine",
+            "endocrinology",
+            "data_analysis"
+          ],
+          "complexity_match": true,
+          "specialist_match_score": 1.0,
+          "key_findings": "Multiple statin switches, ezetimibe addition"
+        },
+        "quality_analysis": {
+          "prompt_file": "backend/services/agents/cmo/prompts/1_initial_analysis.txt",
+          "issue_description": "The CMO's analysis lacks comprehensive integration of multiple factors affecting cholesterol management and fails to address several expected key data points",
+          "root_cause": "The analysis focuses primarily on direct medication-lab correlations without considering broader patient context and lifestyle factors that influence cholesterol management",
+          "weak_components": {
+            "comprehensive_approach": "Missing analysis of lifestyle factors, comorbidities, diet, exercise patterns, and their impact on medication effectiveness and adherence. Also lacking discussion of social determinants of health that might affect adherence."
+          },
+          "specific_improvements": [
+            "Add instruction in prompt: 'Include analysis of lifestyle factors (diet, exercise, weight changes) and their correlation with medication adherence and lab results'",
+            "Add instruction in prompt: 'Evaluate impact of comorbidities and concurrent medications on cholesterol management'",
+            "Add instruction in prompt: 'Assess social determinants of health affecting medication adherence (cost, access, education, support system)'",
+            "Add instruction in prompt: 'Consider cardiovascular risk factors and overall treatment goals in context of medication adherence'",
+            "Modify section in prompt: 'Expand data correlation requirements to include BMI trends, blood pressure patterns, and diabetes markers if present'"
+          ],
+          "expected_impact": "Enhanced analysis will provide a more complete picture of factors affecting medication adherence and treatment effectiveness, leading to more actionable insights for improving patient outcomes",
+          "priority": "high"
+        }
+      },
+      {
+        "test_case_id": "complex_002",
+        "query": "How has my HbA1c level changed since I started taking metformin, has my dosage been adjusted over time based on my lab results, and is there a correlation between these changes and my weight measurements during the same period?",
+        "success": true,
+        "expected_complexity": "COMPLEX",
+        "actual_complexity": "complex",
+        "complexity_correct": true,
+        "expected_specialties": "{'pharmacy', 'endocrinology', 'nutrition'}",
+        "actual_specialties": "{'nutrition', 'pharmacy', 'endocrinology', 'data_analysis', 'laboratory_medicine'}",
+        "specialty_precision": 0.9,
+        "specialty_recall": 0.9,
+        "specialty_f1": 0.9,
+        "analysis_quality_score": 0.75,
+        "quality_breakdown": {
+          "data_gathering": 1.0,
+          "context_awareness": 1.0,
+          "specialist_rationale": 1.0,
+          "comprehensive_approach": 0.0,
+          "concern_identification": 1.0
+        },
+        "tool_calls_made": 1,
+        "tool_success_rate": 1.0,
+        "tool_relevance_score": 0.9,
+        "response_valid": true,
+        "structure_errors": [],
+        "total_response_time_ms": 70118.675,
+        "tokens_used": 783,
+        "approach_text": "Detailed medical approach including:\n\n**What specialists are needed and why:**\n1. **Endocrinologist** - Primary specialist needed to analyze HbA1c trends, diabetes management effectiveness, and medication adjustments\n2. **Primary Care Physician** - To evaluate overall metabolic health and weight management in context of diabetes treatment\n3. **Clinical Pharmacist** - To assess metformin dosing strategy and potential for optimization based on glycemic control\n\n**Key data points to investigate:**\n1. **HbA1c trajectory**: Limited data shows only 4 HbA1c values (5.7% to 6.1%) over 5+ years, which is insufficient for proper trend analysis\n2. **Metformin dosing consistency**: Patient has been on consistent 500 MG dose throughout the entire treatment period (2021-2025) with no adjustments\n3. **Weight fluctuation patterns**: Significant weight changes observed - from ~235 lbs (2013-2014) down to ~192-205 lbs (2022-2024), then recent increase to 226.62 lbs (April 2025)\n4. **Timeline gaps**: Need to identify when metformin was actually initiated (first record shows September 2021)\n\n**Potential correlations to explore:**\n1. **Weight-HbA1c relationship**: Initial weight loss appears to correlate with good glycemic control (HbA1c 5.7-5.9%), but recent weight gain (226.62 lbs) may relate to slight HbA1c increase (6.1%)\n2. **Medication adherence impact**: Consistent metformin records suggest good adherence, but need to verify frequency/timing\n3. **Time-based patterns**: Need more frequent HbA1c monitoring to establish clear cause-effect relationships\n\n**Immediate concerns noted:**\n1. **Insufficient HbA1c monitoring**: Only 4 values over 5 years is below standard diabetes care (should be 2-4 times yearly)\n2. **Recent weight gain**: 26.66 lb increase from early 2024 to April 2025 requires investigation\n3. **No dose adjustments**: Despite weight changes and time on therapy, metformin dose remained static at 500 MG\n4. **Missing baseline data**: No HbA1c values from before metformin initiation to establish true treatment effect\n\nThis analysis requires comprehensive investigation including gathering additional historical data, evaluating monitoring frequency, and assessing the need for treatment optimization.",
+        "initial_data_gathered": {
+          "execute_health_query_v2_1": {
+            "query": "Show me the patient's HbA1c lab results, metformin medication records including dosages and start date, and weight measurements over time. Include dates for all records.",
+            "result_count": 81,
+            "has_data": true
+          }
+        },
+        "analysis_time_ms": 33669.159,
+        "specialist_tasks": [
+          {
+            "specialist": "endocrinology",
+            "objective": "Analyze HbA1c progression from baseline through current levels, correlate with metformin initiation date, and evaluate glycemic control effectiveness",
+            "context": "Patient has limited HbA1c data (5.7% to 6.1%) over 5+ years. Need to identify when metformin started (first record September 2021) and establish baseline pre-medication HbA1c. Recent increase to 6.1% ...",
+            "expected_output": "1) Complete HbA1c timeline with all available values and dates, 2) Identification of pre-metformin baseline if available, 3) Assessment of glycemic control trend, 4) Recommendations for monitoring frequency",
+            "priority": 1,
+            "max_tool_calls": 5
+          },
+          {
+            "specialist": "pharmacy",
+            "objective": "Evaluate metformin dosing history, identify any dose adjustments, assess medication adherence patterns, and determine if current 500mg dose is optimal",
+            "context": "Patient has been on consistent metformin 500mg since at least September 2021 with no documented adjustments despite weight changes and time on therapy. Need to verify actual start date and any dosing ...",
+            "expected_output": "1) Complete metformin prescription history with start date, 2) Documentation of any dose changes or formulation switches, 3) Adherence assessment based on refill patterns, 4) Recommendation for dose optimization based on current HbA1c and weight",
+            "priority": 2,
+            "max_tool_calls": 5
+          },
+          {
+            "specialist": "nutrition",
+            "objective": "Analyze weight trajectory from 2013 to present, identify patterns of weight loss and recent gain, correlate with HbA1c changes",
+            "context": "Significant weight changes observed: ~235 lbs (2013-2014) down to ~192-205 lbs (2022-2024), then recent increase to 226.62 lbs (April 2025). This 26.66 lb gain coincides with HbA1c increase to 6.1%.\n\n...",
+            "expected_output": "1) Complete weight history timeline with all measurements, 2) Identification of weight loss/gain periods, 3) BMI calculations and trends, 4) Correlation analysis between weight changes and glycemic control",
+            "priority": 3,
+            "max_tool_calls": 5
+          },
+          {
+            "specialist": "laboratory_medicine",
+            "objective": "Compile comprehensive metabolic panel results to assess overall diabetes control and identify any complications or comorbidities",
+            "context": "Limited HbA1c monitoring (only 4 values over 5 years) suggests possible gaps in diabetes surveillance. Need to check for other metabolic markers and diabetes complications screening.\n\nSuggested querie...",
+            "expected_output": "1) Complete metabolic panel history including kidney function, liver enzymes, 2) Lipid panel trends, 3) Microalbumin/creatinine ratios if available, 4) Assessment of monitoring completeness and gaps",
+            "priority": 4,
+            "max_tool_calls": 5
+          },
+          {
+            "specialist": "data_analysis",
+            "objective": "Perform statistical correlation analysis between HbA1c trends, weight changes, and metformin therapy timeline to identify significant relationships",
+            "context": "Need to establish clear timeline relationships between metformin initiation, weight changes (40+ lb loss then 26 lb gain), and HbA1c progression (5.7% to 6.1%). Current data appears sparse for proper ...",
+            "expected_output": "1) Statistical correlation coefficients between weight and HbA1c, 2) Timeline visualization of all three variables, 3) Identification of data gaps and recommendations for monitoring frequency, 4) Predictive analysis for future HbA1c based on current trends",
+            "priority": 5,
+            "max_tool_calls": 5
+          }
+        ],
+        "task_creation_success": true,
+        "task_creation_time_ms": 34881.498,
+        "task_creation_error": null,
+        "task_count": 5,
+        "task_quality_score": 1.0,
+        "task_quality_breakdown": {
+          "task_count_score": 1.0,
+          "task_definition_score": 1.0,
+          "priority_order_score": 1.0,
+          "specialist_coverage_score": 1.0
+        },
+        "error_message": null,
+        "approach_mentioned_specialties": "{'pharmacy', 'endocrinology'}",
+        "key_data_points": [
+          "hba1c_trend",
+          "metformin_initiation",
+          "dose_adjustments",
+          "weight_correlation",
+          "glycemic_control",
+          "temporal_analysis"
+        ],
+        "real_world_comparison": {
+          "actual_complexity": "COMPLEX",
+          "actual_specialists": [
+            "endocrinology",
+            "pharmacy",
+            "nutrition"
+          ],
+          "complexity_match": true,
+          "specialist_match_score": 0.6,
+          "key_findings": "Suboptimal metformin dose, weight gain correlation"
+        },
+        "quality_analysis": {
+          "prompt_file": "backend/services/agents/cmo/prompts/1_initial_analysis.txt",
+          "issue_description": "The analysis lacks comprehensive evaluation of several critical aspects of diabetes management and fails to address important clinical correlations beyond basic metrics",
+          "root_cause": "The CMO's analysis focused primarily on direct data points but missed analyzing broader clinical implications, treatment guidelines compliance, and metabolic health indicators",
+          "weak_components": {
+            "comprehensive_approach": "Failed to address lifestyle factors, medication side effects, kidney function monitoring, cardiovascular risk assessment, and dietary/exercise impacts on treatment efficacy"
+          },
+          "specific_improvements": [
+            "Add instruction in prompt: 'Evaluate broader metabolic health indicators including lipid profiles, blood pressure trends, and kidney function in relation to metformin therapy'",
+            "Add instruction in prompt: 'Assess lifestyle modifications, diet patterns, and physical activity levels that could impact treatment effectiveness'",
+            "Add instruction in prompt: 'Review cardiovascular risk factors and their relationship to diabetes management'",
+            "Modify section in prompt: 'Include analysis of potential medication side effects, tolerability, and impact on patient adherence'",
+            "Add instruction in prompt: 'Compare current treatment approach against latest diabetes management guidelines and standards of care'"
+          ],
+          "expected_impact": "Enhanced analysis will provide a more holistic view of diabetes management, considering multiple health domains and treatment factors that influence glycemic control and overall patient outcomes",
+          "priority": "high"
+        }
+      }
+    ],
+    "aggregated_metrics": {
+      "total_test_cases": 4,
+      "successful_evaluations": 4,
+      "failed_evaluations": 0,
+      "complexity_accuracy": 1.0,
+      "avg_analysis_time_ms": 31826.00525,
+      "task_creation_success_rate": 1.0,
+      "avg_task_creation_time_ms": 31300.19075,
+      "avg_task_count": 4.0,
+      "avg_task_quality": 0.95,
+      "specialty_avg_precision": 0.95,
+      "specialty_avg_recall": 0.95,
+      "specialty_avg_f1": 0.95,
+      "avg_analysis_quality": 0.7520833333333334,
+      "avg_tool_success_rate": 1.0,
+      "avg_tool_relevance": 0.9,
+      "response_validity_rate": 1.0,
+      "avg_total_response_time_ms": 63997.742249999996,
+      "avg_tokens_used": 665.5,
+      "by_complexity": {
+        "STANDARD": {
+          "count": 2,
+          "accuracy": 1.0,
+          "specialty_f1": 0.95,
+          "quality_score": 0.7541666666666668,
+          "task_quality": 0.95,
+          "avg_task_count": 3.0,
+          "avg_response_time_ms": 54907.945999999996
+        },
+        "COMPLEX": {
+          "count": 2,
+          "accuracy": 1.0,
+          "specialty_f1": 0.95,
+          "quality_score": 0.75,
+          "task_quality": 0.95,
+          "avg_task_count": 5.0,
+          "avg_response_time_ms": 73087.5385
+        }
+      }
+    },
+    "evaluation_summary": {
+      "overall_result": "FAIL",
+      "dimension_results": {
+        "complexity_classification": {
+          "score": 1.0,
+          "target": 0.9,
+          "passed": true,
+          "weight": 1.0
+        },
+        "specialty_selection": {
+          "score": 0.95,
+          "target": 0.85,
+          "passed": true,
+          "weight": 1.0
+        },
+        "analysis_quality": {
+          "score": 0.7520833333333334,
+          "target": 0.8,
+          "passed": false,
+          "weight": 1.0
+        },
+        "tool_usage": {
+          "score": 1.0,
+          "target": 0.9,
+          "passed": true,
+          "weight": 1.0
+        },
+        "response_structure": {
+          "score": 1.0,
+          "target": 0.95,
+          "passed": true,
+          "weight": 1.0
+        }
+      },
+      "overall_score": 0.9404166666666667,
+      "overall_target": 0.8799999999999999,
+      "failed_dimensions": [
+        "analysis_quality"
+      ],
+      "recommendations": [
+        "Enhance analysis prompts to ensure comprehensive coverage of key aspects"
+      ]
+    },
+    "real_world_summary": {
+      "total_comparisons": 4,
+      "complexity_accuracy": 1.0,
+      "avg_specialist_match": 0.8250000000000001,
+      "perfect_matches": 2
+    },
+    "llm_judge_analysis": {
+      "failure_patterns": [],
+      "prompt_improvements": [],
+      "recommendations": [
+        {
+          "id": 3,
+          "priority": "MEDIUM",
+          "title": "Improve Complexity Classification Examples",
+          "description": "Add 5 more examples distinguishing STANDARD vs COMPLEX",
+          "expected_improvement": "+8% classification accuracy"
+        }
+      ]
+    }
+  },
+  "llm_judge_integrated": true
+}

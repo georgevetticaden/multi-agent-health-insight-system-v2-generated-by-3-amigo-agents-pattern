@@ -1,0 +1,17 @@
+Based on your initial data gathering and complexity assessment of {{COMPLEXITY}}, define the analytical approach for this health query.
+
+You've already determined this is a {{COMPLEXITY}} query. Now focus on HOW to analyze it.
+
+Format your response using XML tags as follows:
+
+<approach>
+Describe your recommended analytical approach including:
+- What specific data points need investigation
+- Any correlations to explore  
+- Key health concerns to address
+- Timeframes to consider
+- Areas of focus for the analysis
+- Priority of different aspects
+</approach>
+
+Be concise but thorough in your approach description. This will guide the specialist team's investigation.

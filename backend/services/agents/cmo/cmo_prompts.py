@@ -18,13 +18,13 @@ class CMOPrompts:
     
     def get_initial_analysis_prompt(self, query: str) -> str:
         """Get prompt for initial query analysis with tool usage"""
-        return self.prompts["1_initial_analysis"].replace(
+        return self.prompts["1_gather_data_assess_complexity"].replace(
             "{{CURRENT_DATE}}", datetime.now().strftime("%Y-%m-%d")
         ).replace("{{QUERY}}", query)
     
     def get_analysis_summary_prompt(self) -> str:
         """Get prompt for summarizing initial analysis"""
-        return self.prompts["2_initial_analysis_summarize"]
+        return self.prompts["2_define_analytical_approach"]
     
     def get_task_creation_prompt(
         self, 
@@ -36,7 +36,7 @@ class CMOPrompts:
         tool_limit: int = 5
     ) -> str:
         """Get prompt for creating specialist tasks"""
-        return self.prompts["3_task_creation"].replace(
+        return self.prompts["3_assign_specialist_tasks"].replace(
             "{{QUERY}}", query
         ).replace(
             "{{COMPLEXITY}}", complexity

@@ -11,10 +11,15 @@ IMPORTANT INSTRUCTIONS:
 3. Focus on getting a broad overview rather than specific details
 4. Consider temporal aspects - if the query mentions timeframes, ensure your tool query respects those
 
-After gathering initial data, assess the complexity of this query:
+After gathering initial data, provide your assessment:
 - SIMPLE: Basic lookups, single values, straightforward questions
 - STANDARD: Trend analysis, 2-3 related metrics, moderate complexity
 - COMPLEX: Multi-system analysis, correlations, deeper investigation needed
 - COMPREHENSIVE: Full health assessment, multiple domains, extensive analysis required
 
-Execute your initial data gathering now.
+Execute your initial data gathering now. After using the tool, provide your initial assessment with:
+
+<initial_assessment>
+<complexity>[SIMPLE/STANDARD/COMPLEX/COMPREHENSIVE]</complexity>
+<key_findings>Brief summary of what data is available and initial observations</key_findings>
+</initial_assessment>

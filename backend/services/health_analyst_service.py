@@ -16,7 +16,6 @@ from services.agents import (
     SpecialistTask,
     SpecialistResult
 )
-from services.agents.cmo.cmo_agent_simple import CMOAgentSimple
 from tools.tool_registry import ToolRegistry
 from utils.anthropic_client import AnthropicStreamingClient
 
@@ -69,13 +68,14 @@ class HealthAnalystService:
         self.max_tokens_task_planning = int(os.getenv("MAX_TOKENS_TASK_PLANNING", "6000"))
         self.max_tokens_specialist = int(os.getenv("MAX_TOKENS_SPECIALIST", "4000"))
         
-        # Initialize agents - use simplified CMO to avoid tool issues
-        self.cmo_agent = CMOAgentSimple(
+        # Initialize CMO agent with tool calling capabilities
+        self.cmo_agent = CMOAgent(
             anthropic_client=self.anthropic_client,
             tool_registry=self.tool_registry,
             model=self.cmo_model,
             max_tokens_analysis=self.max_tokens_cmo_analysis,
-            max_tokens_planning=self.max_tokens_task_planning
+            max_tokens_planning=self.max_tokens_task_planning,
+            max_tokens_synthesis=self.max_tokens_synthesis
         )
         
         self.specialist_agent = SpecialistAgent(
@@ -132,7 +132,7 @@ class HealthAnalystService:
             }
             
             try:
-                complexity, approach, initial_data = await self.cmo_agent.analyze_query_simple(query)
+                complexity, approach, initial_data = await self.cmo_agent.analyze_query_with_tools(query)
                 logger.info(f"CMO Analysis Complete - Complexity: {complexity.value}, Approach: {approach[:50]}...")
                 
                 # Success message
@@ -167,7 +167,7 @@ class HealthAnalystService:
             }
             
             # Create specialist tasks
-            tasks = await self.cmo_agent.create_specialist_tasks(query, complexity, approach, initial_data)
+            tasks = self.cmo_agent.create_specialist_tasks(query, complexity, approach, initial_data)
             
             # Step 3: Announce team assembly with specialist list
             specialist_intro = f"""👥 **Medical Team Assembled**
@@ -330,29 +330,10 @@ Your consultation will include:"""
         
         specialist_findings = "\n".join(findings_text)
         
-        # Create synthesis prompt
-        synthesis_prompt = f"""As the Chief Medical Officer, provide a comprehensive response to the patient's question.
-
-Original Question: {query}
-
-Specialist Findings:
-{specialist_findings}
-
-Provide a direct, comprehensive answer that:
-1. Directly addresses the patient's specific question
-2. Integrates all specialist insights
-3. Highlights key findings and patterns
-4. Provides clear recommendations
-5. Flags any concerns requiring attention
-
-Use clear, patient-friendly language while maintaining medical accuracy."""
-        
-        # Stream the synthesis
-        response = self.streaming_client.create_message_with_retry(
-            model=self.cmo_model,
-            messages=[{"role": "user", "content": synthesis_prompt}],
-            max_tokens=self.max_tokens_synthesis,
-            temperature=0.3,
+        # Use CMO agent's synthesis method
+        response = await self.cmo_agent.synthesize_findings(
+            query=query,
+            specialist_findings=specialist_findings,
             stream=True
         )
         
@@ -458,3 +439,4 @@ Use clear, patient-friendly language while maintaining medical accuracy."""
                 "type": "error", 
                 "content": "Unable to generate visualization at this time."
             }
+    

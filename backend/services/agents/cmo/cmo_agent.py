@@ -22,6 +22,7 @@ class CMOAgent:
         model: Optional[str] = None,
         max_tokens_analysis: int = 4000,
         max_tokens_planning: int = 6000,
+        max_tokens_synthesis: int = 16384,
         default_max_tool_calls: int = 5
     ):
         self.client = anthropic_client or Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
@@ -29,6 +30,7 @@ class CMOAgent:
         self.model = model or os.getenv("CMO_MODEL", "claude-3-5-sonnet-20241022")
         self.max_tokens_analysis = max_tokens_analysis
         self.max_tokens_planning = max_tokens_planning
+        self.max_tokens_synthesis = max_tokens_synthesis
         self.default_max_tool_calls = default_max_tool_calls
         self.prompts = CMOPrompts()
         self.streaming_client = AnthropicStreamingClient(self.client)
@@ -182,17 +184,40 @@ class CMOAgent:
             })
             
             logger.info(f"Added tool results to conversation. Total messages: {len(messages)}")
+            
+            # Get the final response with initial assessment
+            assessment_response = self.streaming_client.create_message_with_retry(
+                model=self.model,
+                messages=messages,
+                max_tokens=1000,
+                temperature=0.0
+            )
+            
+            # Extract complexity from initial assessment
+            assessment_text = assessment_response.content[0].text
+            complexity = self._extract_complexity(assessment_text)
+            initial_data = self._extract_key_findings(assessment_text)
+            
+            # Add the assessment to messages
+            messages.append({
+                "role": "assistant",
+                "content": assessment_text
+            })
         else:
             # No tool calls, just add the assistant response
             messages.append({
                 "role": "assistant",
                 "content": response.content[0].text if response.content else ""
             })
+            # Extract complexity from the response
+            complexity = self._extract_complexity(response.content[0].text)
+            initial_data = self._extract_key_findings(response.content[0].text)
         
-        # Now ask for the analysis summary
+        # Now ask for the analysis summary with the complexity already determined
+        summary_prompt = self.prompts.get_analysis_summary_prompt().replace("{{COMPLEXITY}}", complexity.value)
         messages.append({
             "role": "user",
-            "content": self.prompts.get_analysis_summary_prompt()
+            "content": summary_prompt
         })
         
         summary_response = self.streaming_client.create_message_with_retry(
@@ -202,10 +227,8 @@ class CMOAgent:
             temperature=0.0
         )
         
-        # Parse complexity and approach from response
+        # Parse approach from response (complexity already extracted from step 1)
         response_text = summary_response.content[0].text
-        
-        complexity = self._extract_complexity(response_text)
         approach = self._extract_approach(response_text)
         
         logger.info(f"Query analysis complete - Complexity: {complexity.value}, Tool calls: {initial_data['tool_calls_made']}")
@@ -286,6 +309,19 @@ class CMOAgent:
         if match:
             return match.group(1).strip()
         return "Standard medical analysis approach"
+    
+    def _extract_key_findings(self, text: str) -> Dict[str, Any]:
+        """Extract key findings from initial assessment"""
+        match = re.search(r'<key_findings>(.*?)</key_findings>', text, re.IGNORECASE | re.DOTALL)
+        key_findings = match.group(1).strip() if match else ""
+        
+        # Also extract tool call information
+        tool_calls_made = 1 if "execute_health_query" in text else 0
+        
+        return {
+            "summary": key_findings,
+            "tool_calls_made": tool_calls_made
+        }
     
     def _parse_tasks_from_xml(self, xml_text: str, complexity: QueryComplexity) -> List[SpecialistTask]:
         """Parse specialist tasks from XML response"""
@@ -388,3 +424,46 @@ class CMOAgent:
             QueryComplexity.COMPREHENSIVE: 8
         }
         return counts.get(complexity, 3)
+    
+    async def synthesize_findings(
+        self, 
+        query: str, 
+        specialist_findings: str,
+        stream: bool = False
+    ) -> Any:
+        """
+        Synthesize specialist findings into a comprehensive response
+        
+        Args:
+            query: Original patient query
+            specialist_findings: Formatted findings from all specialists
+            stream: Whether to stream the response
+            
+        Returns:
+            Either a complete synthesis string or a streaming response
+        """
+        # Get synthesis prompt
+        synthesis_prompt = self.prompts.get_synthesis_prompt(query, specialist_findings)
+        
+        # Create message
+        messages = [{"role": "user", "content": synthesis_prompt}]
+        
+        if stream:
+            # Return streaming response for the orchestrator to handle
+            return self.streaming_client.create_message_with_retry(
+                model=self.model,
+                messages=messages,
+                max_tokens=self.max_tokens_synthesis,
+                temperature=0.3,
+                stream=True
+            )
+        else:
+            # Return complete synthesis
+            response = self.streaming_client.create_message_with_retry(
+                model=self.model,
+                messages=messages,
+                max_tokens=self.max_tokens_synthesis,
+                temperature=0.3,
+                stream=False
+            )
+            return response.content[0].text

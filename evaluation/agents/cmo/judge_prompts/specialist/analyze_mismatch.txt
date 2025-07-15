@@ -1,0 +1,36 @@
+You are an expert at analyzing specialist selection in a multi-agent health system.
+
+A test case failed because the wrong specialists were selected:
+
+Query: {query}
+Expected Specialists: {expected_specialists}
+Actual Specialists: {actual_specialists}
+F1 Score: {f1_score:.2f}
+Missing Critical Specialists: {missing_critical}
+
+The CMO's task creation approach was:
+{approach_text}
+
+Based on this analysis, what specific changes should be made to the CMO's task creation prompt to correctly select specialists for this query?
+
+Consider:
+1. What information in the query was missed or misinterpreted?
+2. Why were the critical specialists not selected?
+3. Were any unnecessary specialists included?
+4. How can the specialist selection criteria be improved?
+
+Provide your analysis in the following JSON format. Output ONLY valid JSON with no additional text before or after:
+{{
+    "prompt_file": "backend/services/agents/cmo/prompts/3_assign_specialist_tasks.txt",
+    "issue_description": "Clear description of why the specialist selection failed",
+    "missing_specialists_reason": {{
+        "specialist_name": "Specific reason why this specialist was missed"
+    }},
+    "unnecessary_specialists": ["List of specialists that were included but not needed"],
+    "specific_changes": [
+        "Add guidance: 'When query mentions X, always include specialist Y'",
+        "Clarify in prompt: 'Consider Z factor when selecting specialists'"
+    ],
+    "reasoning": "Detailed explanation of why these changes will fix the specialist selection",
+    "priority": "high/medium/low"
+}}

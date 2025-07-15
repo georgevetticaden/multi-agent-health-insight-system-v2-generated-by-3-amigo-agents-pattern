@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CMO Agent Evaluation Report</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(to bottom right, #0f172a, #1e3a8a, #581c87);
+      min-height: 100vh;
+      color: #e5e7eb;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .container {
+      padding: 32px;
+    }
+    h1, h2, h3, h4 {
+      color: white;
+      margin: 0 0 16px 0;
+    }
+    a {
+      color: #60a5fa;
+      text-decoration: none;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      color: #e5e7eb;
+    }
+    th {
+      text-align: left;
+      padding: 12px;
+    }
+    td {
+      padding: 12px;
+    }
+    
+    /* Collapsible sections */
+    .collapsible {
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.3s ease;
+    }
+    .collapsible:hover {
+      background: rgba(255,255,255,0.08);
+    }
+    .collapsible-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+    }
+    .collapsible-arrow {
+      transition: transform 0.3s ease;
+      font-size: 1.2rem;
+    }
+    .collapsible-arrow.open {
+      transform: rotate(180deg);
+    }
+    .collapsible-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+    .collapsible-content.open {
+      max-height: 3000px;
+    }
+    
+    /* Failure analysis styling */
+    .failure-card {
+      background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.05));
+      border: 2px solid rgba(239,68,68,0.3);
+      border-radius: 16px;
+      padding: 24px;
+      margin-top: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .failure-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #ef4444, #dc2626, #ef4444);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.8; }
+      50% { opacity: 1; }
+    }
+    .failure-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .failure-icon {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 4px 12px rgba(239,68,68,0.3);
+    }
+    .failure-item {
+      background: rgba(0,0,0,0.2);
+      border-left: 4px solid #ef4444;
+      padding: 16px;
+      margin-bottom: 12px;
+      border-radius: 8px;
+    }
+    .recommendation-box {
+      background: rgba(59,130,246,0.1);
+      border: 1px solid rgba(59,130,246,0.3);
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+    .progress-bar {
+      background: rgba(255,255,255,0.1);
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+    .progress-fill {
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+    .progress-target {
+      position: absolute;
+      top: -2px;
+      bottom: -2px;
+      width: 2px;
+      background: #60a5fa;
+    }
+    .test-card {
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      margin-bottom: 24px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .test-card-header {
+      background: linear-gradient(135deg, rgba(59,130,246,0.3), rgba(6,182,212,0.3));
+      padding: 20px 24px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+<h1 style="font-size: 48px; margin-bottom: 16px;">📊 CMO Agent Evaluation Report</h1>
+<div style="background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(168,85,247,0.1)); border: 1px solid rgba(59,130,246,0.3); border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+  <p style="margin: 0; color: #e5e7eb; font-size: 0.875rem;">
+    <strong style="color: #60a5fa;">🏗️ Multi-Agent Architecture:</strong> This evaluation framework follows Anthropic's best practices for testing multi-agent systems, 
+    with the CMO agent serving as the orchestrator that delegates to specialist agents - mirroring the "research lead" pattern described in 
+    <a href="https://www.anthropic.com/engineering/built-multi-agent-research-system" style="color: #a78bfa;">"Building Multi-Agent Research Systems"</a>.
+  </p>
+</div>
+
+<div style="background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); padding: 24px; border-radius: 16px; margin-bottom: 24px; border: 1px solid rgba(255,255,255,0.1);">
+  <div style="font-size: 1.125rem; font-weight: 600; color: #60a5fa;">Test Suite: Example</div>
+  
+  <div style="font-size: 0.875rem; color: #e5e7eb; font-style: italic; margin-top: 4px;">Comprehensive evaluation of agent capabilities</div>
+  
+</div>
+
+
+
+<div style="display: flex; gap: 16px; margin: 20px 0;">
+  <div style="background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); padding: 8px 16px; border-radius: 8px; font-size: 0.875rem; border: 1px solid rgba(255,255,255,0.1); color: white;">
+    <strong style="color: #60a5fa;">Date:</strong> 2025-07-15T16:22:26
+  </div>
+  <div style="background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); padding: 8px 16px; border-radius: 8px; font-size: 0.875rem; border: 1px solid rgba(255,255,255,0.1); color: white;">
+    <strong style="color: #60a5fa;">Evaluation Type:</strong> Hybrid (Deterministic + LLM Judge)
+  </div>
+</div>
+
+<hr style="border: 0; height: 1px; background: rgba(255,255,255,0.1); margin: 32px 0;">
+
+<h2 style="color: white; display: flex; align-items: center; gap: 12px;">
+  <span style="background: rgba(59,130,246,0.2); width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">🔬</span>
+  Evaluation Methodology
+</h2>
+
+<div style="background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border-radius: 16px; padding: 24px; margin-bottom: 32px; border: 1px solid rgba(255,255,255,0.1);">
+  <h3 style="color: white; margin: 0 0 16px 0;">🎯 Five Dimensions of CMO Agent Performance</h3>
+  
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px;">
+    <div style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); border-radius: 12px; padding: 16px;">
+      <h4 style="color: #60a5fa; margin: 0 0 8px 0;">1. Complexity Classification</h4>
+      <p style="margin: 0; color: #e5e7eb; font-size: 0.875rem;">
+        Evaluates if the CMO correctly identifies query complexity (SIMPLE → COMPREHENSIVE).
+        <br><span style="color: #94a3b8;">Method: Hybrid (rule-based + LLM verification)</span>
+      </p>
+    </div>
+    
+    <div style="background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.3); border-radius: 12px; padding: 16px;">
+      <h4 style="color: #a78bfa; margin: 0 0 8px 0;">2. Specialist Selection</h4>
+      <p style="margin: 0; color: #e5e7eb; font-size: 0.875rem;">
+        Measures precision and recall of selecting appropriate medical specialists.
+        <br><span style="color: #94a3b8;">Method: LLM Judge with semantic similarity</span>
+      </p>
+    </div>
+    
+    <div style="background: rgba(236,72,153,0.1); border: 1px solid rgba(236,72,153,0.3); border-radius: 12px; padding: 16px;">
+      <h4 style="color: #ec4899; margin: 0 0 8px 0;">3. Analysis Quality</h4>
+      <p style="margin: 0; color: #e5e7eb; font-size: 0.875rem;">
+        Assesses comprehensiveness of the orchestration plan and task delegation.
+        <br><span style="color: #94a3b8;">Method: LLM Judge scoring on 5 components</span>
+      </p>
+    </div>
+    
+    <div style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); border-radius: 12px; padding: 16px;">
+      <h4 style="color: #10b981; margin: 0 0 8px 0;">4. Tool Usage</h4>
+      <p style="margin: 0; color: #e5e7eb; font-size: 0.875rem;">
+        Validates effective use of health data query tools for initial assessment.
+        <br><span style="color: #94a3b8;">Method: Deterministic validation</span>
+      </p>
+    </div>
+    
+    <div style="background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.3); border-radius: 12px; padding: 16px;">
+      <h4 style="color: #fbbf24; margin: 0 0 8px 0;">5. Response Structure</h4>
+      <p style="margin: 0; color: #e5e7eb; font-size: 0.875rem;">
+        Ensures compliance with required XML format for downstream processing.
+        <br><span style="color: #94a3b8;">Method: Deterministic XML validation</span>
+      </p>
+    </div>
+  </div>
+  
+  <div style="margin-top: 20px; padding: 16px; background: rgba(96,165,250,0.1); border: 1px solid rgba(96,165,250,0.3); border-radius: 12px;">
+    <p style="margin: 0; color: #e5e7eb; font-size: 0.875rem;">
+      <strong style="color: #60a5fa;">📚 Based on Anthropic's Testing Best Practices:</strong> This evaluation framework implements the hybrid approach recommended in Anthropic's 
+      <a href="https://www.anthropic.com/engineering/built-multi-agent-research-system" style="color: #a78bfa;">testing guidelines</a>, combining:
+    </p>
+    <ul style="margin: 8px 0 0 20px; color: #e5e7eb; font-size: 0.875rem;">
+      <li><strong>Deterministic checks</strong> for objective criteria (tool usage, XML structure)</li>
+      <li><strong>LLM Judges</strong> for subjective quality assessment (analysis comprehensiveness, specialist selection appropriateness)</li>
+      <li><strong>Semantic similarity</strong> for flexibility in specialist naming (e.g., "primary_care" ≈ "general_practice")</li>
+    </ul>
+  </div>
+</div>
+
+<h2 style="color: white; display: flex; align-items: center; gap: 12px;">
+  <span style="background: rgba(59,130,246,0.2); width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">🎯</span>
+  Executive Summary
+</h2>
+
+<div style="background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border-radius: 16px; padding: 24px; margin-bottom: 24px; border: 1px solid rgba(255,255,255,0.1);">
+  <h3 style="display: flex; align-items: center; gap: 8px; margin: 0 0 16px 0; color: white;">
+    <span style="font-size: 1.5rem;">🟢</span>
+    CMO Agent Test Suite: <span style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.875rem; margin-left: 8px;">PASS</span>
+  </h3>
+  
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 20px;">
+    <div style="background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); padding: 16px; border-radius: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
+      <div style="font-size: 0.875rem; color: #94a3b8; margin-bottom: 4px;">Overall Score</div>
+      <div style="font-size: 2rem; font-weight: 700; color: white;">100.0%</div>
+    </div>
+    <div style="background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); padding: 16px; border-radius: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
+      <div style="font-size: 0.875rem; color: #94a3b8; margin-bottom: 4px;">Test Cases Evaluated</div>
+      <div style="font-size: 2rem; font-weight: 700; color: white;">1</div>
+    </div>
+  </div>
+  
+  
+</div>
+
+<h3 style="color: white;">Test Case Summary</h3>
+<div style="font-size: 0.875rem; color: #94a3b8; font-style: italic; margin-bottom: 12px;">
+  Individual test results with dimension failures
+  <span style="display: inline-block; margin-left: 12px; background: rgba(59,130,246,0.1); padding: 4px 12px; border-radius: 12px; border: 1px solid rgba(59,130,246,0.3);">
+    <strong>ℹ️ Note:</strong> Tests PASS only when ALL evaluation dimensions meet their target thresholds
+  </span>
+</div>
+
+<div style="background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 24px; border: 1px solid rgba(255,255,255,0.1);">
+  <table style="width: 100%; border-collapse: collapse; color: white;">
+    <thead>
+      <tr style="background: linear-gradient(135deg, #3b82f6, #06b6d4);">
+        <th style="color: white; padding: 12px 16px; text-align: left;">Test Case</th>
+        <th style="color: white; padding: 12px 16px; text-align: left;">Status</th>
+        <th style="color: white; padding: 12px 16px; text-align: left;">Failed Dimensions</th>
+        <th style="color: white; padding: 12px 16px; text-align: left;">Complexity</th>
+      </tr>
+    </thead>
+    <tbody>
+      
+      <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+        <td style="padding: 12px 16px; color: #e5e7eb;">simple_001</td>
+        <td style="padding: 12px 16px;">
+          <span style="background: rgba(239,68,68,0.2); color: #fca5a5; padding: 4px 8px; border-radius: 4px; font-size: 0.875rem;">❌ FAIL</span>
+        </td>
+        <td style="padding: 12px 16px; color: #e5e7eb;">Specialty Selection, Analysis Quality</td>
+        <td style="padding: 12px 16px;">
+          <span style="background: rgba(59,130,246,0.2); color: #93bbfc; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">SIMPLE</span>
+        </td>
+      </tr>
+      
+      <tr style="background: linear-gradient(135deg, rgba(59,130,246,0.2), rgba(168,85,247,0.2)); font-weight: 600;">
+        <td style="padding: 12px 16px; color: white;">TOTAL</td>
+        <td style="padding: 12px 16px; color: white;">0/1 Passed</td>
+        <td style="padding: 12px 16px; color: white;">1 tests with failures</td>
+        <td style="padding: 12px 16px; color: white;">-</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h3 style="color: white;">Dimension Performance Across All Tests</h3>
+<div style="font-size: 0.875rem; color: #94a3b8; font-style: italic; margin-bottom: 12px;">
+  Average scores across all test cases for each evaluation dimension
+  <span style="display: inline-block; margin-left: 12px; background: rgba(168,85,247,0.1); padding: 4px 12px; border-radius: 12px; border: 1px solid rgba(168,85,247,0.3);">
+    <strong>🎯 Anthropic Best Practice:</strong> Hybrid evaluation using both deterministic checks and LLM judges
+  </span>
+</div>
+
+<div style="background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 24px; border: 1px solid rgba(255,255,255,0.1);">
+  
+  <div style="margin-bottom: 20px;">
+    <div style="font-weight: 600; color: #e5e7eb; margin-bottom: 4px;">Complexity Classification</div>
+    <div style="display: flex; justify-content: space-between; margin: 8px 0;">
+      <span style="color: #cbd5e1;">Score: <strong style="color: #10b981;">100.0%</strong></span>
+      <span style="color: #cbd5e1;">Target: 90.0%</span>
+    </div>
+    <div class="progress-bar">
+      <div style="width: 100.0%; height: 100%; background: linear-gradient(to right, #10b981, #059669);"></div>
+      <div class="progress-target" style="left: 90.0%;"></div>
+    </div>
+    <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">🔧 Deterministic • Accuracy in classifying query complexity (SIMPLE/STANDARD/COMPLEX/COMPREHENSIVE)</div>
+  </div>
+  
+  <div style="margin-bottom: 20px;">
+    <div style="font-weight: 600; color: #e5e7eb; margin-bottom: 4px;">Specialty Selection</div>
+    <div style="display: flex; justify-content: space-between; margin: 8px 0;">
+      <span style="color: #cbd5e1;">Score: <strong style="color: #ef4444;">0.0%</strong></span>
+      <span style="color: #cbd5e1;">Target: 85.0%</span>
+    </div>
+    <div class="progress-bar">
+      <div style="width: 0.0%; height: 100%; background: linear-gradient(to right, #ef4444, #dc2626);"></div>
+      <div class="progress-target" style="left: 85.0%;"></div>
+    </div>
+    <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">🧠 Deterministic • Precision in selecting appropriate medical specialists</div>
+  </div>
+  
+  <div style="margin-bottom: 20px;">
+    <div style="font-weight: 600; color: #e5e7eb; margin-bottom: 4px;">Analysis Quality</div>
+    <div style="display: flex; justify-content: space-between; margin: 8px 0;">
+      <span style="color: #cbd5e1;">Score: <strong style="color: #ef4444;">76.0%</strong></span>
+      <span style="color: #cbd5e1;">Target: 80.0%</span>
+    </div>
+    <div class="progress-bar">
+      <div style="width: 76.0%; height: 100%; background: linear-gradient(to right, #ef4444, #dc2626);"></div>
+      <div class="progress-target" style="left: 80.0%;"></div>
+    </div>
+    <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">🧠 Llm Judge • Comprehensiveness and quality of medical analysis orchestration</div>
+  </div>
+  
+  <div style="margin-bottom: 20px;">
+    <div style="font-weight: 600; color: #e5e7eb; margin-bottom: 4px;">Tool Usage</div>
+    <div style="display: flex; justify-content: space-between; margin: 8px 0;">
+      <span style="color: #cbd5e1;">Score: <strong style="color: #10b981;">100.0%</strong></span>
+      <span style="color: #cbd5e1;">Target: 90.0%</span>
+    </div>
+    <div class="progress-bar">
+      <div style="width: 100.0%; height: 100%; background: linear-gradient(to right, #10b981, #059669);"></div>
+      <div class="progress-target" style="left: 90.0%;"></div>
+    </div>
+    <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">🔧 Deterministic • Effectiveness of health data tool usage</div>
+  </div>
+  
+  <div style="margin-bottom: 20px;">
+    <div style="font-weight: 600; color: #e5e7eb; margin-bottom: 4px;">Response Structure</div>
+    <div style="display: flex; justify-content: space-between; margin: 8px 0;">
+      <span style="color: #cbd5e1;">Score: <strong style="color: #10b981;">100.0%</strong></span>
+      <span style="color: #cbd5e1;">Target: 95.0%</span>
+    </div>
+    <div class="progress-bar">
+      <div style="width: 100.0%; height: 100%; background: linear-gradient(to right, #10b981, #059669);"></div>
+      <div class="progress-target" style="left: 95.0%;"></div>
+    </div>
+    <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">🔧 Deterministic • Compliance with expected XML response format</div>
+  </div>
+  
+  
+  
+</div>
+
+
+
+<h2 style="color: white; display: flex; align-items: center; gap: 12px;">
+  <span style="background: rgba(59,130,246,0.2); width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">📋</span>
+  Test Results Detail
+</h2>
+
+<div style="background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); padding: 16px; border-radius: 8px; margin-bottom: 24px; border: 1px solid rgba(255,255,255,0.1);">
+  <strong style="color: #60a5fa;">📝 CMO Agent Prompts Being Tested:</strong>
+  <p style="margin: 8px 0; color: #94a3b8; font-size: 0.875rem;">
+    The CMO agent uses a multi-stage prompting approach to orchestrate the analysis:
+  </p>
+  <ul style="margin-top: 8px; color: #e5e7eb;">
+    
+    <li style="margin-bottom: 8px;">
+      <a href="../../../services/agents/cmo/prompts/1_gather_data_assess_complexity.txt" style="color: #60a5fa; text-decoration: none;">
+        <code style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px;">1_gather_data_assess_complexity.txt</code>
+      </a> - Gathers initial health data and assesses query complexity
+      
+        <span style="color: #94a3b8; font-size: 0.875rem;">(LLM Judge target for: complexity misclassification, some quality issues)</span>
+      
+    </li>
+    
+    <li style="margin-bottom: 8px;">
+      <a href="../../../services/agents/cmo/prompts/2_define_analytical_approach.txt" style="color: #60a5fa; text-decoration: none;">
+        <code style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px;">2_define_analytical_approach.txt</code>
+      </a> - Defines the analytical approach based on gathered data
+      
+    </li>
+    
+    <li style="margin-bottom: 8px;">
+      <a href="../../../services/agents/cmo/prompts/3_assign_specialist_tasks.txt" style="color: #60a5fa; text-decoration: none;">
+        <code style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px;">3_assign_specialist_tasks.txt</code>
+      </a> - Creates specific tasks for specialist agents
+      
+        <span style="color: #94a3b8; font-size: 0.875rem;">(LLM Judge target for: specialist selection, task delegation issues)</span>
+      
+    </li>
+    
+    <li style="margin-bottom: 8px;">
+      <a href="../../../services/agents/cmo/prompts/4_synthesis.txt" style="color: #60a5fa; text-decoration: none;">
+        <code style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px;">4_synthesis.txt</code>
+      </a> - Synthesizes findings from all specialists
+      
+    </li>
+    
+  </ul>
+</div>
+
+<hr style="border: 0; height: 1px; background: rgba(255,255,255,0.1); margin: 32px 0;">
+
+
+<h2 style="color: white;">Test Case: simple_001 ❌</h2>
+
+<div class="test-card">
+  <div class="test-card-header">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="margin: 0; color: white; font-size: 1.25rem;">Test Case: simple_001</h3>
+      <span style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; padding: 6px 16px; border-radius: 20px; font-size: 0.875rem; font-weight: 600;">FAILED</span>
+    </div>
+  </div>
+  
+  <div style="padding: 24px;">
+    <div style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 8px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.1);">
+      <strong style="color: #60a5fa;">Health Query:</strong>
+      <p style="margin: 8px 0 0 0; color: #e5e7eb;">What is my current blood sugar level?</p>
+    </div>
+    
+    <!-- Collapsible Health Query Response -->
+    <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 16px; overflow: hidden;">
+      <div class="collapsible collapsible-header" onclick="toggleSection(this)">
+        <strong style="color: #60a5fa;">Health Query Response/Analysis</strong>
+        <span class="collapsible-arrow">▼</span>
+      </div>
+      <div class="collapsible-content">
+        <div style="padding: 16px; background: rgba(0,0,0,0.3); color: #e5e7eb; font-size: 0.875rem; line-height: 1.6;">
+          <pre style="white-space: pre-wrap; margin: 0; font-family: inherit;">To analyze this simple query about the patient's current blood sugar level, the approach should focus on:
+
+Data points:
+- The most recent blood glucose measurement, including the exact value, unit of measure, and date of the test
+
+Timeframe:
+- Emphasis on the latest available measurement to represent the "current" blood sugar level
+- No need to explore historical trends or changes over time for this specific query
+
+Key health concerns:
+- Determine if the current blood sugar level falls within the normal/healthy range
+- Note if the level is borderline high or low, which may warrant lifestyle guidance
+
+Areas of focus:
+- A single, reliable blood sugar measurement is sufficient to address this straightforward question
+- Briefly comment on how the current level relates to a typical healthy range for context
+
+Priority:
+- Highest: Reporting the latest blood glucose value and test date 
+- Secondary: Categorizing the level as normal, borderline, or concerning
+- Lowest: General guidance on maintaining healthy blood sugar, only if notably high or low
+
+The analysis can be concise and focused, as extensive investigation into other factors, correlations or history is not needed to satisfy this query. The priority is directly answering the question of the patient's current blood sugar status based on the most recent objective measurement.</pre>
+        </div>
+      </div>
+    </div>
+    
+    
+    <div style="display: flex; gap: 16px; margin: 16px 0;">
+      <div style="background: rgba(255,255,255,0.05); padding: 8px 16px; border-radius: 8px; font-size: 0.875rem; border: 1px solid rgba(255,255,255,0.1);">
+        <strong style="color: #60a5fa;">Response Time:</strong> <span style="color: #e5e7eb;">47.0s</span>
+      </div>
+    </div>
+    
+    
+    <h4 style="color: #e5e7eb;">Evaluation Summary</h4>
+    
+    <div style="background: rgba(255,255,255,0.05); border-radius: 8px; overflow: hidden; margin: 16px 0;">
+      <table style="width: 100%; border-collapse: collapse; color: #e5e7eb;">
+        <thead>
+          <tr style="background: rgba(255,255,255,0.1);">
+            <th style="padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1);">Dimension</th>
+            <th style="padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1);">Expected</th>
+            <th style="padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1);">Actual</th>
+            <th style="padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1);">Score</th>
+            <th style="padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1);">Target</th>
+            <th style="padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1);">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+          <tr >
+            <td style="padding: 12px; font-weight: 600;">Complexity Classification</td>
+            <td style="padding: 12px; ">SIMPLE</td>
+            <td style="padding: 12px; ">simple</td>
+            <td style="padding: 12px;">1.00</td>
+            <td style="padding: 12px;">0.90</td>
+            <td style="padding: 12px;">
+              <span style="background: rgba(16,185,129,0.2); color: #6ee7b7; padding: 4px 8px; border-radius: 4px;">✅ PASS</span>
+            </td>
+          </tr>
+          
+          <tr style="background: rgba(255,255,255,0.02);">
+            <td style="padding: 12px; font-weight: 600;">Specialty Selection</td>
+            <td style="padding: 12px; ">general_practice</td>
+            <td style="padding: 12px; ">laboratory_medicine</td>
+            <td style="padding: 12px;">0.00</td>
+            <td style="padding: 12px;">0.85</td>
+            <td style="padding: 12px;">
+              <span style="background: rgba(239,68,68,0.2); color: #fca5a5; padding: 4px 8px; border-radius: 4px;">❌ FAIL</span>
+            </td>
+          </tr>
+          
+          <tr >
+            <td style="padding: 12px; font-weight: 600;">Analysis Quality</td>
+            <td style="padding: 12px; ">≥0.80</td>
+            <td style="padding: 12px; ">0.76</td>
+            <td style="padding: 12px;">0.76</td>
+            <td style="padding: 12px;">0.80</td>
+            <td style="padding: 12px;">
+              <span style="background: rgba(239,68,68,0.2); color: #fca5a5; padding: 4px 8px; border-radius: 4px;">❌ FAIL</span>
+            </td>
+          </tr>
+          
+          <tr style="background: rgba(255,255,255,0.02);">
+            <td style="padding: 12px; font-weight: 600;">Tool Usage</td>
+            <td style="padding: 12px; ">Effective</td>
+            <td style="padding: 12px; ">2 calls</td>
+            <td style="padding: 12px;">1.00</td>
+            <td style="padding: 12px;">0.90</td>
+            <td style="padding: 12px;">
+              <span style="background: rgba(16,185,129,0.2); color: #6ee7b7; padding: 4px 8px; border-radius: 4px;">✅ PASS</span>
+            </td>
+          </tr>
+          
+          <tr >
+            <td style="padding: 12px; font-weight: 600;">Response Structure</td>
+            <td style="padding: 12px; ">Valid XML</td>
+            <td style="padding: 12px; ">Valid</td>
+            <td style="padding: 12px;">1.00</td>
+            <td style="padding: 12px;">0.95</td>
+            <td style="padding: 12px;">
+              <span style="background: rgba(16,185,129,0.2); color: #6ee7b7; padding: 4px 8px; border-radius: 4px;">✅ PASS</span>
+            </td>
+          </tr>
+          
+        </tbody>
+      </table>
+    </div>
+
+    
+    <!-- Collapsible Analysis Quality Score Breakdown -->
+    <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 16px; overflow: hidden;">
+      <div class="collapsible collapsible-header" onclick="toggleSection(this)">
+        <strong style="color: #60a5fa;">Analysis Quality Score Breakdown</strong>
+        <span class="collapsible-arrow">▼</span>
+      </div>
+      <div class="collapsible-content">
+        <div style="padding: 16px;">
+          <p style="margin: 0 0 16px 0; color: #e5e7eb;">This breakdown shows how the Analysis Quality score was calculated:</p>
+          
+          <div style="background: rgba(255,255,255,0.05); border-radius: 8px; overflow: hidden;">
+            <table style="width: 100%; border-collapse: collapse; color: #e5e7eb;">
+              <thead>
+                <tr style="background: rgba(255,255,255,0.1);">
+                  <th style="padding: 12px; text-align: left;">Component</th>
+                  <th style="padding: 12px; text-align: left;">Weight</th>
+                  <th style="padding: 12px; text-align: left;">Score</th>
+                  <th style="padding: 12px; text-align: left;">Weighted</th>
+                  <th style="padding: 12px; text-align: left;">What We Looked For</th>
+                </tr>
+              </thead>
+              <tbody>
+                
+                <tr >
+                  <td style="padding: 12px; font-weight: 600;">Data Gathering</td>
+                  <td style="padding: 12px;">0.20</td>
+                  <td style="padding: 12px;">1.00</td>
+                  <td style="padding: 12px;">0.200</td>
+                  <td style="padding: 12px; font-size: 0.875rem;">Appropriate tool calls to gather health data</td>
+                </tr>
+                
+                <tr style="background: rgba(255,255,255,0.02);">
+                  <td style="padding: 12px; font-weight: 600;">Context Awareness</td>
+                  <td style="padding: 12px;">0.15</td>
+                  <td style="padding: 12px;">0.70</td>
+                  <td style="padding: 12px;">0.105</td>
+                  <td style="padding: 12px; font-size: 0.875rem;">Consideration of temporal context and patient history</td>
+                </tr>
+                
+                <tr >
+                  <td style="padding: 12px; font-weight: 600;">Specialist Rationale</td>
+                  <td style="padding: 12px;">0.20</td>
+                  <td style="padding: 12px;">0.70</td>
+                  <td style="padding: 12px;">0.140</td>
+                  <td style="padding: 12px; font-size: 0.875rem;">Clear reasoning for specialist task assignments</td>
+                </tr>
+                
+                <tr style="background: rgba(255,255,255,0.02);">
+                  <td style="padding: 12px; font-weight: 600;">Comprehensive Approach</td>
+                  <td style="padding: 12px;">0.25</td>
+                  <td style="padding: 12px;">0.70</td>
+                  <td style="padding: 12px;">0.175</td>
+                  <td style="padding: 12px; font-size: 0.875rem;">Coverage of all relevant medical concepts</td>
+                </tr>
+                
+                <tr >
+                  <td style="padding: 12px; font-weight: 600;">Concern Identification</td>
+                  <td style="padding: 12px;">0.20</td>
+                  <td style="padding: 12px;">0.70</td>
+                  <td style="padding: 12px;">0.140</td>
+                  <td style="padding: 12px; font-size: 0.875rem;">Identification of health concerns and risks</td>
+                </tr>
+                
+                <tr style="background: rgba(59,130,246,0.1); font-weight: 600;">
+                  <td style="padding: 12px; color: white;">Total</td>
+                  <td style="padding: 12px; color: white;">1.00</td>
+                  <td style="padding: 12px; color: white;">-</td>
+                  <td style="padding: 12px; color: white;">0.760</td>
+                  <td style="padding: 12px; color: white;">Target: ≥ 0.800</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+
+    
+  </div>
+</div>
+
+<hr style="border: 0; height: 1px; background: rgba(255,255,255,0.1); margin: 32px 0;">
+
+
+<h2 style="color: white; display: flex; align-items: center; gap: 12px;">
+  <span style="background: rgba(59,130,246,0.2); width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">📊</span>
+  Visualizations
+</h2>
+
+<h3 style="color: white;">Performance by Dimension</h3>
+<div style="font-size: 0.875rem; color: #94a3b8; margin-bottom: 16px;">
+The chart below shows how the CMO Agent performs across each evaluation dimension compared to target thresholds:
+</div>
+
+<div style="background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border-radius: 16px; padding: 40px; text-align: center; border: 2px dashed rgba(255,255,255,0.2); margin: 24px 0;">
+  <div style="font-size: 3rem; margin-bottom: 16px;">📊</div>
+  <h4 style="color: #60a5fa; margin-bottom: 8px;">Dimension Scores</h4>
+  <p style="color: #cbd5e1; font-size: 0.875rem;">Performance across evaluation dimensions vs. target thresholds</p>
+  <img src="./dimension_scores.png" alt="Dimension Scores Chart" style="max-width: 100%; height: auto; margin-top: 20px; border-radius: 8px;">
+</div>
+
+<h3 style="color: white;">Additional Performance Charts</h3>
+
+<div style="background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border-radius: 12px; padding: 20px; margin-top: 24px; border: 1px solid rgba(255,255,255,0.1);">
+  <p style="margin: 0 0 16px 0; color: #60a5fa; font-weight: 600;">Click on any chart below to view additional performance insights:</p>
+  
+  <div style="background: rgba(255,255,255,0.05); border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <table style="width: 100%; border-collapse: collapse; color: #e5e7eb;">
+      <thead>
+        <tr style="background: linear-gradient(135deg, rgba(59,130,246,0.2), rgba(168,85,247,0.2));">
+          <th style="padding: 16px; text-align: left; font-weight: 600;">Chart</th>
+          <th style="padding: 16px; text-align: left; font-weight: 600;">What It Shows</th>
+          <th style="padding: 16px; text-align: left; font-weight: 600;">Key Insights</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+          <td style="padding: 16px;">
+            <a href="./complexity_performance.png" style="color: #60a5fa; text-decoration: none; font-weight: 600;">Complexity Performance</a>
+          </td>
+          <td style="padding: 16px;">Metrics by query complexity</td>
+          <td style="padding: 16px; color: #94a3b8;">See if certain query types perform better</td>
+        </tr>
+        
+        <tr style="background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.1);">
+          <td style="padding: 16px;">
+            <a href="./response_time_distribution.png" style="color: #60a5fa; text-decoration: none; font-weight: 600;">Response Time Distribution</a>
+          </td>
+          <td style="padding: 16px;">Histogram of processing times</td>
+          <td style="padding: 16px; color: #94a3b8;">Understand performance consistency</td>
+        </tr>
+        
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</div>
+</body>
+<script>
+function toggleSection(element) {
+  const content = element.nextElementSibling;
+  const arrow = element.querySelector('.collapsible-arrow');
+  
+  content.classList.toggle('open');
+  arrow.classList.toggle('open');
+}
+</script>
+</html>

@@ -1,13 +1,17 @@
 import os
 import re
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, TYPE_CHECKING
 from anthropic import Anthropic
 
 from services.agents.models import MedicalSpecialty, SpecialistTask, SpecialistResult
 from services.agents.specialist.specialist_prompts import SpecialistPrompts
 from utils.anthropic_client import AnthropicStreamingClient
 from tools.tool_registry import ToolRegistry
+
+# Avoid circular import
+if TYPE_CHECKING:
+    from services.agents.metadata.core import AgentMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -234,3 +238,201 @@ class SpecialistAgent:
         
         # Default confidence
         return 0.75
+    
+    @classmethod
+    def get_evaluation_metadata(cls, specialty: MedicalSpecialty) -> 'AgentMetadata':
+        """
+        Get evaluation metadata for a specific specialist type.
+        
+        Args:
+            specialty: The medical specialty to get metadata for
+            
+        Returns:
+            AgentMetadata configured for the specific specialty
+        """
+        # Import here to avoid circular dependency
+        from services.agents.metadata.core import (
+            AgentMetadata, 
+            PromptMetadata
+        )
+        from evaluation.core.dimensions import (
+            EvaluationCriteria,
+            QualityComponent,
+            dimension_registry
+        )
+        from evaluation.agents.specialist.dimensions import MEDICAL_DIMENSIONS
+        
+        # Get prompt metadata from SpecialistPrompts class
+        prompts_metadata = SpecialistPrompts.get_prompt_metadata(specialty.value)
+        
+        # Define common evaluation criteria for all specialists
+        evaluation_criteria = [
+            EvaluationCriteria(
+                dimension=MEDICAL_DIMENSIONS["medical_accuracy"],
+                description=f"Medical accuracy of {specialty.value} specialist analysis",
+                target_score=0.85,
+                weight=0.30,
+                measurement_method="llm_judge",
+                measurement_description="LLM Judge evaluation of medical correctness"
+            ),
+            EvaluationCriteria(
+                dimension=MEDICAL_DIMENSIONS["evidence_quality"],
+                description=f"Quality of evidence provided by {specialty.value} specialist",
+                target_score=0.80,
+                weight=0.25,
+                measurement_method="hybrid",
+                measurement_description="Quality and appropriateness of evidence cited"
+            ),
+            EvaluationCriteria(
+                dimension=MEDICAL_DIMENSIONS["clinical_reasoning"],
+                description=f"Clinical reasoning quality of {specialty.value} specialist",
+                target_score=0.85,
+                weight=0.15,
+                measurement_method="llm_judge",
+                measurement_description="Sound clinical reasoning and decision-making"
+            ),
+            EvaluationCriteria(
+                dimension=MEDICAL_DIMENSIONS["specialty_expertise"],
+                description=f"Demonstration of {specialty.value} expertise",
+                target_score=0.80,
+                weight=0.15,
+                measurement_method="hybrid",
+                measurement_description="Specialty-specific knowledge and skills"
+            ),
+            EvaluationCriteria(
+                dimension=MEDICAL_DIMENSIONS["patient_safety"],
+                description=f"Patient safety considerations in {specialty.value} analysis",
+                target_score=0.90,
+                weight=0.15,
+                measurement_method="llm_judge",
+                measurement_description="Appropriate safety considerations and warnings"
+            )
+        ]
+        
+        # Add specialty-specific dimensions based on the specialty type
+        specialty_specific_config = cls._get_specialty_specific_config(specialty)
+        
+        # Create the complete metadata
+        # Define quality components for complex dimensions
+        quality_components = {
+            MEDICAL_DIMENSIONS["medical_accuracy"]: [
+                QualityComponent(
+                    name="factual_accuracy",
+                    description="Correctness of medical facts and interpretations",
+                    weight=0.6,
+                    evaluation_method="llm_judge"
+                ),
+                QualityComponent(
+                    name="clinical_relevance",
+                    description="Relevance to the clinical question",
+                    weight=0.4,
+                    evaluation_method="llm_judge"
+                )
+            ],
+            MEDICAL_DIMENSIONS["evidence_quality"]: [
+                QualityComponent(
+                    name="evidence_strength",
+                    description="Quality and reliability of evidence sources",
+                    weight=0.5,
+                    evaluation_method="hybrid"
+                ),
+                QualityComponent(
+                    name="evidence_relevance",
+                    description="Appropriateness of evidence for the clinical question",
+                    weight=0.5,
+                    evaluation_method="llm_judge"
+                )
+            ],
+            MEDICAL_DIMENSIONS["clinical_reasoning"]: [
+                QualityComponent(
+                    name="logical_flow",
+                    description="Logical progression of clinical reasoning",
+                    weight=0.6,
+                    evaluation_method="llm_judge"
+                ),
+                QualityComponent(
+                    name="differential_diagnosis",
+                    description="Consideration of alternative diagnoses",
+                    weight=0.4,
+                    evaluation_method="llm_judge"
+                )
+            ],
+            MEDICAL_DIMENSIONS["specialty_expertise"]: [
+                QualityComponent(
+                    name="domain_knowledge",
+                    description="Demonstration of specialty-specific knowledge",
+                    weight=0.7,
+                    evaluation_method="hybrid"
+                ),
+                QualityComponent(
+                    name="technical_accuracy",
+                    description="Accuracy of technical/clinical details",
+                    weight=0.3,
+                    evaluation_method="llm_judge"
+                )
+            ],
+            MEDICAL_DIMENSIONS["patient_safety"]: [
+                QualityComponent(
+                    name="risk_identification",
+                    description="Identification of potential risks",
+                    weight=0.6,
+                    evaluation_method="llm_judge"
+                ),
+                QualityComponent(
+                    name="safety_recommendations",
+                    description="Appropriate safety precautions and warnings",
+                    weight=0.4,
+                    evaluation_method="llm_judge"
+                )
+            ]
+        }
+        
+        # Create basic agent metadata
+        agent_metadata = AgentMetadata(
+            agent_type=specialty.value,
+            agent_class="services.agents.specialist.SpecialistAgent",
+            description=f"{specialty.value.replace('_', ' ').title()} specialist agent for focused medical analysis",
+            prompts=prompts_metadata,
+            capabilities=["medical_analysis", "clinical_reasoning", "evidence_synthesis"],
+            supported_tools=["execute_health_query_v2"],
+            config=specialty_specific_config
+        )
+        
+        # Import and create evaluation metadata
+        from evaluation.core.agent_evaluation_metadata import AgentEvaluationMetadata
+        
+        evaluation_metadata = AgentEvaluationMetadata(
+            agent_metadata=agent_metadata,
+            evaluation_criteria=evaluation_criteria,
+            quality_components=quality_components
+        )
+        
+        return evaluation_metadata
+    
+    @staticmethod
+    def _get_specialty_specific_config(specialty: MedicalSpecialty) -> Dict[str, Any]:
+        """Get specialty-specific configuration"""
+        configs = {
+            MedicalSpecialty.CARDIOLOGY: {
+                "focus_areas": ["cardiovascular risk", "lipid management", "hypertension"],
+                "key_metrics": ["cholesterol", "blood pressure", "ASCVD risk"],
+                "guidelines": ["ACC/AHA 2018", "ESC 2021"]
+            },
+            MedicalSpecialty.ENDOCRINOLOGY: {
+                "focus_areas": ["diabetes", "thyroid", "metabolic syndrome"],
+                "key_metrics": ["HbA1c", "glucose", "thyroid hormones"],
+                "guidelines": ["ADA Standards", "AACE Guidelines"]
+            },
+            MedicalSpecialty.LABORATORY_MEDICINE: {
+                "focus_areas": ["lab interpretation", "reference ranges", "trends"],
+                "key_metrics": ["all lab values"],
+                "guidelines": ["CAP", "CLSI"]
+            },
+            # Add more specialties as needed
+        }
+        
+        return configs.get(specialty, {
+            "focus_areas": [],
+            "key_metrics": [],
+            "guidelines": []
+        })

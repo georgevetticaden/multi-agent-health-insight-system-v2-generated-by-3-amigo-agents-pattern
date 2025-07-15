@@ -1,6 +1,11 @@
 import os
 from datetime import datetime
 from pathlib import Path
+from typing import List, TYPE_CHECKING
+
+# Avoid circular import
+if TYPE_CHECKING:
+    from services.agents.metadata.core import PromptMetadata
 
 class CMOPrompts:
     """Manages prompts for the CMO agent"""
@@ -50,10 +55,44 @@ class CMOPrompts:
             "{{TOOL_LIMIT}}", str(tool_limit)
         )
     
-    def get_synthesis_prompt(self, query: str, specialist_findings: str) -> str:
-        """Get prompt for final synthesis"""
+    def get_synthesis_prompt(self, query: str, findings: str) -> str:
+        """Get prompt for synthesizing specialist findings"""
         return self.prompts["4_synthesis"].replace(
             "{{QUERY}}", query
         ).replace(
-            "{{SPECIALIST_FINDINGS}}", specialist_findings
+            "{{SPECIALIST_FINDINGS}}", findings
         )
+    
+    @classmethod
+    def get_prompt_metadata(cls) -> List['PromptMetadata']:
+        """
+        Get basic prompt metadata for the CMO agent.
+        
+        Returns metadata without evaluation-specific information.
+        """
+        # Import here to avoid circular dependency
+        from services.agents.metadata.core import PromptMetadata
+        
+        return [
+            PromptMetadata(
+                filename="1_gather_data_assess_complexity.txt",
+                description="Gathers initial health data and assesses query complexity",
+                purpose="initial_analysis"
+            ),
+            PromptMetadata(
+                filename="2_define_analytical_approach.txt",
+                description="Defines the analytical approach based on gathered data",
+                purpose="approach_definition"
+            ),
+            PromptMetadata(
+                filename="3_assign_specialist_tasks.txt",
+                description="Creates specific tasks for specialist agents",
+                purpose="task_creation"
+            ),
+            PromptMetadata(
+                filename="4_synthesis.txt",
+                description="Synthesizes findings from all specialists",
+                purpose="synthesis"
+            )
+        ]
+    

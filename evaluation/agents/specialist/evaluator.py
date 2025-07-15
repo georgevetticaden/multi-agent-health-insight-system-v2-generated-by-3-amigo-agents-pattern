@@ -117,16 +117,6 @@ class SpecialistEvaluator(BaseEvaluator):
                 "key_findings": ["preventable_conditions", "screening_gaps"],
                 "requires_guidelines": True
             },
-            MedicalSpecialty.DATA_ANALYSIS: {
-                "focus_areas": ["trend_analysis", "correlations", "statistical_significance"],
-                "key_findings": ["data_patterns", "health_trends"],
-                "requires_statistical_tools": True
-            },
-            MedicalSpecialty.GENERAL_PRACTICE: {
-                "focus_areas": ["comprehensive_assessment", "differential_diagnosis", "referrals"],
-                "key_findings": ["general_health_issues", "system_review"],
-                "requires_broad_knowledge": True
-            }
         }
         
         return configs.get(specialty, {

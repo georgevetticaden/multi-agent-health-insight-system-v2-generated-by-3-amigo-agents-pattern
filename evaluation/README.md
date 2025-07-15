@@ -669,8 +669,7 @@ python -m evaluation.cli.run_evaluation --agent specialist --specialty pharmacy 
 python -m evaluation.cli.run_evaluation --agent specialist --specialty nutrition --test comprehensive
 python -m evaluation.cli.run_evaluation --agent specialist --specialty laboratory_medicine --test comprehensive
 python -m evaluation.cli.run_evaluation --agent specialist --specialty preventive_medicine --test comprehensive
-python -m evaluation.cli.run_evaluation --agent specialist --specialty data_analysis --test comprehensive
-python -m evaluation.cli.run_evaluation --agent specialist --specialty general_practice --test comprehensive
+python -m evaluation.cli.run_evaluation --agent specialist --specialty nutrition --test comprehensive
 
 # IMPROVE Phase: Run real-world tests to validate improvements
 python -m evaluation.cli.run_evaluation --agent cmo --test real-world
@@ -746,8 +745,6 @@ echo $ANTHROPIC_API_KEY  # Should show your API key
 - `nutrition`: Nutrition-specific tests
 - `laboratory_medicine`: Laboratory medicine tests
 - `preventive_medicine`: Preventive medicine tests
-- `data_analysis`: Data analysis tests
-- `general_practice`: General practice tests
 
 **Combining Parameters:**
 ```bash

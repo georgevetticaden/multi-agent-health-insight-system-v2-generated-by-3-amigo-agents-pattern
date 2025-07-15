@@ -9,13 +9,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from api.chat import router as chat_router
+from utils.logging_config import setup_backend_logging
 
-# Configure logging with proper formatting
-logging.basicConfig(
-    level=getattr(logging, os.getenv("LOG_LEVEL", "INFO")),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    force=True  # Force reconfiguration
-)
+# Configure logging with both console and file output
+setup_backend_logging(service_name="fastapi")
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager

@@ -35,14 +35,12 @@ Guidelines:
 - Avoid overlap between specialists
 
 Available specialists (use exact lowercase values):
-- general_practice: Overall health, vital signs, general assessments
 - cardiology: Heart health, blood pressure, cardiovascular disease
 - endocrinology: Diabetes, thyroid, hormones, metabolic health
 - laboratory_medicine: Lab tests, blood work, diagnostic results
 - pharmacy: Medications, dosages, interactions, adherence
 - nutrition: Diet, weight, nutritional health
 - preventive_medicine: Risk factors, screening, prevention
-- data_analysis: Statistical analysis, trends, correlations
 
 Format each task as XML within a tasks wrapper:
 

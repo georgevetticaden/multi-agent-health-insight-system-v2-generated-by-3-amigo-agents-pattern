@@ -400,17 +400,13 @@ class CMOAgent:
     def _map_specialist_to_enum(self, specialist_name: str) -> Optional[MedicalSpecialty]:
         """Map specialist name string to enum"""
         mapping = {
-            "general_practice": MedicalSpecialty.GENERAL_PRACTICE,
-            "internal_medicine": MedicalSpecialty.GENERAL_PRACTICE,  # Common mistake
-            "primary_care": MedicalSpecialty.GENERAL_PRACTICE,      # Common mistake
             "cardiology": MedicalSpecialty.CARDIOLOGY,
             "endocrinology": MedicalSpecialty.ENDOCRINOLOGY,
             "laboratory_medicine": MedicalSpecialty.LABORATORY_MEDICINE,
             "lab_medicine": MedicalSpecialty.LABORATORY_MEDICINE,    # Common mistake
             "pharmacy": MedicalSpecialty.PHARMACY,
             "nutrition": MedicalSpecialty.NUTRITION,
-            "preventive_medicine": MedicalSpecialty.PREVENTIVE_MEDICINE,
-            "data_analysis": MedicalSpecialty.DATA_ANALYSIS
+            "preventive_medicine": MedicalSpecialty.PREVENTIVE_MEDICINE
         }
         
         clean_name = specialist_name.lower().strip()

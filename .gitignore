@@ -125,6 +125,17 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Backend logs
+backend/logs/
+backend/logs/*.log
+
+# Evaluation logs
+evaluation/logs/
+evaluation/logs/*.log
+
+# Evaluation test run logs
+evaluation/test_runs/*/evaluation.log
+
 # Test Coverage
 coverage/
 *.lcov

@@ -13,14 +13,12 @@ class SpecialistPrompts:
     def __init__(self):
         self.prompt_dir = Path(__file__).parent / "prompts"
         self.specialty_file_map = {
-            "general_practice": "system_general_practice.txt",
             "endocrinology": "system_endocrinology.txt",
             "cardiology": "system_cardiology.txt",
             "nutrition": "system_nutrition.txt",
             "preventive_medicine": "system_preventive_medicine.txt",
             "laboratory_medicine": "system_laboratory_medicine.txt",
-            "pharmacy": "system_pharmacy.txt",
-            "data_analysis": "system_data_analysis.txt"
+            "pharmacy": "system_pharmacy.txt"
         }
         self._load_prompts()
     

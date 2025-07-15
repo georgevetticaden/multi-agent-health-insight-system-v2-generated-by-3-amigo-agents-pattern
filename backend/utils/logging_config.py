@@ -1,5 +1,5 @@
 """
-Logging configuration for the evaluation framework.
+Logging configuration for the backend services.
 Sets up both console and file logging with appropriate formatting.
 """
 
@@ -9,15 +9,14 @@ from pathlib import Path
 from datetime import datetime
 
 
-def setup_evaluation_logging(log_level: str = None, log_to_file: bool = True, log_dir: Path = None):
+def setup_backend_logging(log_level: str = None, service_name: str = "backend"):
     """
-    Configure logging for evaluation runs.
+    Configure logging for backend services.
     
     Args:
         log_level: Logging level (DEBUG, INFO, WARNING, ERROR). 
                   If None, uses LOG_LEVEL env var or defaults to INFO.
-        log_to_file: Whether to also log to a file.
-        log_dir: Directory to write log file to. If None, uses default logs directory.
+        service_name: Name of the service for log file naming.
     """
     # Determine log level
     if log_level is None:
@@ -33,7 +32,7 @@ def setup_evaluation_logging(log_level: str = None, log_to_file: bool = True, lo
     )
     
     simple_formatter = logging.Formatter(
-        '%(asctime)s - %(levelname)s - %(message)s',
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         datefmt='%H:%M:%S'
     )
     
@@ -51,24 +50,21 @@ def setup_evaluation_logging(log_level: str = None, log_to_file: bool = True, lo
     root_logger.addHandler(console_handler)
     
     # File handler (detailed format)
-    if log_to_file:
-        # Use provided log_dir or default to evaluation/logs directory
-        if log_dir is None:
-            # Use evaluation/logs directory for evaluation-specific logs
-            log_dir = Path(__file__).parent.parent / "logs"
-            log_dir.mkdir(exist_ok=True)
-            log_file = log_dir / f"evaluation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-        else:
-            # If specific log_dir provided, use it directly
-            log_file = log_dir / "evaluation.log"
-        
-        file_handler = logging.FileHandler(log_file)
-        file_handler.setLevel(logging.DEBUG)  # Always log DEBUG to file
-        file_handler.setFormatter(detailed_formatter)
-        root_logger.addHandler(file_handler)
-        
-        # Log the log file location
-        root_logger.info(f"Logging to file: {log_file}")
+    # Create logs directory in backend
+    log_dir = Path(__file__).parent.parent / "logs"
+    log_dir.mkdir(exist_ok=True)
+    
+    # Create timestamped log file
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    log_file = log_dir / f"{service_name}_{timestamp}.log"
+    
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(logging.DEBUG)  # Always log DEBUG to file
+    file_handler.setFormatter(detailed_formatter)
+    root_logger.addHandler(file_handler)
+    
+    # Log the log file location
+    root_logger.info(f"Logging to file: {log_file}")
     
     # Set specific loggers to appropriate levels
     # Suppress verbose HTTP and connection logs
@@ -86,6 +82,10 @@ def setup_evaluation_logging(log_level: str = None, log_to_file: bool = True, lo
     # Suppress urllib3 connection pool logs
     logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
     
+    # Suppress uvicorn verbose logs
+    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+    logging.getLogger("uvicorn.error").setLevel(logging.INFO)
+    
     # Suppress other verbose libraries
     logging.getLogger("asyncio").setLevel(logging.WARNING)
     logging.getLogger("concurrent.futures").setLevel(logging.WARNING)
@@ -93,9 +93,9 @@ def setup_evaluation_logging(log_level: str = None, log_to_file: bool = True, lo
     return root_logger
 
 
-def get_evaluation_logger(name: str) -> logging.Logger:
+def get_backend_logger(name: str) -> logging.Logger:
     """
-    Get a logger instance for evaluation components.
+    Get a logger instance for backend components.
     
     Args:
         name: Logger name (usually __name__)

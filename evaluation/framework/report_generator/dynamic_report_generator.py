@@ -418,7 +418,18 @@ class DynamicHTMLReportGenerator:
                 continue
             
             # Get analysis data for this dimension
-            analysis_key = f"{(criteria.dimension.name if hasattr(criteria.dimension, 'name') else str(criteria.dimension))}_analysis"
+            # Map dimension names to the actual analysis keys used in results
+            analysis_key_map = {
+                'specialty_selection': 'specialist_analysis',
+                'analysis_quality': 'quality_analysis',
+                'complexity_classification': 'complexity_analysis',
+                'tool_usage': 'tool_usage_analysis',
+                'response_structure': 'response_structure_analysis'
+            }
+            
+            dim_key = criteria.dimension.name if hasattr(criteria.dimension, 'name') else str(criteria.dimension)
+            analysis_key = analysis_key_map.get(dim_key, f"{dim_key}_analysis")
+            
             if analysis_key in result:
                 analysis_data = result[analysis_key]
                 

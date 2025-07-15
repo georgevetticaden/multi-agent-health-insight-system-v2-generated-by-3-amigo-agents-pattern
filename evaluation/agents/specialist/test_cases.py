@@ -2,8 +2,7 @@
 Medical Specialist Agent Test Cases
 
 Comprehensive test cases for evaluating all medical specialist agents including
-cardiology, endocrinology, laboratory medicine, pharmacy, nutrition, preventive medicine,
-data analysis, and general practice.
+cardiology, endocrinology, laboratory medicine, pharmacy, nutrition, and preventive medicine.
 """
 
 from dataclasses import dataclass, field
@@ -382,56 +381,13 @@ class SpecialistTestCases:
             )
         ]
     
-    # ===== DATA ANALYSIS TEST CASES =====
     @staticmethod
-    def get_data_analysis_trend_cases() -> List[SpecialistTestCase]:
-        """Test cases for health data trend analysis"""
-        return [
-            SpecialistTestCase(
-                id="data_trend_001",
-                specialty=MedicalSpecialty.DATA_ANALYSIS,
-                query="Analyze 12-year trends in lipid values and identify patterns",
-                patient_context={
-                    "time_series_data": {
-                        "hdl": [(2013, 25), (2015, 30), (2018, 35), (2020, 40), (2025, 42)],
-                        "ldl": [(2013, 100), (2015, 90), (2018, 75), (2020, 85), (2025, 122)],
-                        "triglycerides": [(2013, 426), (2015, 350), (2018, 200), (2020, 95), (2025, 153)]
-                    },
-                    "interventions": {
-                        "2013": "statin_started",
-                        "2018": "dose_increased",
-                        "2024": "ezetimibe_added"
-                    }
-                },
-                expected_findings={
-                    "hdl_improving_trend",
-                    "ldl_recent_deterioration",
-                    "triglyceride_dramatic_improvement_then_rebound",
-                    "treatment_response_variability"
-                },
-                expected_recommendations={
-                    "investigate_recent_ldl_increase",
-                    "correlation_analysis_with_adherence",
-                    "predictive_modeling_for_targets"
-                },
-                specialty_specific_expectations={
-                    "statistical_tests": ["trend_analysis", "correlation", "regression"],
-                    "visualization_types": ["time_series", "scatter_plot", "control_chart"]
-                },
-                category="longitudinal_analysis",
-                urgency_level="routine",
-                description="Statistical analysis of lipid trends"
-            )
-        ]
-    
-    # ===== GENERAL PRACTICE TEST CASES =====
-    @staticmethod
-    def get_general_practice_comprehensive_cases() -> List[SpecialistTestCase]:
+    def get_comprehensive_health_cases() -> List[SpecialistTestCase]:
         """Test cases for comprehensive primary care assessment"""
         return [
             SpecialistTestCase(
                 id="gp_comprehensive_001",
-                specialty=MedicalSpecialty.GENERAL_PRACTICE,
+                specialty=MedicalSpecialty.PREVENTIVE_MEDICINE,
                 query="Provide comprehensive assessment and care coordination",
                 patient_context={
                     "chief_complaints": ["fatigue", "weight_gain"],
@@ -510,8 +466,6 @@ class SpecialistTestCases:
             MedicalSpecialty.PHARMACY: [cls.get_pharmacy_medication_review_cases],
             MedicalSpecialty.NUTRITION: [cls.get_nutrition_assessment_cases],
             MedicalSpecialty.PREVENTIVE_MEDICINE: [cls.get_preventive_medicine_screening_cases],
-            MedicalSpecialty.DATA_ANALYSIS: [cls.get_data_analysis_trend_cases],
-            MedicalSpecialty.GENERAL_PRACTICE: [cls.get_general_practice_comprehensive_cases]
         }
         
         cases = []

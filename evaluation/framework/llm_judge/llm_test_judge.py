@@ -33,6 +33,7 @@ class PromptRecommendation:
     medical_context: str
     recommendations: List[str]
     priority: str  # high, medium, low
+    prompt_file: Optional[str] = None
 
 
 @dataclass
@@ -48,12 +49,12 @@ class SpecialistSimilarityJudgment:
 @dataclass
 class QualityAnalysisJudgment:
     """Judgment on analysis quality issues and improvements"""
-    quality_issues: List[str]
-    medical_accuracy: str
-    completeness: str
-    clinical_appropriateness: str
-    recommendations: List[str]
-    priority: str  # high, medium, low
+    overall_issue_description: str
+    root_cause: str
+    weak_components: Dict[str, str]
+    prompt_improvements: Dict[str, Dict[str, Any]]
+    expected_impact: str
+    overall_priority: str  # high, medium, low
 
 
 @dataclass
@@ -90,16 +91,31 @@ class LLMTestJudge:
     ) -> PromptRecommendation:
         """Analyze why complexity classification was wrong and suggest prompt improvements"""
         
-        # Load prompt from agent-centric directory
+        # Load the judge prompt
         prompt_file = Path(__file__).parent.parent.parent / "agents" / "cmo" / "judge_prompts" / "complexity" / "analyze_mismatch.txt"
         prompt_template = prompt_file.read_text()
+        
+        # Load the actual CMO prompt that needs improvement
+        # Load the actual CMO prompt that needs improvement
+        # Navigate from evaluation/framework/llm_judge to project root
+        # __file__ is in evaluation/framework/llm_judge/, need to go up to project root
+        current_file = Path(__file__).resolve()
+        # Go up: llm_judge -> framework -> evaluation -> project_root
+        project_root = current_file.parent.parent.parent.parent
+        cmo_prompt_file = project_root / "backend" / "services" / "agents" / "cmo" / "prompts" / "1_gather_data_assess_complexity.txt"
+        try:
+            actual_prompt_content = cmo_prompt_file.read_text()
+        except Exception as e:
+            logger.error(f"Failed to load CMO prompt: {e}")
+            actual_prompt_content = "[Could not load actual prompt content]"
         
         # Format the prompt with actual values
         prompt = prompt_template.format(
             query=test_case.get('query', ''),
             expected_complexity=expected_complexity,
             actual_complexity=actual_complexity,
-            approach_text=approach_text
+            approach_text=approach_text,
+            actual_prompt_content=actual_prompt_content
         )
 
         response = self.client.messages.create(
@@ -119,8 +135,16 @@ class LLMTestJudge:
                 result = json.loads(json_match.group())
             else:
                 result = json.loads(response_text)
-                
-            return PromptRecommendation(**result)
+            
+            # Handle the response format from the prompt
+            return PromptRecommendation(
+                root_cause=result.get('root_cause', ''),
+                complexity_indicators=result.get('complexity_indicators', []),
+                medical_context=result.get('medical_context', ''),
+                recommendations=result.get('specific_changes', []),  # Map specific_changes to recommendations
+                priority=result.get('priority', 'medium'),
+                prompt_file=result.get('prompt_file')
+            )
         except (json.JSONDecodeError, KeyError, TypeError) as e:
             logger.error(f"Failed to parse LLM response: {e}")
             logger.debug(f"Raw response: {response.content[0].text[:500]}...")
@@ -201,9 +225,22 @@ class LLMTestJudge:
     ) -> Dict[str, Any]:
         """Analyze why specialist selection was wrong and suggest prompt improvements"""
         
-        # Load prompt from agent-centric directory
+        # Load the judge prompt
         prompt_file = Path(__file__).parent.parent.parent / "agents" / "cmo" / "judge_prompts" / "specialist" / "analyze_mismatch.txt"
         prompt_template = prompt_file.read_text()
+        
+        # Load the actual CMO specialist assignment prompt
+        # Load the actual CMO specialist assignment prompt
+        # Navigate from evaluation/framework/llm_judge to project root
+        current_file = Path(__file__).resolve()
+        # Go up: llm_judge -> framework -> evaluation -> project_root
+        project_root = current_file.parent.parent.parent.parent
+        cmo_prompt_file = project_root / "backend" / "services" / "agents" / "cmo" / "prompts" / "3_assign_specialist_tasks.txt"
+        try:
+            actual_prompt_content = cmo_prompt_file.read_text()
+        except Exception as e:
+            logger.error(f"Failed to load CMO specialist prompt: {e}")
+            actual_prompt_content = "[Could not load actual prompt content]"
         
         # Format the prompt with actual values
         prompt = prompt_template.format(
@@ -212,7 +249,8 @@ class LLMTestJudge:
             actual_specialists=', '.join(sorted(actual_specialists)),
             f1_score=f1_score,
             missing_critical=', '.join(missing_critical) if missing_critical else 'None',
-            approach_text=approach_text
+            approach_text=approach_text,
+            actual_prompt_content=actual_prompt_content
         )
 
         response = self.client.messages.create(
@@ -260,9 +298,35 @@ class LLMTestJudge:
         # Identify weak components
         weak_components = {k: v for k, v in quality_breakdown.items() if v < 0.5}
         
-        # Load prompt from agent-centric directory
+        # Load the judge prompt
         prompt_file = Path(__file__).parent.parent.parent / "agents" / "cmo" / "judge_prompts" / "quality" / "analyze_issues.txt"
         prompt_template = prompt_file.read_text()
+        
+        # Load all relevant CMO prompts
+        # Load all relevant CMO prompts
+        # Navigate from evaluation/framework/llm_judge to project root
+        current_file = Path(__file__).resolve()
+        # Go up: llm_judge -> framework -> evaluation -> project_root
+        project_root = current_file.parent.parent.parent.parent
+        cmo_prompts_dir = project_root / "backend" / "services" / "agents" / "cmo" / "prompts"
+        relevant_prompts = {}
+        prompt_files = [
+            "1_gather_data_assess_complexity.txt",
+            "2_define_analytical_approach.txt", 
+            "3_assign_specialist_tasks.txt",
+            "4_synthesis.txt"
+        ]
+        
+        for pf in prompt_files:
+            try:
+                prompt_path = cmo_prompts_dir / pf
+                logger.debug(f"Attempting to load CMO prompt from: {prompt_path}")
+                content = prompt_path.read_text()
+                relevant_prompts[pf] = content
+            except Exception as e:
+                logger.error(f"Failed to load CMO prompt {pf}: {e}")
+                logger.error(f"Full path attempted: {cmo_prompts_dir / pf}")
+                relevant_prompts[pf] = f"[Could not load {pf}]"
         
         # Format the prompt with actual values
         prompt = prompt_template.format(
@@ -271,7 +335,8 @@ class LLMTestJudge:
             quality_breakdown=json.dumps(quality_breakdown, indent=2),
             key_data_points=', '.join(key_data_points),
             approach_text=approach_text,
-            weak_components=json.dumps(weak_components, indent=2)
+            weak_components=json.dumps(weak_components, indent=2),
+            relevant_prompts=json.dumps(relevant_prompts, indent=2)
         )
 
         response = self.client.messages.create(
@@ -292,22 +357,34 @@ class LLMTestJudge:
             else:
                 result = json.loads(response_text)
                 
-            return QualityAnalysisJudgment(**result)
+            # Extract the fields properly
+            return QualityAnalysisJudgment(
+                overall_issue_description=result.get('overall_issue_description', ''),
+                root_cause=result.get('root_cause', ''),
+                weak_components=result.get('weak_components', {}),
+                prompt_improvements=result.get('prompt_improvements', {}),
+                expected_impact=result.get('expected_impact', ''),
+                overall_priority=result.get('overall_priority', 'medium')
+            )
         except (json.JSONDecodeError, KeyError, TypeError) as e:
             logger.error(f"Failed to parse quality analysis response: {e}")
             logger.debug(f"Raw response: {response.content[0].text[:500]}...")
             
             # Fallback analysis
             return QualityAnalysisJudgment(
-                quality_issues=[f"Analysis quality below threshold ({quality_score:.2f} < 0.80)"],
-                medical_accuracy="Failed to comprehensively address all key data points",
-                completeness="Missing coverage of some medical concepts",
-                clinical_appropriateness="Adequate but could be more comprehensive",
-                recommendations=[
-                    "Add instruction: 'Ensure all key medical concepts mentioned in the query are addressed'",
-                    "Add guidance: 'Provide more comprehensive analysis covering all relevant data points'"
-                ],
-                priority="high" if quality_score < 0.7 else "medium"
+                overall_issue_description=f"Analysis quality below threshold ({quality_score:.2f} < 0.80)",
+                root_cause="Failed to comprehensively address all key data points",
+                weak_components=weak_components,
+                prompt_improvements={
+                    "1_gather_data_assess_complexity.txt": {
+                        "needs_update": True,
+                        "issues": ["May not be identifying all key data points"],
+                        "specific_changes": ["Review data gathering section"],
+                        "priority": "medium"
+                    }
+                },
+                expected_impact="Improved quality scores",
+                overall_priority="high" if quality_score < 0.7 else "medium"
             )
     
     async def analyze_tool_usage_issues(

@@ -9,12 +9,18 @@ Actual Complexity: {actual_complexity}
 The CMO's reasoning was:
 {approach_text}
 
-Based on this analysis, what specific changes should be made to the CMO's complexity classification prompt to correctly classify this query?
+Here is the ACTUAL PROMPT that the CMO used for complexity classification:
+```
+{actual_prompt_content}
+```
+
+Based on this analysis and the actual prompt content above, what specific changes should be made to the CMO's complexity classification prompt to correctly classify this query?
 
 Consider:
-1. What criteria led to the misclassification?
-2. What specific guidance in the prompt needs adjustment?
+1. What criteria in the actual prompt led to the misclassification?
+2. What specific sections or guidance in the prompt needs adjustment?
 3. How can we make the complexity boundaries clearer?
+4. Are there specific examples or rules that need to be added or modified?
 
 Provide your analysis in the following JSON format. Output ONLY valid JSON with no additional text before or after:
 {{

@@ -1,5 +1,15 @@
 You are an expert at analyzing specialist selection in a multi-agent health system.
 
+Important context: The system has 6 specialist types available:
+- cardiology: Heart health, blood pressure, cardiovascular disease
+- endocrinology: Diabetes, thyroid, hormones, metabolic health
+- laboratory_medicine: Lab tests, blood work, diagnostic results
+- pharmacy: Medications, dosages, interactions, adherence
+- nutrition: Diet, weight, nutritional health
+- preventive_medicine: Risk factors, screening, prevention
+
+Note: The CMO agent itself handles all data analysis, trend identification, and synthesis tasks.
+
 A test case failed because the wrong specialists were selected:
 
 Query: {query}
@@ -11,13 +21,18 @@ Missing Critical Specialists: {missing_critical}
 The CMO's task creation approach was:
 {approach_text}
 
-Based on this analysis, what specific changes should be made to the CMO's task creation prompt to correctly select specialists for this query?
+Here is the ACTUAL PROMPT that the CMO used for specialist selection:
+```
+{actual_prompt_content}
+```
+
+Based on this analysis and the actual prompt content above, what specific changes should be made to the CMO's task creation prompt to correctly select specialists for this query?
 
 Consider:
-1. What information in the query was missed or misinterpreted?
-2. Why were the critical specialists not selected?
-3. Were any unnecessary specialists included?
-4. How can the specialist selection criteria be improved?
+1. What information in the query was missed or misinterpreted given the current prompt instructions?
+2. Why were the critical specialists not selected based on the prompt's guidance?
+3. Were any unnecessary specialists included due to unclear instructions?
+4. What specific sections, examples, or rules in the prompt need to be updated?
 
 Provide your analysis in the following JSON format. Output ONLY valid JSON with no additional text before or after:
 {{

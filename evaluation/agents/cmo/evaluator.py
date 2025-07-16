@@ -482,3 +482,70 @@ class CMOEvaluator(BaseEvaluator):
         # Implementation would use LLM Judge to evaluate concern identification
         # For now, return a placeholder score
         return 0.7
+    
+    def _create_summary(self, aggregated: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create evaluation summary that considers dimension thresholds.
+        
+        For CMO, a test passes only if ALL dimensions meet their target thresholds.
+        """
+        if not aggregated:
+            return {"overall_success": False}
+        
+        # Get the aggregated results
+        results = aggregated.get("results", [])
+        total_tests = aggregated.get("total_tests", 0)
+        
+        # Count tests that pass ALL dimension thresholds
+        tests_with_all_dimensions_passing = 0
+        failed_tests = []
+        
+        # CMO dimension thresholds
+        dimension_thresholds = {
+            'complexity_classification': 0.90,
+            'specialty_selection': 0.85,
+            'analysis_quality': 0.80,
+            'tool_usage': 0.90,
+            'response_structure': 0.95
+        }
+        
+        for result in results:
+            all_dimensions_pass = True
+            
+            # Check each dimension against its threshold
+            if not result.get('complexity_correct', False):
+                all_dimensions_pass = False
+            
+            if result.get('specialty_f1', 0.0) < dimension_thresholds['specialty_selection']:
+                all_dimensions_pass = False
+            
+            if result.get('analysis_quality_score', 0.0) < dimension_thresholds['analysis_quality']:
+                all_dimensions_pass = False
+            
+            if result.get('tool_success_rate', 0.0) < dimension_thresholds['tool_usage']:
+                all_dimensions_pass = False
+            
+            if not result.get('response_valid', False):
+                all_dimensions_pass = False
+            
+            if all_dimensions_pass:
+                tests_with_all_dimensions_passing += 1
+            else:
+                failed_tests.append(result.get('test_case_id', 'Unknown'))
+        
+        # Calculate true success rate based on dimension thresholds
+        true_success_rate = tests_with_all_dimensions_passing / total_tests if total_tests > 0 else 0.0
+        
+        # Overall success requires 75% of tests to pass ALL dimension thresholds
+        overall_success = true_success_rate >= 0.75
+        
+        return {
+            "overall_success": overall_success,
+            "success_rate": true_success_rate,
+            "total_tests": total_tests,
+            "failed_tests": failed_tests,
+            "performance_metrics": {
+                "avg_response_time_ms": aggregated.get("average_response_time_ms", 0),
+                "avg_tokens_per_test": aggregated.get("average_tokens_per_test", 0)
+            }
+        }

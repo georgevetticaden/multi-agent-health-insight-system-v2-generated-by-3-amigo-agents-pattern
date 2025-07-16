@@ -198,7 +198,8 @@ class BaseEvaluator(ABC):
             "average_response_time_ms": avg_response_time,
             "total_tokens_used": total_tokens,
             "average_tokens_per_test": avg_tokens,
-            "failed_tests": [r.test_case_id for r in results if not r.success]
+            "failed_tests": [r.test_case_id for r in results if not r.success],
+            "results": [r.__dict__ if hasattr(r, '__dict__') else r for r in results]  # Include full results for summary
         }
     
     def _create_summary(self, aggregated: Dict[str, Any]) -> Dict[str, Any]:

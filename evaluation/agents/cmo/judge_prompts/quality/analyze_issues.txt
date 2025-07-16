@@ -4,7 +4,8 @@ The CMO agent's primary role is to:
 1. Analyze query complexity
 2. Identify required medical specialties
 3. Create comprehensive task plans for specialist agents
-4. Delegate work effectively (NOT provide the final analysis itself)
+4. Perform data analysis and trend identification (previously handled by data_analysis specialist)
+5. Synthesize findings from all specialists into a cohesive response
 
 A CMO agent's orchestration quality scored poorly:
 
@@ -25,22 +26,63 @@ Analyze why the orchestration quality is low. Consider:
 3. Was the task decomposition thorough enough to guide specialists?
 4. Did the CMO miss any critical data points that should be delegated to specialists?
 
-Based on your analysis, determine which prompt file needs improvement:
-- If the issue is with initial complexity assessment or data point identification: "backend/services/agents/cmo/prompts/1_gather_data_assess_complexity.txt"
-- If the issue is with specialist selection or task delegation: "backend/services/agents/cmo/prompts/3_assign_specialist_tasks.txt"
+Here are the ACTUAL CMO PROMPTS for reference:
+```json
+{relevant_prompts}
+```
+
+Based on your analysis of the actual prompts above, evaluate EACH prompt for potential improvements:
+
+1. **1_gather_data_assess_complexity.txt**: Does it properly identify complexity and key data points?
+2. **2_define_analytical_approach.txt**: Does it create a comprehensive analytical plan?
+3. **3_assign_specialist_tasks.txt**: Does it select the right specialists and create clear tasks?
+4. **4_synthesis.txt**: Does it guide proper synthesis and analysis of findings?
 
 Provide your analysis in the following JSON format. Output ONLY valid JSON with no additional text before or after:
 {{
-    "prompt_file": "Appropriate prompt file path based on the issue",
-    "issue_description": "Clear description of the orchestration quality issue",
-    "root_cause": "Why the CMO's task planning and delegation was insufficient",
+    "overall_issue_description": "Clear description of the orchestration quality issue",
+    "root_cause": "Why the CMO's overall performance was insufficient",
     "weak_components": {{
-        "component_name": "Specific reason why this component scored low (e.g., missed specialists, incomplete task decomposition)"
+        "component_name": "Specific reason why this component scored low"
     }},
-    "specific_improvements": [
-        "Add instruction in prompt: 'Ensure all key data points are identified for specialist delegation'",
-        "Modify section in prompt: 'Emphasize comprehensive task breakdown for specialists'"
-    ],
+    "prompt_improvements": {{
+        "1_gather_data_assess_complexity.txt": {{
+            "needs_update": true/false,
+            "issues": ["Issue 1 with this prompt", "Issue 2"],
+            "specific_changes": [
+                "In section X, add: 'Consider Y when assessing Z'",
+                "Replace the example about A with B"
+            ],
+            "priority": "high/medium/low"
+        }},
+        "2_define_analytical_approach.txt": {{
+            "needs_update": true/false,
+            "issues": ["Issue 1 with this prompt"],
+            "specific_changes": [
+                "Add guidance for handling trend analysis",
+                "Include examples of correlation identification"
+            ],
+            "priority": "high/medium/low"
+        }},
+        "3_assign_specialist_tasks.txt": {{
+            "needs_update": true/false,
+            "issues": ["Issue 1 with this prompt"],
+            "specific_changes": [
+                "Update specialist selection criteria for X scenarios",
+                "Add clearer task decomposition guidelines"
+            ],
+            "priority": "high/medium/low"
+        }},
+        "4_synthesis.txt": {{
+            "needs_update": true/false,
+            "issues": ["Issue 1 with this prompt"],
+            "specific_changes": [
+                "Emphasize direct answering of user's question",
+                "Add statistical analysis guidance"
+            ],
+            "priority": "high/medium/low"
+        }}
+    }},
     "expected_impact": "How these improvements will enhance CMO's orchestration effectiveness",
-    "priority": "high/medium/low"
+    "overall_priority": "high/medium/low"
 }}

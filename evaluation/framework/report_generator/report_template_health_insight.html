@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ report_title }}</title>
+  <style>
+    /* Health Insight App Styling - Light Theme */
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f9fafb;
+      --bg-tertiary: #f3f4f6;
+      --accent-primary: #3b82f6;
+      --accent-secondary: #8b5cf6;
+      --accent-success: #10b981;
+      --accent-warning: #f59e0b;
+      --accent-danger: #ef4444;
+      --text-primary: #111827;
+      --text-secondary: #374151;
+      --text-tertiary: #6b7280;
+      --border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg-primary);
+      min-height: 100vh;
+      color: var(--text-secondary);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+    }
+
+    /* Container with subtle light gradient background */
+    .main-container {
+      background: linear-gradient(135deg, #ffffff 0%, #f9fafb 50%, #f3f4f6 100%);
+      min-height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .main-container::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.05) 0%, transparent 70%);
+      animation: pulse 20s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1) rotate(0deg); }
+      50% { transform: scale(1.1) rotate(180deg); }
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      padding: 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* Header styling matching Health Insight */
+    .header {
+      background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    .header h1 {
+      margin: 0 0 1rem 0;
+      color: var(--text-primary);
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Card styling */
+    .card {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Status badges */
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-success {
+      background: rgba(16, 185, 129, 0.2);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .badge-danger {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .badge-warning {
+      background: rgba(245, 158, 11, 0.2);
+      color: #f59e0b;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      background: var(--bg-tertiary);
+      padding: 0.75rem;
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-primary);
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    td {
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    tr:hover {
+      background: rgba(0, 0, 0, 0.02);
+    }
+
+    /* Buttons and links */
+    a {
+      color: var(--accent-primary);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    a:hover {
+      color: var(--accent-secondary);
+    }
+
+    /* Collapsible sections */
+    .collapsible {
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.3s ease;
+    }
+
+    .collapsible:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .collapsible-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem;
+    }
+
+    .collapsible-arrow {
+      transition: transform 0.3s ease;
+      font-size: 1.2rem;
+      color: var(--text-tertiary);
+    }
+
+    .collapsible-arrow.open {
+      transform: rotate(180deg);
+    }
+
+    .collapsible-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .collapsible-content.open {
+      max-height: 3000px;
+    }
+
+    /* Metric cards */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .metric-card {
+      background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      border: 1px solid var(--border-color);
+    }
+
+    .metric-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin: 0.5rem 0;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .metric-label {
+      color: var(--text-tertiary);
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Dimension cards */
+    .dimension-card {
+      background: var(--bg-tertiary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      border: 1px solid var(--border-color);
+    }
+
+    /* Progress bars */
+    .progress-bar {
+      background: rgba(0, 0, 0, 0.1);
+      border-radius: 9999px;
+      height: 8px;
+      overflow: hidden;
+      margin: 0.5rem 0;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 9999px;
+      transition: width 0.5s ease;
+    }
+
+    /* Test case cards */
+    .test-case-card {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      margin-bottom: 2rem;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+
+    .test-case-header {
+      background: var(--bg-tertiary);
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .test-case-content {
+      padding: 1.5rem;
+    }
+
+    /* Failure analysis styling */
+    .failure-card {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), transparent);
+      border: 2px solid rgba(239, 68, 68, 0.3);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    /* Prompt improvement styling */
+    .prompt-improvement-card {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), transparent);
+      border: 2px solid rgba(139, 92, 246, 0.3);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    /* Icon styling */
+    .icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.05);
+      margin-right: 1rem;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    /* Scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--accent-primary);
+    }
+  </style>
+</head>
+<body>
+<div class="main-container">
+<div class="container">
+
+<!-- Header -->
+<div class="header fade-in">
+  <h1>{{ report_title }}</h1>
+  <p style="margin: 0; color: var(--text-tertiary);">
+    Generated on {{ timestamp }} | <strong>{{ agent_type|upper }}</strong> Agent | {{ test_suite }} Test Suite
+  </p>
+</div>
+
+<!-- Executive Summary -->
+<div class="card fade-in">
+  <h2 style="color: var(--text-primary); margin-top: 0; display: flex; align-items: center;">
+    <span class="icon" style="background: {{ overall_result_color }};">{{ overall_result_icon }}</span>
+    Executive Summary
+  </h2>
+  
+  <div class="metric-grid">
+    <div class="metric-card">
+      <div class="metric-label">Overall Score</div>
+      <div class="metric-value">{{ overall_score }}%</div>
+      <div class="badge {% if overall_result == 'PASS' %}badge-success{% else %}badge-danger{% endif %}">
+        {{ overall_result }}
+      </div>
+    </div>
+    
+    <div class="metric-card">
+      <div class="metric-label">Tests Evaluated</div>
+      <div class="metric-value">{{ total_tests }}</div>
+      <div style="color: var(--text-tertiary); font-size: 0.875rem;">
+        {{ tests_passed }} passed
+      </div>
+    </div>
+    
+    <div class="metric-card">
+      <div class="metric-label">Avg Response Time</div>
+      <div class="metric-value">{{ "%.1f"|format(summary.performance_metrics.avg_response_time_ms / 1000) }}s</div>
+      <div style="color: var(--text-tertiary); font-size: 0.875rem;">
+        per test
+      </div>
+    </div>
+    
+    <div class="metric-card">
+      <div class="metric-label">Target Score</div>
+      <div class="metric-value">75%</div>
+      <div style="color: var(--text-tertiary); font-size: 0.875rem;">
+        minimum required
+      </div>
+    </div>
+  </div>
+  
+  {% if failed_dimensions %}
+  <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 1rem; margin-top: 1rem;">
+    <h4 style="color: #ef4444; margin: 0 0 0.5rem 0;">Failed Dimensions</h4>
+    <ul style="margin: 0; padding-left: 1.5rem;">
+      {% for dim in failed_dimensions %}
+      <li style="color: var(--text-secondary);">{{ dim }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Test Case Summary -->
+<div class="card fade-in">
+  <h2 style="color: var(--text-primary); margin-top: 0;">Test Case Summary</h2>
+  <div style="overflow-x: auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>Test Case ID</th>
+          <th>Status</th>
+          <th>Response Time</th>
+          <th>Failed Dimensions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for test in test_summary %}
+        <tr>
+          <td style="font-weight: 600;">{{ test.test_case_id }}</td>
+          <td>
+            <span class="badge {% if 'PASS' in test.status %}badge-success{% else %}badge-danger{% endif %}">
+              {{ test.status }}
+            </span>
+          </td>
+          <td>{{ "%.1f"|format(test.response_time / 1000) }}s</td>
+          <td>
+            {% if test.failed_dimensions %}
+              {% for dim in test.failed_dimensions %}
+              <span style="color: #ef4444; font-size: 0.875rem;">{{ dim }}{% if not loop.last %}, {% endif %}</span>
+              {% endfor %}
+            {% else %}
+              <span style="color: #10b981;">None</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Dimension Performance -->
+<div class="card fade-in">
+  <h2 style="color: var(--text-primary); margin-top: 0;">Performance by Dimension</h2>
+  
+  {% for dim_data in dimension_performance %}
+  <div class="dimension-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+      <h4 style="margin: 0; color: var(--text-primary);">
+        {{ dim_data.icon }} {{ dim_data.name }}
+      </h4>
+      <span class="badge {% if dim_data.passed %}badge-success{% else %}badge-danger{% endif %}">
+        {{ dim_data.actual_score }} / {{ dim_data.target_score }}
+      </span>
+    </div>
+    
+    <div class="progress-bar">
+      <div class="progress-fill" style="width: {{ (dim_data.score_percentage) }}%; background: {% if dim_data.passed %}var(--accent-success){% else %}var(--accent-danger){% endif %};"></div>
+    </div>
+    
+    <p style="margin: 0.5rem 0 0 0; color: var(--text-tertiary); font-size: 0.875rem;">
+      {{ dim_data.description }} • Method: {{ dim_data.method }}
+    </p>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Individual Test Cases -->
+<h2 style="color: var(--text-primary); margin: 2rem 0 1rem 0;">Individual Test Case Results</h2>
+
+{% for test_case in test_cases %}
+<div class="test-case-card fade-in">
+  <div class="test-case-header">
+    <div style="display: flex; justify-content: space-between; align-items: start;">
+      <div>
+        <h3 style="margin: 0; color: var(--text-primary);">Test Case: {{ test_case.test_case_id }}</h3>
+        <p style="margin: 0.5rem 0 0 0; color: var(--text-tertiary);">{{ test_case.query }}</p>
+      </div>
+      <span class="badge {% if test_case.passed %}badge-success{% else %}badge-danger{% endif %}">
+        {{ test_case.status }}
+      </span>
+    </div>
+  </div>
+  
+  <div class="test-case-content">
+    <!-- Dimension Evaluation Summary -->
+    <h4 style="color: var(--text-primary); margin-top: 0;">Dimension Evaluation</h4>
+    <div style="overflow-x: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Dimension</th>
+            <th>Expected</th>
+            <th>Actual</th>
+            <th>Score</th>
+            <th>Target</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for dimension in test_case.evaluation_dimensions %}
+          <tr {% if dimension.has_components or dimension.has_failure_info %}class="collapsible" onclick="toggleDimensionRow(this)" style="cursor: pointer;"{% endif %}>
+            <td style="font-weight: 600;">
+              {% if dimension.has_components or dimension.has_failure_info %}
+              <span class="dimension-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+              {% endif %}
+              {{ dimension.name }}
+            </td>
+            <td>{{ dimension.expected }}</td>
+            <td>{{ dimension.actual }}</td>
+            <td>{{ dimension.score }}</td>
+            <td>{{ dimension.target }}</td>
+            <td>
+              <span class="badge {% if 'PASS' in dimension.status %}badge-success{% else %}badge-danger{% endif %}">
+                {{ dimension.status }}
+              </span>
+            </td>
+          </tr>
+          {% if dimension.has_components %}
+          <tr class="dimension-components" style="display: none;">
+            <td colspan="6" style="padding: 0;">
+              <div style="padding: 1rem 1.5rem; background: var(--bg-primary);">
+                <h5 style="color: var(--accent-primary); margin: 0 0 0.5rem 0;">Quality Score Components:</h5>
+                <table style="font-size: 0.875rem;">
+                  <thead>
+                    <tr>
+                      <th>Component</th>
+                      <th>Weight</th>
+                      <th>Score</th>
+                      <th>Weighted</th>
+                      <th>Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for component in dimension.components %}
+                    <tr>
+                      <td style="font-weight: 600;">{{ component.name }}</td>
+                      <td>{{ component.weight }}</td>
+                      <td>{{ component.score }}</td>
+                      <td style="color: var(--accent-primary);">{{ component.weighted }}</td>
+                      <td style="color: var(--text-tertiary);">{{ component.description }}</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </td>
+          </tr>
+          {% elif dimension.has_failure_info %}
+          <tr class="dimension-failure" style="display: none;">
+            <td colspan="6" style="padding: 0;">
+              <div style="padding: 1.5rem; background: linear-gradient(135deg, rgba(239, 68, 68, 0.05), rgba(239, 68, 68, 0.02)); border-top: 2px solid rgba(239, 68, 68, 0.2);">
+                <div style="display: grid; gap: 1rem;">
+                  {% if dimension.failure_info.prompt_files %}
+                  <div>
+                    <h5 style="color: var(--accent-danger); margin: 0 0 0.5rem 0;">📄 Associated Prompt Files:</h5>
+                    <ul style="margin: 0; padding-left: 1.5rem;">
+                      {% for file in dimension.failure_info.prompt_files %}
+                      <li style="color: var(--text-secondary);">{{ file.name }}</li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                  {% endif %}
+                  
+                  {% if dimension.failure_info.root_cause %}
+                  <div>
+                    <h5 style="color: var(--accent-danger); margin: 0 0 0.5rem 0;">🔍 Root Cause Analysis:</h5>
+                    <p style="margin: 0; color: var(--text-secondary); background: rgba(0, 0, 0, 0.02); padding: 0.75rem; border-radius: 6px;">
+                      {{ dimension.failure_info.root_cause }}
+                    </p>
+                  </div>
+                  {% endif %}
+                  
+                  {% if dimension.failure_info.recommendations %}
+                  <div>
+                    <h5 style="color: var(--accent-primary); margin: 0 0 0.5rem 0;">💡 Recommended Improvements:</h5>
+                    <ul style="margin: 0; padding-left: 1.5rem;">
+                      {% for rec in dimension.failure_info.recommendations %}
+                      <li style="color: var(--text-secondary);">{{ rec }}</li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                  {% endif %}
+                  
+                  {% if dimension.failure_info.priority %}
+                  <div style="text-align: right;">
+                    <span class="badge badge-{% if dimension.failure_info.priority == 'high' %}danger{% elif dimension.failure_info.priority == 'medium' %}warning{% else %}success{% endif %}">
+                      Priority: {{ dimension.failure_info.priority|upper }}
+                    </span>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+<!-- Visualizations -->
+<div class="card fade-in">
+  <h2 style="color: var(--text-primary); margin-top: 0;">Visualizations</h2>
+  <div style="text-align: center; padding: 2rem;">
+    <img src="./dimension_scores.png" alt="Dimension Scores" style="max-width: 100%; height: auto; border-radius: 8px;">
+  </div>
+</div>
+
+<!-- Footer -->
+<div style="text-align: center; padding: 2rem; color: var(--text-tertiary);">
+  <p>Report generated by Multi-Agent Health Insight System Evaluation Framework</p>
+  <p style="font-size: 0.875rem;">
+    <a href="https://github.com/anthropics/multi-agent-health-system" target="_blank">View on GitHub</a> |
+    <a href="./raw_results.json" target="_blank">Download Raw Data</a>
+  </p>
+</div>
+
+</div>
+</div>
+</body>
+<script>
+function toggleSection(element) {
+  const content = element.nextElementSibling;
+  const arrow = element.querySelector('.collapsible-arrow');
+  
+  content.classList.toggle('open');
+  arrow.classList.toggle('open');
+}
+
+function toggleDimensionRow(row) {
+  const nextRow = row.nextElementSibling;
+  const arrow = row.querySelector('.dimension-arrow');
+  
+  if (nextRow && (nextRow.classList.contains('dimension-components') || nextRow.classList.contains('dimension-failure'))) {
+    if (nextRow.style.display === 'none') {
+      nextRow.style.display = 'table-row';
+      arrow.style.transform = 'rotate(90deg)';
+    } else {
+      nextRow.style.display = 'none';
+      arrow.style.transform = 'rotate(0deg)';
+    }
+  }
+}
+
+// Add fade-in animation on scroll
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('fade-in');
+    }
+  });
+});
+
+document.querySelectorAll('.card, .test-case-card').forEach(el => {
+  observer.observe(el);
+});
+</script>
+</html>

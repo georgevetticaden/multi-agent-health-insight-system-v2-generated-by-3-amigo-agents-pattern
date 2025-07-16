@@ -22,11 +22,12 @@ from evaluation.core.dimensions import (
 class DynamicHTMLReportGenerator:
     """Generates evaluation reports dynamically based on agent metadata"""
     
-    def __init__(self, test_run_dir: Path, agent_type: str):
+    def __init__(self, test_run_dir: Path, agent_type: str, use_health_insight_theme: bool = True):
         self.test_run_dir = test_run_dir
         self.report_dir = test_run_dir / "report"
         self.report_dir.mkdir(exist_ok=True, parents=True)
         self.agent_type = agent_type
+        self.use_health_insight_theme = use_health_insight_theme
         
         # Get metadata directly from agent class
         self.agent_metadata = None
@@ -66,7 +67,8 @@ class DynamicHTMLReportGenerator:
         template_data['agent_metadata'] = self.agent_metadata.to_report_data()
         
         # Load template and render
-        template = self.env.get_template("report_template.html")
+        template_file = "report_template_health_insight.html" if self.use_health_insight_theme else "report_template.html"
+        template = self.env.get_template(template_file)
         html_content = template.render(**template_data)
         
         # Save HTML report
@@ -124,7 +126,9 @@ class DynamicHTMLReportGenerator:
                 'status': "✅ PASS" if test_passed else "❌ FAIL",
                 'status_color': "rgba(16,185,129,0.2)" if test_passed else "rgba(239,68,68,0.2)",
                 'status_text_color': "#6ee7b7" if test_passed else "#fca5a5",
+                'failed_dimensions': failed_dims,
                 'failed_dimensions_text': ", ".join(failed_dims) if failed_dims else "None",
+                'response_time': result.get('total_response_time_ms', 0),
                 'complexity': result.get('expected_complexity', 'Unknown'),
                 'complexity_color': self._get_complexity_color(result.get('expected_complexity', '')),
                 'complexity_text_color': self._get_complexity_text_color(result.get('expected_complexity', ''))
@@ -160,6 +164,9 @@ class DynamicHTMLReportGenerator:
         for result in individual_results:
             test_cases.append(self._prepare_test_case_data_dynamic(result))
         
+        # Collect prompt improvements from all test cases
+        prompt_improvements = self._collect_prompt_improvements(individual_results)
+        
         return {
             'report_title': f'{self.agent_type.upper()} Agent Evaluation Report',
             'agent_type': self.agent_type,
@@ -179,7 +186,9 @@ class DynamicHTMLReportGenerator:
             'dimension_performance': dimension_performance,
             'prompts_tested': prompts_tested,
             'test_cases': test_cases,
-            'additional_charts': self._get_additional_charts()
+            'prompt_improvements': prompt_improvements,
+            'additional_charts': self._get_additional_charts(),
+            'summary': summary  # Add summary for template access
         }
     
     def _calculate_dimension_scores_dynamic(self, results: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
@@ -316,6 +325,8 @@ class DynamicHTMLReportGenerator:
         # Add failure analysis
         if failed_dimensions:
             test_data['failure_analysis'] = self._prepare_failure_analysis_dynamic(result, failed_dimensions)
+            # Add prompt improvements for this specific test case
+            test_data['prompt_improvements'] = self._prepare_test_case_prompt_improvements(result)
         
         return test_data
     
@@ -332,6 +343,36 @@ class DynamicHTMLReportGenerator:
                 expected, actual = self._get_dimension_values(result, dim_name)
                 
                 passed = score >= criteria.target_score
+                
+                # Get quality components if this is analysis_quality dimension
+                quality_components = None
+                if dim_name == 'analysis_quality' and 'quality_breakdown' in result:
+                    quality_components = []
+                    breakdown = result['quality_breakdown']
+                    # Define component details
+                    component_info = {
+                        'data_gathering': ('Data Gathering', 0.20, 'Appropriate tool calls to gather health data'),
+                        'context_awareness': ('Context Awareness', 0.15, 'Consideration of temporal context and patient history'),
+                        'specialist_rationale': ('Specialist Rationale', 0.20, 'Clear reasoning for specialist task assignments'),
+                        'comprehensive_approach': ('Comprehensive Approach', 0.25, 'Coverage of all relevant medical concepts'),
+                        'concern_identification': ('Concern Identification', 0.20, 'Identification of health concerns and risks')
+                    }
+                    
+                    for comp_key, (comp_name, weight, description) in component_info.items():
+                        if comp_key in breakdown:
+                            quality_components.append({
+                                'name': comp_name,
+                                'weight': f"{weight:.2f}",
+                                'score': f"{breakdown[comp_key]:.2f}",
+                                'weighted': f"{breakdown[comp_key] * weight:.3f}",
+                                'description': description
+                            })
+                
+                # Get failure analysis and prompt improvements for failed dimensions
+                failure_info = None
+                if not passed:
+                    failure_info = self._get_dimension_failure_info(result, dim_name)
+                
                 dimensions.append({
                     'name': dim_name.replace('_', ' ').title(),
                     'expected': expected,
@@ -342,10 +383,85 @@ class DynamicHTMLReportGenerator:
                     'status_color': "rgba(16,185,129,0.2)" if passed else "rgba(239,68,68,0.2)",
                     'status_text_color': "#6ee7b7" if passed else "#fca5a5",
                     'expected_small': len(str(expected)) > 50,
-                    'actual_small': len(str(actual)) > 50
+                    'actual_small': len(str(actual)) > 50,
+                    'has_components': quality_components is not None,
+                    'components': quality_components,
+                    'has_failure_info': failure_info is not None,
+                    'failure_info': failure_info
                 })
         
         return dimensions
+    
+    def _get_dimension_failure_info(self, result: Dict[str, Any], dimension: str) -> Optional[Dict[str, Any]]:
+        """Get failure analysis and prompt improvements for a dimension"""
+        # Map dimension names to analysis keys
+        analysis_key_map = {
+            'specialty_selection': 'specialist_analysis',
+            'analysis_quality': 'quality_analysis',
+            'complexity_classification': 'complexity_analysis',
+            'tool_usage': 'tool_usage_analysis',
+            'response_structure': 'response_structure_analysis'
+        }
+        
+        analysis_key = analysis_key_map.get(dimension)
+        if not analysis_key or analysis_key not in result:
+            return None
+        
+        analysis = result[analysis_key]
+        
+        # Build failure info
+        failure_info = {
+            'prompt_files': [],
+            'root_cause': '',
+            'recommendations': []
+        }
+        
+        # Handle specialist analysis
+        if dimension == 'specialty_selection':
+            prompt_file = analysis.get('prompt_file', '3_assign_specialist_tasks.txt')
+            if '/' in prompt_file:
+                prompt_file = prompt_file.split('/')[-1]
+            
+            failure_info['prompt_files'].append({
+                'name': prompt_file,
+                'full_path': f'backend/services/agents/{self.agent_type}/prompts/{prompt_file}'
+            })
+            failure_info['root_cause'] = analysis.get('reasoning', analysis.get('issue_description', ''))
+            failure_info['recommendations'] = analysis.get('specific_changes', [])
+            failure_info['priority'] = analysis.get('priority', 'medium')
+            
+        # Handle quality analysis  
+        elif dimension == 'analysis_quality' and 'prompt_improvements' in analysis:
+            failure_info['root_cause'] = analysis.get('root_cause', '')
+            for prompt_file, improvements in analysis['prompt_improvements'].items():
+                if improvements.get('needs_update'):
+                    failure_info['prompt_files'].append({
+                        'name': prompt_file,
+                        'full_path': f'backend/services/agents/{self.agent_type}/prompts/{prompt_file}'
+                    })
+                    failure_info['recommendations'].extend(improvements.get('specific_changes', []))
+            failure_info['priority'] = analysis.get('overall_priority', 'medium')
+        
+        # Handle other analyses
+        else:
+            prompt_file = analysis.get('prompt_file', '')
+            if prompt_file:
+                if '/' not in prompt_file:
+                    prompt_file_path = f'backend/services/agents/{self.agent_type}/prompts/{prompt_file}'
+                else:
+                    prompt_file_path = prompt_file
+                    prompt_file = prompt_file.split('/')[-1]
+                
+                failure_info['prompt_files'].append({
+                    'name': prompt_file,
+                    'full_path': prompt_file_path
+                })
+            
+            failure_info['root_cause'] = analysis.get('reasoning', analysis.get('root_cause', ''))
+            failure_info['recommendations'] = analysis.get('specific_changes', analysis.get('recommendations', []))
+            failure_info['priority'] = analysis.get('priority', 'medium')
+        
+        return failure_info if failure_info['prompt_files'] else None
     
     def _get_dimension_values(self, result: Dict[str, Any], dimension: str) -> tuple:
         """Get expected and actual values for a dimension"""
@@ -433,37 +549,76 @@ class DynamicHTMLReportGenerator:
             if analysis_key in result:
                 analysis_data = result[analysis_key]
                 
-                # Find relevant prompt
-                relevant_prompts = [p for p in self.agent_metadata.prompts 
-                                  if criteria.dimension in p.evaluation_dimensions]
-                prompt_file = relevant_prompts[0].filename if relevant_prompts else "unknown"
+                # Get prompt file from analysis data or use a default
+                prompt_file = analysis_data.get('prompt_file', '')
+                if not prompt_file:
+                    # Try to determine prompt file based on dimension
+                    dimension_to_prompt = {
+                        'complexity_classification': '1_gather_data_assess_complexity.txt',
+                        'specialty_selection': '3_assign_specialist_tasks.txt',
+                        'analysis_quality': '2_define_analytical_approach.txt',
+                        'tool_usage': '1_gather_data_assess_complexity.txt',
+                        'response_structure': '1_gather_data_assess_complexity.txt'
+                    }
+                    prompt_file = dimension_to_prompt.get(dim_key, 'unknown')
                 
-                analysis.append({
-                    'icon': self._get_dimension_icon(criteria.dimension),
-                    'title': f'{dim_name} Issue',
-                    'description': analysis_data.get('issue_description', f'{dim_name} below threshold'),
-                    'root_cause': analysis_data.get('reasoning', ''),
-                    'priority': analysis_data.get('priority', 'MEDIUM').upper(),
-                    'priority_color': self._get_priority_color(analysis_data.get('priority', 'medium')),
-                    'prompt_file': f'backend/services/agents/{self.agent_type}/prompts/{prompt_file}',
-                    'recommendations': analysis_data.get('specific_changes', []),
-                    'expected_impact': analysis_data.get('expected_impact')
-                })
+                # Use the prompt file path from analysis data or construct it
+                if '/' in prompt_file:
+                    # Full path already provided
+                    prompt_file_path = prompt_file
+                else:
+                    # Just filename, construct path
+                    prompt_file_path = f'backend/services/agents/{self.agent_type}/prompts/{prompt_file}'
+                
+                # Handle different analysis structures
+                if 'prompt_improvements' in analysis_data:
+                    # New quality analysis structure with multiple prompt improvements
+                    for prompt_name, improvements in analysis_data.get('prompt_improvements', {}).items():
+                        if improvements.get('needs_update', False):
+                            analysis.append({
+                                'icon': self._get_dimension_icon(criteria.dimension),
+                                'title': f'{dim_name} Issue - {prompt_name}',
+                                'description': analysis_data.get('overall_issue_description', f'{dim_name} below threshold'),
+                                'root_cause': analysis_data.get('root_cause', ''),
+                                'priority': improvements.get('priority', 'MEDIUM').upper(),
+                                'priority_color': self._get_priority_color(improvements.get('priority', 'medium')),
+                                'prompt_file': f'backend/services/agents/{self.agent_type}/prompts/{prompt_name}',
+                                'recommendations': improvements.get('specific_changes', []),
+                                'expected_impact': analysis_data.get('expected_impact'),
+                                'issues': improvements.get('issues', [])
+                            })
+                else:
+                    # Original structure for other analyses
+                    analysis.append({
+                        'icon': self._get_dimension_icon(criteria.dimension),
+                        'title': f'{dim_name} Issue',
+                        'description': analysis_data.get('issue_description', f'{dim_name} below threshold'),
+                        'root_cause': analysis_data.get('reasoning', ''),
+                        'priority': analysis_data.get('priority', 'MEDIUM').upper(),
+                        'priority_color': self._get_priority_color(analysis_data.get('priority', 'medium')),
+                        'prompt_file': prompt_file_path,
+                        'recommendations': analysis_data.get('specific_changes', []),
+                        'expected_impact': analysis_data.get('expected_impact')
+                    })
         
         return analysis
     
     def _get_dimension_icon(self, dimension: EvaluationDimension) -> str:
         """Get icon for a dimension"""
+        # Map dimension names to icons
         icon_map = {
-            EvaluationDimension.COMPLEXITY_CLASSIFICATION: "⚠️",
-            EvaluationDimension.SPECIALTY_SELECTION: "👥",
-            EvaluationDimension.ANALYSIS_QUALITY: "📊",
-            EvaluationDimension.TOOL_USAGE: "🔧",
-            EvaluationDimension.RESPONSE_STRUCTURE: "📋",
-            EvaluationDimension.MEDICAL_ACCURACY: "🏥",
-            EvaluationDimension.RECOMMENDATION_QUALITY: "💡"
+            "complexity_classification": "⚠️",
+            "specialty_selection": "👥",
+            "analysis_quality": "📊",
+            "tool_usage": "🔧",
+            "response_structure": "📋",
+            "medical_accuracy": "🏥",
+            "recommendation_quality": "💡",
+            "synthesis_quality": "🔄"
         }
-        return icon_map.get(dimension, "📌")
+        # Get the dimension name (handle both string and EvaluationDimension)
+        dim_name = dimension.name if hasattr(dimension, 'name') else str(dimension)
+        return icon_map.get(dim_name, "📌")
     
     def _get_complexity_color(self, complexity: str) -> str:
         """Get background color for complexity badge"""
@@ -497,6 +652,130 @@ class DynamicHTMLReportGenerator:
         if test_suite.lower() == "real world":
             return f"The Real World test suite evaluates the {self.agent_type.upper()} Agent's performance on queries taken from production usage."
         return ""
+    
+    def _collect_prompt_improvements(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Collect and organize all prompt improvements from LLM Judge analyses"""
+        prompt_improvements = {}
+        
+        # Collect improvements from each result
+        for result in results:
+            # Check quality analysis for prompt improvements
+            if 'quality_analysis' in result and 'prompt_improvements' in result['quality_analysis']:
+                for prompt_file, improvements in result['quality_analysis']['prompt_improvements'].items():
+                    if improvements.get('needs_update', False):
+                        if prompt_file not in prompt_improvements:
+                            prompt_improvements[prompt_file] = {
+                                'issues': set(),
+                                'changes': set(),
+                                'priorities': [],
+                                'test_cases': []
+                            }
+                        
+                        # Aggregate issues and changes
+                        prompt_improvements[prompt_file]['issues'].update(improvements.get('issues', []))
+                        prompt_improvements[prompt_file]['changes'].update(improvements.get('specific_changes', []))
+                        prompt_improvements[prompt_file]['priorities'].append(improvements.get('priority', 'medium'))
+                        prompt_improvements[prompt_file]['test_cases'].append(result.get('test_case_id', 'Unknown'))
+            
+            # Check specialist analysis
+            if 'specialist_analysis' in result and 'specific_changes' in result['specialist_analysis']:
+                prompt_file = result['specialist_analysis'].get('prompt_file', '3_assign_specialist_tasks.txt')
+                if '/' in prompt_file:
+                    prompt_file = prompt_file.split('/')[-1]
+                
+                if prompt_file not in prompt_improvements:
+                    prompt_improvements[prompt_file] = {
+                        'issues': set(),
+                        'changes': set(),
+                        'priorities': [],
+                        'test_cases': []
+                    }
+                
+                prompt_improvements[prompt_file]['issues'].add(result['specialist_analysis'].get('issue_description', ''))
+                prompt_improvements[prompt_file]['changes'].update(result['specialist_analysis'].get('specific_changes', []))
+                prompt_improvements[prompt_file]['priorities'].append(result['specialist_analysis'].get('priority', 'medium'))
+                prompt_improvements[prompt_file]['test_cases'].append(result.get('test_case_id', 'Unknown'))
+        
+        # Convert sets to lists and determine overall priority
+        organized_improvements = []
+        for prompt_file, data in prompt_improvements.items():
+            # Determine overall priority (highest priority wins)
+            priority_order = {'high': 3, 'medium': 2, 'low': 1}
+            priorities = data['priorities']
+            if priorities:
+                overall_priority = max(priorities, key=lambda p: priority_order.get(p, 0))
+            else:
+                overall_priority = 'medium'
+            
+            organized_improvements.append({
+                'file': prompt_file,
+                'full_path': f'backend/services/agents/{self.agent_type}/prompts/{prompt_file}',
+                'issues': list(data['issues']),
+                'changes': list(data['changes']),
+                'priority': overall_priority,
+                'affected_tests': data['test_cases'],
+                'test_count': len(set(data['test_cases']))
+            })
+        
+        # Sort by priority
+        priority_order = {'high': 3, 'medium': 2, 'low': 1}
+        organized_improvements.sort(key=lambda x: priority_order.get(x['priority'], 0), reverse=True)
+        
+        return {
+            'has_improvements': len(organized_improvements) > 0,
+            'total_files': len(organized_improvements),
+            'improvements': organized_improvements
+        }
+    
+    def _prepare_test_case_prompt_improvements(self, result: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Prepare prompt improvement recommendations for a specific test case"""
+        improvements = []
+        
+        # Check if we have quality analysis with prompt improvements
+        if 'quality_analysis' in result and 'prompt_improvements' in result['quality_analysis']:
+            for prompt_file, improvement_data in result['quality_analysis']['prompt_improvements'].items():
+                if improvement_data.get('needs_update', False):
+                    improvements.append({
+                        'prompt_file': prompt_file,
+                        'issues': improvement_data.get('issues', []),
+                        'changes': improvement_data.get('specific_changes', []),
+                        'priority': improvement_data.get('priority', 'medium'),
+                        'dimension': 'Analysis Quality'
+                    })
+        
+        # Check specialist analysis
+        if 'specialist_analysis' in result:
+            analysis = result['specialist_analysis']
+            if 'prompt_file' in analysis and 'specific_changes' in analysis:
+                prompt_file = analysis['prompt_file']
+                if '/' in prompt_file:
+                    prompt_file = prompt_file.split('/')[-1]
+                
+                improvements.append({
+                    'prompt_file': prompt_file,
+                    'issues': [analysis.get('issue_description', '')],
+                    'changes': analysis.get('specific_changes', []),
+                    'priority': analysis.get('priority', 'medium'),
+                    'dimension': 'Specialist Selection',
+                    'missing_specialists': analysis.get('missing_specialists_reason', {})
+                })
+        
+        # Check complexity analysis
+        if 'complexity_analysis' in result:
+            analysis = result['complexity_analysis']
+            if hasattr(analysis, 'prompt_file') or 'prompt_file' in analysis:
+                prompt_file = analysis.get('prompt_file') if isinstance(analysis, dict) else getattr(analysis, 'prompt_file', None)
+                if prompt_file:
+                    recommendations = analysis.get('recommendations', []) if isinstance(analysis, dict) else getattr(analysis, 'recommendations', [])
+                    improvements.append({
+                        'prompt_file': prompt_file,
+                        'issues': [analysis.get('root_cause', '') if isinstance(analysis, dict) else getattr(analysis, 'root_cause', '')],
+                        'changes': recommendations,
+                        'priority': analysis.get('priority', 'medium') if isinstance(analysis, dict) else getattr(analysis, 'priority', 'medium'),
+                        'dimension': 'Complexity Classification'
+                    })
+        
+        return improvements
     
     def _get_additional_charts(self) -> List[Dict[str, str]]:
         """Get additional chart data"""

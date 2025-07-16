@@ -374,6 +374,114 @@
   {% endif %}
 </div>
 
+{% if prompt_improvements.has_improvements %}
+<h2 style="color: white; display: flex; align-items: center; gap: 12px;">
+  <span style="background: linear-gradient(135deg, #ec4899, #8b5cf6); width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">🎯</span>
+  LLM Judge Prompt Improvement Recommendations
+</h2>
+
+<div style="background: linear-gradient(135deg, rgba(236,72,153,0.1), rgba(139,92,246,0.1)); border: 1px solid rgba(139,92,246,0.3); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+  <p style="margin: 0 0 16px 0; color: #e5e7eb;">
+    <strong style="color: #ec4899;">🤖 AI-Powered Analysis:</strong> Our LLM Judge analyzed {{ total_tests }} test cases and identified specific improvements needed across {{ prompt_improvements.total_files }} prompt files. Each recommendation is based on actual test failures and includes the exact prompt content.
+  </p>
+  
+  <div style="display: flex; gap: 24px; margin-top: 16px;">
+    <div style="flex: 1; background: rgba(255,255,255,0.05); padding: 16px; border-radius: 8px;">
+      <div style="font-size: 2rem; font-weight: bold; color: #ec4899;">{{ prompt_improvements.total_files }}</div>
+      <div style="font-size: 0.875rem; color: #94a3b8;">Prompts Need Updates</div>
+    </div>
+    <div style="flex: 1; background: rgba(255,255,255,0.05); padding: 16px; border-radius: 8px;">
+      <div style="font-size: 2rem; font-weight: bold; color: #8b5cf6;">
+        {% set high_priority = prompt_improvements.improvements | selectattr("priority", "equalto", "high") | list | length %}
+        {{ high_priority }}
+      </div>
+      <div style="font-size: 0.875rem; color: #94a3b8;">High Priority Changes</div>
+    </div>
+  </div>
+</div>
+
+{% for improvement in prompt_improvements.improvements %}
+<div style="background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; overflow: hidden; margin-bottom: 20px;">
+  <!-- Header with priority indicator -->
+  <div style="background: {% if improvement.priority == 'high' %}linear-gradient(135deg, rgba(239,68,68,0.2), rgba(239,68,68,0.1)){% elif improvement.priority == 'medium' %}linear-gradient(135deg, rgba(251,191,36,0.2), rgba(251,191,36,0.1)){% else %}linear-gradient(135deg, rgba(34,197,94,0.2), rgba(34,197,94,0.1)){% endif %}; padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="margin: 0; color: white; font-size: 1.25rem;">📄 {{ improvement.file }}</h3>
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <span style="background: {% if improvement.priority == 'high' %}rgba(239,68,68,0.3){% elif improvement.priority == 'medium' %}rgba(251,191,36,0.3){% else %}rgba(34,197,94,0.3){% endif %}; color: {% if improvement.priority == 'high' %}#fca5a5{% elif improvement.priority == 'medium' %}#fcd34d{% else %}#86efac{% endif %}; padding: 6px 12px; border-radius: 6px; font-size: 0.875rem; font-weight: 600;">
+          {{ improvement.priority|upper }} PRIORITY
+        </span>
+        <span style="background: rgba(139,92,246,0.2); color: #c4b5fd; padding: 6px 12px; border-radius: 6px; font-size: 0.875rem;">
+          Affects {{ improvement.test_count }} test{{ 's' if improvement.test_count > 1 else '' }}
+        </span>
+      </div>
+    </div>
+    <div style="margin-top: 8px;">
+      <code style="background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px; font-size: 0.875rem; color: #94a3b8;">{{ improvement.full_path }}</code>
+    </div>
+  </div>
+  
+  <div style="padding: 20px;">
+    <!-- Issues Identified -->
+    {% if improvement.issues %}
+    <div style="margin-bottom: 20px;">
+      <h4 style="color: #fbbf24; margin: 0 0 12px 0; font-size: 1rem;">🔍 Issues Identified</h4>
+      <ul style="margin: 0; padding-left: 20px; color: #e5e7eb;">
+        {% for issue in improvement.issues %}
+        {% if issue %}
+        <li style="margin-bottom: 8px; line-height: 1.5;">{{ issue }}</li>
+        {% endif %}
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+    
+    <!-- Recommended Changes -->
+    {% if improvement.changes %}
+    <div style="margin-bottom: 20px;">
+      <h4 style="color: #60a5fa; margin: 0 0 12px 0; font-size: 1rem;">💡 Specific Changes Required</h4>
+      <div style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); border-radius: 8px; padding: 16px;">
+        <ul style="margin: 0; padding-left: 20px; color: #e5e7eb;">
+          {% for change in improvement.changes %}
+          <li style="margin-bottom: 12px; line-height: 1.5;">
+            <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 3px; font-size: 0.875rem;">{{ change }}</code>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    {% endif %}
+    
+    <!-- Affected Tests -->
+    <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px;">
+      <span style="color: #94a3b8; font-size: 0.875rem;">
+        <strong>Affected Tests:</strong> 
+        {% for test in improvement.affected_tests[:3] %}
+        <span style="background: rgba(139,92,246,0.2); padding: 2px 6px; border-radius: 3px; margin-left: 4px;">{{ test }}</span>
+        {% endfor %}
+        {% if improvement.affected_tests|length > 3 %}
+        <span style="color: #6366f1; margin-left: 4px;">+{{ improvement.affected_tests|length - 3 }} more</span>
+        {% endif %}
+      </span>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+<div style="background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(34,197,94,0.1)); border: 1px solid rgba(34,197,94,0.3); border-radius: 12px; padding: 20px; margin-top: 24px;">
+  <h4 style="color: #6ee7b7; margin: 0 0 12px 0;">📚 Implementation Guide</h4>
+  <p style="margin: 0 0 16px 0; color: #e5e7eb;">To implement these improvements:</p>
+  <ol style="margin: 0; padding-left: 20px; color: #e5e7eb;">
+    <li style="margin-bottom: 8px;">Start with <strong style="color: #fca5a5;">HIGH PRIORITY</strong> changes first</li>
+    <li style="margin-bottom: 8px;">Review the actual prompt content alongside the recommendations</li>
+    <li style="margin-bottom: 8px;">Test each change with the affected test cases</li>
+    <li style="margin-bottom: 8px;">Run the full evaluation suite to verify improvements</li>
+  </ol>
+  <p style="margin: 16px 0 0 0; color: #94a3b8; font-size: 0.875rem;">
+    💡 <strong>Pro Tip:</strong> The LLM Judge analyzed the actual prompt content to provide these specific recommendations, ensuring they directly address the root causes of test failures.
+  </p>
+</div>
+{% endif %}
+
 {% if failure_patterns %}
 <h2 style="color: white; display: flex; align-items: center; gap: 12px;">
   <span style="background: rgba(59,130,246,0.2); width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">🔍</span>
@@ -494,8 +602,13 @@
         </thead>
         <tbody>
           {% for dimension in test_case.evaluation_dimensions %}
-          <tr {% if loop.index0 % 2 == 1 %}style="background: rgba(255,255,255,0.02);"{% endif %}>
-            <td style="padding: 12px; font-weight: 600;">{{ dimension.name }}</td>
+          <tr {% if dimension.has_components %}class="collapsible" onclick="toggleDimensionRow(this)" style="cursor: pointer; {% if loop.index0 % 2 == 1 %}background: rgba(255,255,255,0.02);{% endif %}"{% else %}{% if loop.index0 % 2 == 1 %}style="background: rgba(255,255,255,0.02);"{% endif %}{% endif %}>
+            <td style="padding: 12px; font-weight: 600;">
+              {% if dimension.has_components %}
+              <span class="dimension-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+              {% endif %}
+              {{ dimension.name }}
+            </td>
             <td style="padding: 12px; {% if dimension.expected_small %}font-size: 0.875rem;{% endif %}">{{ dimension.expected }}</td>
             <td style="padding: 12px; {% if dimension.actual_small %}font-size: 0.875rem;{% endif %}">{{ dimension.actual }}</td>
             <td style="padding: 12px;">{{ dimension.score }}</td>
@@ -504,57 +617,42 @@
               <span style="background: {{ dimension.status_color }}; color: {{ dimension.status_text_color }}; padding: 4px 8px; border-radius: 4px;">{{ dimension.status }}</span>
             </td>
           </tr>
+          {% if dimension.has_components %}
+          <tr class="dimension-components" style="display: none; background: rgba(255,255,255,0.03);">
+            <td colspan="6" style="padding: 0;">
+              <div style="padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <h5 style="color: #60a5fa; margin: 0 0 12px 0; font-size: 0.875rem;">Quality Score Components:</h5>
+                <table style="width: 100%; font-size: 0.875rem;">
+                  <thead>
+                    <tr style="background: rgba(255,255,255,0.05);">
+                      <th style="padding: 8px; text-align: left; color: #94a3b8;">Component</th>
+                      <th style="padding: 8px; text-align: left; color: #94a3b8;">Weight</th>
+                      <th style="padding: 8px; text-align: left; color: #94a3b8;">Score</th>
+                      <th style="padding: 8px; text-align: left; color: #94a3b8;">Weighted</th>
+                      <th style="padding: 8px; text-align: left; color: #94a3b8;">Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for component in dimension.components %}
+                    <tr {% if loop.index0 % 2 == 1 %}style="background: rgba(255,255,255,0.02);"{% endif %}>
+                      <td style="padding: 8px; font-weight: 600; color: #e5e7eb;">{{ component.name }}</td>
+                      <td style="padding: 8px; color: #94a3b8;">{{ component.weight }}</td>
+                      <td style="padding: 8px; color: #e5e7eb;">{{ component.score }}</td>
+                      <td style="padding: 8px; color: #60a5fa;">{{ component.weighted }}</td>
+                      <td style="padding: 8px; color: #94a3b8; font-size: 0.75rem;">{{ component.description }}</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </td>
+          </tr>
+          {% endif %}
           {% endfor %}
         </tbody>
       </table>
     </div>
 
-    {% if test_case.quality_breakdown %}
-    <!-- Collapsible Analysis Quality Score Breakdown -->
-    <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 16px; overflow: hidden;">
-      <div class="collapsible collapsible-header" onclick="toggleSection(this)">
-        <strong style="color: #60a5fa;">Analysis Quality Score Breakdown</strong>
-        <span class="collapsible-arrow">▼</span>
-      </div>
-      <div class="collapsible-content">
-        <div style="padding: 16px;">
-          <p style="margin: 0 0 16px 0; color: #e5e7eb;">This breakdown shows how the Analysis Quality score was calculated:</p>
-          
-          <div style="background: rgba(255,255,255,0.05); border-radius: 8px; overflow: hidden;">
-            <table style="width: 100%; border-collapse: collapse; color: #e5e7eb;">
-              <thead>
-                <tr style="background: rgba(255,255,255,0.1);">
-                  <th style="padding: 12px; text-align: left;">Component</th>
-                  <th style="padding: 12px; text-align: left;">Weight</th>
-                  <th style="padding: 12px; text-align: left;">Score</th>
-                  <th style="padding: 12px; text-align: left;">Weighted</th>
-                  <th style="padding: 12px; text-align: left;">What We Looked For</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for component in test_case.quality_breakdown %}
-                <tr {% if loop.index0 % 2 == 1 %}style="background: rgba(255,255,255,0.02);"{% endif %}>
-                  <td style="padding: 12px; font-weight: 600;">{{ component.name }}</td>
-                  <td style="padding: 12px;">{{ component.weight }}</td>
-                  <td style="padding: 12px;">{{ component.score }}</td>
-                  <td style="padding: 12px;">{{ component.weighted }}</td>
-                  <td style="padding: 12px; font-size: 0.875rem;">{{ component.description }}</td>
-                </tr>
-                {% endfor %}
-                <tr style="background: rgba(59,130,246,0.1); font-weight: 600;">
-                  <td style="padding: 12px; color: white;">Total</td>
-                  <td style="padding: 12px; color: white;">1.00</td>
-                  <td style="padding: 12px; color: white;">-</td>
-                  <td style="padding: 12px; color: white;">{{ test_case.total_quality_score }}</td>
-                  <td style="padding: 12px; color: white;">Target: ≥ 0.800</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-    {% endif %}
 
     {% if test_case.failure_analysis %}
     <!-- Enhanced Failure Analysis Section -->
@@ -603,6 +701,19 @@
       </div>
       {% endif %}
       
+      {% if failure.issues %}
+      <div style="background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.3); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+        <p style="margin: 0 0 12px 0; color: #fbbf24; font-weight: 600;">
+          🔍 Issues Identified
+        </p>
+        <ul style="margin: 0; padding-left: 20px; color: #e5e7eb;">
+          {% for issue in failure.issues %}
+          <li style="margin-bottom: 8px;">{{ issue }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+      
       {% if failure.recommendations %}
       <div class="recommendation-box">
         <p style="margin: 0 0 12px 0; color: #60a5fa; font-weight: 600;">
@@ -626,6 +737,71 @@
         </p>
       </div>
       {% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+    
+    {% if test_case.prompt_improvements %}
+    <!-- LLM Judge Prompt Improvement Recommendations for this test case -->
+    <div style="background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(139,92,246,0.05)); border: 2px solid rgba(139,92,246,0.3); border-radius: 16px; padding: 24px; margin-top: 24px; position: relative; overflow: hidden;">
+      <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #a78bfa, #8b5cf6, #a78bfa); animation: pulse 2s ease-in-out infinite;"></div>
+      
+      <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px;">
+        <div style="background: rgba(139,92,246,0.2); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">💡</div>
+        <h4 style="color: white; margin: 0; font-size: 1.25rem;">Prompt Improvement Recommendations</h4>
+      </div>
+      
+      <div style="background: rgba(236,72,153,0.1); border: 1px solid rgba(236,72,153,0.3); border-radius: 12px; padding: 12px; margin-bottom: 16px;">
+        <p style="margin: 0; color: #e5e7eb; font-size: 0.875rem;">
+          <strong style="color: #ec4899;">🎯 Targeted Improvements:</strong> The LLM Judge analyzed this specific test failure and identified prompt improvements that would help the CMO agent pass this test.
+        </p>
+      </div>
+      
+      {% for improvement in test_case.prompt_improvements %}
+      <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 16px; margin-bottom: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+          <div>
+            <h5 style="color: #a78bfa; margin: 0 0 4px 0; font-size: 1rem;">📄 {{ improvement.prompt_file }}</h5>
+            <span style="color: #94a3b8; font-size: 0.75rem;">Failed Dimension: {{ improvement.dimension }}</span>
+          </div>
+          <span style="background: {% if improvement.priority == 'high' %}rgba(239,68,68,0.3){% elif improvement.priority == 'medium' %}rgba(251,191,36,0.3){% else %}rgba(34,197,94,0.3){% endif %}; color: {% if improvement.priority == 'high' %}#fca5a5{% elif improvement.priority == 'medium' %}#fcd34d{% else %}#86efac{% endif %}; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">
+            {{ improvement.priority|upper }}
+          </span>
+        </div>
+        
+        {% if improvement.issues %}
+        <div style="margin-bottom: 12px;">
+          <p style="color: #fbbf24; font-size: 0.875rem; margin: 0 0 8px 0; font-weight: 600;">Issues:</p>
+          <ul style="margin: 0; padding-left: 20px; color: #e5e7eb; font-size: 0.875rem;">
+            {% for issue in improvement.issues %}
+            {% if issue %}
+            <li style="margin-bottom: 4px;">{{ issue }}</li>
+            {% endif %}
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+        
+        {% if improvement.changes %}
+        <div style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); border-radius: 8px; padding: 12px;">
+          <p style="color: #60a5fa; font-size: 0.875rem; margin: 0 0 8px 0; font-weight: 600;">Recommended Changes:</p>
+          <ul style="margin: 0; padding-left: 20px; color: #e5e7eb; font-size: 0.875rem;">
+            {% for change in improvement.changes %}
+            <li style="margin-bottom: 4px;">{{ change }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+        
+        {% if improvement.missing_specialists %}
+        <div style="margin-top: 12px; padding: 8px; background: rgba(251,191,36,0.1); border-radius: 6px;">
+          <p style="color: #fbbf24; font-size: 0.75rem; margin: 0; font-weight: 600;">Missing Specialists:</p>
+          {% for spec, reason in improvement.missing_specialists.items() %}
+          <p style="color: #e5e7eb; font-size: 0.75rem; margin: 4px 0 0 0;">• <strong>{{ spec }}:</strong> {{ reason }}</p>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
       {% endfor %}
     </div>
     {% endif %}
@@ -690,6 +866,21 @@ function toggleSection(element) {
   
   content.classList.toggle('open');
   arrow.classList.toggle('open');
+}
+
+function toggleDimensionRow(row) {
+  const componentRow = row.nextElementSibling;
+  const arrow = row.querySelector('.dimension-arrow');
+  
+  if (componentRow && componentRow.classList.contains('dimension-components')) {
+    if (componentRow.style.display === 'none') {
+      componentRow.style.display = 'table-row';
+      arrow.style.transform = 'rotate(90deg)';
+    } else {
+      componentRow.style.display = 'none';
+      arrow.style.transform = 'rotate(0deg)';
+    }
+  }
 }
 </script>
 </html>

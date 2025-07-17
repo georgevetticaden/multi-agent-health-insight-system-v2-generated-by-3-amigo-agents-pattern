@@ -1020,3 +1020,124 @@ class LLMTestJudge:
         # Call the appropriate analysis method
         method = analysis_methods[dimension]
         return await method(**kwargs)
+    
+    async def analyze_dimension_patterns(
+        self,
+        agent_type: str,
+        dimension_name: str, 
+        dimension_data: Dict[str, Any]
+    ) -> Optional[Dict]:
+        """
+        Analyze failure patterns across all tests for a dimension.
+        
+        This method performs macro-level analysis by examining all test failures
+        for a specific dimension, identifying patterns, and providing consolidated
+        recommendations.
+        
+        Args:
+            agent_type: Type of agent being evaluated (e.g., 'cmo')
+            dimension_name: Name of the dimension being analyzed
+            dimension_data: Aggregated data including all test failures
+            
+        Returns:
+            Consolidated analysis with patterns and recommendations, or None if analysis fails
+        """
+        logger.info(f"🔍 Analyzing patterns for dimension: {dimension_name}")
+        
+        # Load macro analysis prompt
+        prompt_template = self._load_prompt(
+            agent_type, 
+            "macro_analysis", 
+            "dimension_pattern_analysis"
+        )
+        
+        # Collect all unique prompt files mentioned in failures
+        unique_prompt_files = set()
+        for test_failure in dimension_data['failed_tests']:
+            prompt_files = test_failure.get('prompt_files', [])
+            for pf in prompt_files:
+                if isinstance(pf, dict):
+                    unique_prompt_files.add(pf.get('name', pf.get('filename', '')))
+                else:
+                    unique_prompt_files.add(str(pf))
+        
+        # Load actual prompt content
+        prompt_contents = {}
+        for prompt_file in unique_prompt_files:
+            # Clean filename (remove path if included)
+            clean_filename = prompt_file.split('/')[-1] if '/' in prompt_file else prompt_file
+            
+            # Load the actual prompt content
+            actual_content = self._load_agent_prompt(agent_type, clean_filename)
+            if actual_content:
+                prompt_contents[clean_filename] = actual_content
+            else:
+                prompt_contents[clean_filename] = f"[Could not load {clean_filename}]"
+                logger.warning(f"Could not load prompt file: {clean_filename}")
+        
+        # Format individual test analyses
+        test_analyses_text = []
+        for test_failure in dimension_data['failed_tests']:
+            test_text = f"""Test Case: {test_failure['test_id']}
+Query: {test_failure['query'][:100]}...
+Score: {test_failure['score']:.2%} (Target: {test_failure['target']:.2%})
+
+Individual LLM Judge Analysis:
+- Root Cause: {test_failure.get('root_cause', 'Not analyzed')}
+- Recommendations:"""
+            
+            for rec in test_failure.get('recommendations', []):
+                test_text += f"\n  • {rec}"
+                
+            test_text += f"""
+- Priority: {test_failure.get('priority', 'medium')}
+- Prompt Files: {', '.join(str(pf) for pf in test_failure.get('prompt_files', []))}
+--------------------------------------------------------------------------------"""
+            test_analyses_text.append(test_text)
+        
+        # Format prompt contents
+        prompt_contents_text = []
+        for filename, content in sorted(prompt_contents.items()):
+            prompt_contents_text.append(f"""File: {filename}
+```
+{content}
+```
+================================================================================""")
+        
+        # Format the complete prompt
+        prompt = prompt_template.format(
+            dimension_name=dimension_name,
+            failed_count=len(dimension_data['failed_tests']),
+            total_count=dimension_data['total_tests'],
+            avg_score=dimension_data['avg_score'],
+            target_score=dimension_data['target_score'],
+            failure_rate=dimension_data['failure_rate'],
+            test_analyses='\n'.join(test_analyses_text),
+            prompt_contents='\n'.join(prompt_contents_text)
+        )
+        
+        # Call LLM with more tokens for larger context
+        try:
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=3000,  # Increased for comprehensive analysis
+                messages=[{"role": "user", "content": prompt}]
+            )
+            
+            # Parse response
+            response_text = response.content[0].text.strip()
+            logger.debug(f"Raw macro analysis response: {response_text[:500]}...")
+            
+            import re
+            json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', response_text, re.DOTALL)
+            if json_match:
+                result = json.loads(json_match.group())
+            else:
+                result = json.loads(response_text)
+                
+            logger.info(f"✅ Macro analysis complete for {dimension_name}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to analyze dimension patterns: {e}")
+            return None

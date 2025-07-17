@@ -100,9 +100,16 @@ def _print_evaluation_summary(results: Dict[str, Any], test_dir: Path, agent_typ
     # Recommendations
     print("\nRecommendations for Improvement:")
     if overall_score < 75.0:
-        print("  1. Review failed test cases in the HTML report")
-        print("  2. Analyze LLM Judge feedback for quality improvements")
-        print("  3. Consider prompt refinements based on failure patterns")
+        # Check if we have macro analysis results
+        if 'macro_analyses' in results and results['macro_analyses']:
+            print("  📊 Macro-Level Analysis Available:")
+            print("  - Pattern analysis across all test failures")
+            print("  - Consolidated recommendations in HTML report")
+            print("  - Expected improvements from implementing recommendations")
+        else:
+            print("  1. Review failed test cases in the HTML report")
+            print("  2. Analyze LLM Judge feedback for quality improvements")
+            print("  3. Consider prompt refinements based on failure patterns")
     else:
         print("  ✓ All performance targets met!")
     
@@ -352,6 +359,12 @@ class EvaluationRunner:
         results["agent_type"] = agent_type
         results["test_type"] = test_type
         results["category"] = category
+        
+        # Perform macro-level analysis if applicable (CMO evaluator has this method)
+        if hasattr(evaluator, 'perform_macro_analysis'):
+            logger.info("Performing macro-level analysis across all test failures...")
+            results = await evaluator.perform_macro_analysis(results)
+            logger.info("Macro-level analysis completed")
         
         # No need to enhance here - failure analysis is now done in the evaluator
         return results

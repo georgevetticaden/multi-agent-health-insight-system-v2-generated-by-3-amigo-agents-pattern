@@ -140,31 +140,9 @@ class DynamicHTMLReportGenerator:
             })
         
         # Dimension performance - dynamic based on metadata
-        dimension_performance = []
-        for dim_name, data in dimension_scores.items():
-            # Find criteria by dimension name
-            criteria = None
-            for c in self.agent_metadata.evaluation_criteria:
-                if c.dimension.name == dim_name:
-                    criteria = c
-                    break
-            if criteria:
-                passed = data['passed']
-                dimension_performance.append({
-                    'name': dim_name.replace('_', ' ').title(),
-                    'score_percent': f"{data['score_percent']:.1f}",
-                    'target_percent': f"{data['target_percent']:.1f}",
-                    'score_percentage': data['score_percent'],  # For progress bar width
-                    'actual_score': f"{data['score_percent']:.1f}%",
-                    'target_score': f"{data['target_percent']:.1f}%",
-                    'passed': passed,
-                    'score_color': "#10b981" if passed else "#ef4444",
-                    'progress_gradient': "linear-gradient(to right, #10b981, #059669)" if passed else "linear-gradient(to right, #ef4444, #dc2626)",
-                    'method_icon': self._get_method_icon_dynamic(criteria),
-                    'method': self._get_primary_method(criteria),
-                    'description': criteria.description,
-                    'icon': self._get_method_icon_dynamic(criteria)
-                })
+        dimension_performance = self._prepare_dimension_performance_with_macro_analysis(
+            dimension_scores, results.get('macro_analyses', {})
+        )
         
         # Get prompts from metadata
         prompts_tested = self._get_prompts_tested_dynamic()
@@ -177,8 +155,13 @@ class DynamicHTMLReportGenerator:
         # Collect prompt improvements from all test cases
         prompt_improvements = self._collect_prompt_improvements(individual_results)
         
+        # Prepare consolidated recommendations from macro analysis
+        consolidated_recommendations = self._prepare_consolidated_recommendations(
+            results.get('macro_analyses', {})
+        )
+        
         return {
-            'report_title': f'{self.agent_type.upper()} Agent Evaluation Report',
+            'report_title': f'{self.agent_type.upper()} Agent Eval Report',
             'agent_type': self.agent_type,
             'agent_description': self.agent_metadata.description,
             'test_suite': test_suite,
@@ -197,6 +180,7 @@ class DynamicHTMLReportGenerator:
             'prompts_tested': prompts_tested,
             'test_cases': test_cases,
             'prompt_improvements': prompt_improvements,
+            'consolidated_recommendations': consolidated_recommendations,
             'additional_charts': self._get_additional_charts(),
             'summary': summary  # Add summary for template access
         }
@@ -1139,3 +1123,109 @@ class DynamicHTMLReportGenerator:
         """Check if a test passed based on all dimensions"""
         failed_dims = self._get_failed_dimensions_dynamic(result)
         return len(failed_dims) == 0
+    
+    def _prepare_dimension_performance_with_macro_analysis(
+        self, 
+        dimension_scores: Dict[str, Dict[str, Any]], 
+        macro_analyses: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """Prepare dimension performance data with macro analysis for expandable rows"""
+        dimension_performance = []
+        
+        for dim_name, data in dimension_scores.items():
+            # Find criteria by dimension name
+            criteria = None
+            for c in self.agent_metadata.evaluation_criteria:
+                if c.dimension.name == dim_name:
+                    criteria = c
+                    break
+            
+            if criteria:
+                passed = data['passed']
+                
+                # Check if we have macro analysis for this dimension
+                macro_analysis = macro_analyses.get(dim_name)
+                has_macro_analysis = macro_analysis is not None and not passed
+                
+                dim_perf = {
+                    'name': dim_name.replace('_', ' ').title(),
+                    'score_percent': f"{data['score_percent']:.1f}",
+                    'target_percent': f"{data['target_percent']:.1f}",
+                    'score_percentage': data['score_percent'],  # For progress bar width
+                    'actual_score': f"{data['score_percent']:.1f}%",
+                    'target_score': f"{data['target_percent']:.1f}%",
+                    'passed': passed,
+                    'score_color': "#10b981" if passed else "#ef4444",
+                    'progress_gradient': "linear-gradient(to right, #10b981, #059669)" if passed else "linear-gradient(to right, #ef4444, #dc2626)",
+                    'method_icon': self._get_method_icon_dynamic(criteria),
+                    'method': self._get_primary_method(criteria),
+                    'description': criteria.description,
+                    'icon': self._get_method_icon_dynamic(criteria),
+                    'has_macro_analysis': has_macro_analysis,
+                    'is_expandable': has_macro_analysis  # Only expandable if failed and has analysis
+                }
+                
+                # Add macro analysis data if available
+                if has_macro_analysis:
+                    pattern_analysis = macro_analysis.get('pattern_analysis', {})
+                    dim_perf['macro_analysis'] = {
+                        'common_patterns': pattern_analysis.get('common_patterns', []),
+                        'systemic_root_cause': pattern_analysis.get('systemic_root_cause', ''),
+                        'contributing_factors': pattern_analysis.get('contributing_factors', []),
+                        'prompt_coverage_gaps': macro_analysis.get('prompt_coverage_gaps', []),
+                        'expected_improvement': macro_analysis.get('expected_improvement', {})
+                    }
+                
+                dimension_performance.append(dim_perf)
+        
+        return dimension_performance
+    
+    def _prepare_consolidated_recommendations(
+        self, 
+        macro_analyses: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Prepare consolidated recommendations from macro analyses"""
+        all_recommendations = []
+        
+        # Collect all recommendations from all dimensions
+        for dimension, analysis in macro_analyses.items():
+            if analysis and 'consolidated_recommendations' in analysis:
+                for rec in analysis['consolidated_recommendations']:
+                    # Add dimension info to recommendation
+                    rec['dimension'] = dimension.replace('_', ' ').title()
+                    all_recommendations.append(rec)
+        
+        # Sort by priority
+        priority_order = {'CRITICAL': 4, 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1}
+        all_recommendations.sort(
+            key=lambda x: priority_order.get(x.get('priority', 'MEDIUM'), 2), 
+            reverse=True
+        )
+        
+        # Group by priority
+        recommendations_by_priority = {
+            'CRITICAL': [],
+            'HIGH': [],
+            'MEDIUM': [],
+            'LOW': []
+        }
+        
+        for rec in all_recommendations:
+            priority = rec.get('priority', 'MEDIUM')
+            if priority in recommendations_by_priority:
+                recommendations_by_priority[priority].append(rec)
+        
+        # Calculate statistics
+        total_recommendations = len(all_recommendations)
+        affected_files = set()
+        for rec in all_recommendations:
+            if rec.get('prompt_file'):
+                affected_files.add(rec['prompt_file'])
+        
+        return {
+            'has_recommendations': total_recommendations > 0,
+            'total_recommendations': total_recommendations,
+            'total_affected_files': len(affected_files),
+            'recommendations_by_priority': recommendations_by_priority,
+            'all_recommendations': all_recommendations
+        }

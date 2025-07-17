@@ -1163,3 +1163,154 @@ class CMOEvaluator(BaseEvaluator):
         except Exception as e:
             logger.error(f"Failed to analyze {dimension_name} failure: {e}")
             return None
+    
+    # ==================== Macro Analysis Methods ====================
+    
+    async def perform_macro_analysis(self, results: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Perform macro-level analysis on failed dimensions.
+        
+        This method analyzes patterns across all test failures for each dimension
+        that's performing below its target score. It adds consolidated recommendations
+        and identifies systemic issues.
+        
+        Args:
+            results: Complete evaluation results from all tests
+            
+        Returns:
+            Updated results with 'macro_analyses' key containing cross-test patterns
+        """
+        logger.info("📊 Starting macro-level analysis across all test failures")
+        
+        # Aggregate dimension data across all tests
+        dimension_aggregates = self._aggregate_dimension_failures(results)
+        
+        # Perform macro analysis for each failed dimension
+        macro_analyses = {}
+        
+        for dimension_name, dim_data in dimension_aggregates.items():
+            if dim_data['avg_score'] < dim_data['target_score']:
+                logger.info(f"🔍 Performing macro analysis for {dimension_name} " +
+                           f"(avg: {dim_data['avg_score']:.2%} < target: {dim_data['target_score']:.2%})")
+                
+                # Prepare data for LLM Judge
+                analysis_data = {
+                    'dimension_name': dimension_name,
+                    'total_tests': dim_data['total_tests'],
+                    'avg_score': dim_data['avg_score'],
+                    'target_score': dim_data['target_score'],
+                    'failure_rate': dim_data['failure_rate'],
+                    'failed_tests': dim_data['failed_tests']
+                }
+                
+                # Get macro analysis from LLM Judge
+                macro_analysis = await self.llm_judge.analyze_dimension_patterns(
+                    agent_type='cmo',
+                    dimension_name=dimension_name,
+                    dimension_data=analysis_data
+                )
+                
+                if macro_analysis:
+                    macro_analyses[dimension_name] = macro_analysis
+                    logger.info(f"✅ Macro analysis complete for {dimension_name}")
+                else:
+                    logger.warning(f"❌ Failed to get macro analysis for {dimension_name}")
+        
+        # Add macro analyses to results
+        results['macro_analyses'] = macro_analyses
+        logger.info(f"📊 Macro analysis complete: {len(macro_analyses)} dimensions analyzed")
+        
+        return results
+    
+    def _aggregate_dimension_failures(self, results: Dict[str, Any]) -> Dict[str, Dict]:
+        """
+        Aggregate failure data by dimension across all tests.
+        
+        This method collects all test results for each dimension, calculates
+        average scores, and gathers detailed failure information including
+        individual LLM Judge analyses.
+        
+        Args:
+            results: Complete evaluation results
+            
+        Returns:
+            Dictionary mapping dimension names to aggregated data
+        """
+        dimension_aggregates = {}
+        
+        # Process each test result
+        for test_result in results.get('results', []):
+            # Process each dimension by looking for dimension scores directly
+            for criteria in self.agent_metadata.evaluation_criteria:
+                dim_name = criteria.dimension.name
+                score_key = f"{dim_name}_score"
+                
+                if score_key in test_result:
+                    score = test_result[score_key]
+                    
+                    # Initialize dimension aggregate if not exists
+                    if dim_name not in dimension_aggregates:
+                        dimension_aggregates[dim_name] = {
+                            'total_tests': 0,
+                            'failed_tests': [],
+                            'all_scores': [],
+                            'target_score': criteria.target_score,
+                            'unique_prompt_files': set()  # Track all mentioned prompt files
+                        }
+                    
+                    agg = dimension_aggregates[dim_name]
+                    agg['total_tests'] += 1
+                    agg['all_scores'].append(score)
+                    
+                    # If failed, collect detailed data
+                    if score < criteria.target_score:
+                        failed_test_data = {
+                            'test_id': test_result['test_case_id'],
+                            'query': test_result.get('query', ''),
+                            'score': score,
+                            'target': criteria.target_score
+                        }
+                        
+                        # Add individual failure analysis if available
+                        if 'failure_analyses' in test_result:
+                            for fa in test_result['failure_analyses']:
+                                if fa['dimension'] == dim_name:
+                                    failed_test_data.update({
+                                        'root_cause': fa.get('root_cause'),
+                                        'recommendations': fa.get('recommendations', []),
+                                        'priority': fa.get('priority'),
+                                        'prompt_files': []
+                                    })
+                                    
+                                    # Extract prompt files
+                                    if fa.get('prompt_file'):
+                                        failed_test_data['prompt_files'].append(fa['prompt_file'])
+                                        agg['unique_prompt_files'].add(fa['prompt_file'])
+                                    
+                                    # Also check for prompt_files list
+                                    if fa.get('prompt_files'):
+                                        for pf in fa['prompt_files']:
+                                            if isinstance(pf, dict):
+                                                filename = pf.get('name', pf.get('filename', ''))
+                                                if filename:
+                                                    failed_test_data['prompt_files'].append(filename)
+                                                    agg['unique_prompt_files'].add(filename)
+                                            else:
+                                                failed_test_data['prompt_files'].append(str(pf))
+                                                agg['unique_prompt_files'].add(str(pf))
+                                    break
+                        
+                        agg['failed_tests'].append(failed_test_data)
+        
+        # Calculate aggregated metrics and convert sets to lists
+        for dim_name, agg in dimension_aggregates.items():
+            agg['avg_score'] = sum(agg['all_scores']) / len(agg['all_scores']) if agg['all_scores'] else 0
+            agg['failure_rate'] = len(agg['failed_tests']) / agg['total_tests'] if agg['total_tests'] > 0 else 0
+            agg['unique_prompt_files'] = list(agg['unique_prompt_files'])
+            del agg['all_scores']  # Not needed anymore
+            
+            logger.debug(f"Dimension {dim_name}: {agg['total_tests']} tests, " +
+                        f"{len(agg['failed_tests'])} failures, " +
+                        f"avg score: {agg['avg_score']:.2%}")
+        
+        return dimension_aggregates

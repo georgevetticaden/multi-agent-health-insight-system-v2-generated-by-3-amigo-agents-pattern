@@ -504,9 +504,12 @@
   </p>
   
   {% for dim_data in dimension_performance %}
-  <div class="dimension-card">
+  <div class="dimension-card {% if dim_data.is_expandable %}collapsible{% endif %}" {% if dim_data.is_expandable %}onclick="toggleDimensionSection(this)"{% endif %}>
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
       <h4 style="margin: 0; color: var(--text-primary);">
+        {% if dim_data.is_expandable %}
+        <span class="dimension-section-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+        {% endif %}
         {{ dim_data.icon }} {{ dim_data.name }}
       </h4>
       <span class="badge {% if dim_data.passed %}badge-success{% else %}badge-danger{% endif %}">
@@ -522,6 +525,61 @@
     <p style="margin: 0.5rem 0 0 0; color: var(--text-tertiary); font-size: 0.875rem;">
       {{ dim_data.description }} • Method: {{ dim_data.method }}
     </p>
+    
+    {% if dim_data.has_macro_analysis %}
+    <div class="macro-analysis-content" style="display: none; margin-top: 1rem; padding: 1rem; background: var(--bg-tertiary); border-radius: 8px;">
+      <h5 style="color: var(--accent-primary); margin: 0 0 1rem 0;">📊 Pattern Analysis Across All Tests</h5>
+      
+      <!-- Systemic Root Cause -->
+      <div style="margin-bottom: 1rem;">
+        <h6 style="color: var(--text-primary); margin: 0 0 0.5rem 0;">Systemic Root Cause:</h6>
+        <p style="margin: 0; color: var(--text-secondary);">{{ dim_data.macro_analysis.systemic_root_cause }}</p>
+      </div>
+      
+      <!-- Common Patterns -->
+      {% if dim_data.macro_analysis.common_patterns %}
+      <div style="margin-bottom: 1rem;">
+        <h6 style="color: var(--text-primary); margin: 0 0 0.5rem 0;">Common Failure Patterns:</h6>
+        {% for pattern in dim_data.macro_analysis.common_patterns %}
+        <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: var(--bg-secondary); border-radius: 4px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="color: var(--text-primary);">{{ pattern.pattern }}</strong>
+            <span class="badge {% if pattern.severity == 'HIGH' %}badge-danger{% elif pattern.severity == 'MEDIUM' %}badge-warning{% else %}badge-success{% endif %}" style="font-size: 0.75rem;">
+              {{ pattern.severity }}
+            </span>
+          </div>
+          <p style="margin: 0.25rem 0 0 0; color: var(--text-tertiary); font-size: 0.875rem;">
+            {{ pattern.frequency }} • Gap: {{ pattern.prompt_gap }}
+          </p>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      
+      <!-- Contributing Factors -->
+      {% if dim_data.macro_analysis.contributing_factors %}
+      <div style="margin-bottom: 1rem;">
+        <h6 style="color: var(--text-primary); margin: 0 0 0.5rem 0;">Contributing Factors:</h6>
+        <ul style="margin: 0; padding-left: 1.5rem;">
+          {% for factor in dim_data.macro_analysis.contributing_factors %}
+          <li style="color: var(--text-secondary);">{{ factor }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+      
+      <!-- Expected Improvement -->
+      {% if dim_data.macro_analysis.expected_improvement %}
+      <div style="margin-bottom: 0.5rem;">
+        <h6 style="color: var(--text-primary); margin: 0 0 0.5rem 0;">Expected Improvement:</h6>
+        <p style="margin: 0; color: var(--text-secondary);">
+          Current: {{ (dim_data.macro_analysis.expected_improvement.current_avg * 100)|round(1) }}% → 
+          Projected: {{ (dim_data.macro_analysis.expected_improvement.projected_avg * 100)|round(1) }}%
+        </p>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
   </div>
   {% endfor %}
 </div>
@@ -705,6 +763,94 @@
 </div>
 {% endfor %}
 
+<!-- Consolidated Recommendations -->
+{% if consolidated_recommendations.has_recommendations %}
+<div class="card fade-in">
+  <h2 style="color: var(--text-primary); margin-top: 0;">📋 Consolidated Recommendations</h2>
+  <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+    Based on pattern analysis across all {{ total_tests }} tests, here are the prioritized recommendations to improve agent performance.
+    These recommendations are consolidated from individual test failures and cross-test pattern analysis.
+  </p>
+  
+  <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+    <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 8px; flex: 1;">
+      <h4 style="margin: 0; color: var(--text-primary);">📊 Summary</h4>
+      <p style="margin: 0.5rem 0 0 0; color: var(--text-secondary);">
+        Total Recommendations: <strong>{{ consolidated_recommendations.total_recommendations }}</strong><br>
+        Affected Prompt Files: <strong>{{ consolidated_recommendations.total_affected_files }}</strong>
+      </p>
+    </div>
+  </div>
+  
+  {% for priority, recommendations in consolidated_recommendations.recommendations_by_priority.items() %}
+  {% if recommendations %}
+  <div style="margin-bottom: 1.5rem;">
+    <h4 style="color: var(--text-primary); margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+      {% if priority == 'CRITICAL' %}
+      <span class="badge badge-danger">{{ priority }}</span>
+      {% elif priority == 'HIGH' %}
+      <span class="badge badge-danger">{{ priority }}</span>
+      {% elif priority == 'MEDIUM' %}
+      <span class="badge badge-warning">{{ priority }}</span>
+      {% else %}
+      <span class="badge badge-success">{{ priority }}</span>
+      {% endif %}
+      Priority Recommendations
+    </h4>
+    
+    {% for rec in recommendations %}
+    <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+        <h5 style="margin: 0; color: var(--text-primary);">
+          {{ rec.category|replace('_', ' ')|title }}
+        </h5>
+        <span style="color: var(--text-tertiary); font-size: 0.875rem;">
+          Dimension: {{ rec.dimension }}
+        </span>
+      </div>
+      
+      <p style="margin: 0.5rem 0; color: var(--accent-primary); font-size: 0.875rem; font-family: monospace;">
+        📁 {{ rec.prompt_file }}
+      </p>
+      
+      {% if rec.current_content %}
+      <div style="background: var(--bg-secondary); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem;">
+        <p style="margin: 0; color: var(--text-tertiary); font-size: 0.875rem;">
+          <strong>Current:</strong> {{ rec.current_content|truncate(200) }}
+        </p>
+      </div>
+      {% endif %}
+      
+      <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.75rem; border-radius: 4px; margin-bottom: 0.5rem;">
+        <p style="margin: 0; color: var(--text-primary);">
+          <strong>Recommendation:</strong> {{ rec.recommendation }}
+        </p>
+      </div>
+      
+      <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+        <span style="color: var(--text-tertiary); font-size: 0.875rem;">
+          <strong>Expected Impact:</strong> {{ rec.expected_impact }}
+        </span>
+        <span style="color: var(--text-tertiary); font-size: 0.875rem;">
+          <strong>Consolidated from:</strong> {{ rec.consolidated_from|length }} tests
+        </span>
+      </div>
+      
+      {% if rec.implementation_notes %}
+      <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
+        <p style="margin: 0; color: var(--text-tertiary); font-size: 0.875rem;">
+          <strong>Implementation Notes:</strong> {{ rec.implementation_notes }}
+        </p>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
 <!-- Visualizations -->
 <div class="card fade-in">
   <h2 style="color: var(--text-primary); margin-top: 0;">Visualizations</h2>
@@ -732,6 +878,21 @@ function toggleSection(element) {
   
   content.classList.toggle('open');
   arrow.classList.toggle('open');
+}
+
+function toggleDimensionSection(element) {
+  const macroContent = element.querySelector('.macro-analysis-content');
+  const arrow = element.querySelector('.dimension-section-arrow');
+  
+  if (macroContent) {
+    if (macroContent.style.display === 'none') {
+      macroContent.style.display = 'block';
+      arrow.style.transform = 'rotate(90deg)';
+    } else {
+      macroContent.style.display = 'none';
+      arrow.style.transform = 'rotate(0deg)';
+    }
+  }
 }
 
 function toggleDimensionRow(row) {

@@ -133,8 +133,12 @@ backend/logs/*.log
 evaluation/logs/
 evaluation/logs/*.log
 
-# Evaluation test run logs
-evaluation/test_runs/*/evaluation.log
+# Evaluation test runs
+# Ignore all test runs
+evaluation/test_runs/*/
+# But keep the saved-runs directory
+!evaluation/test_runs/saved-runs/
+!evaluation/test_runs/saved-runs/**/
 
 # Test Coverage
 coverage/

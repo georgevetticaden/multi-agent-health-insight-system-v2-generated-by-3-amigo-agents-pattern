@@ -461,16 +461,15 @@
       <thead>
         <tr>
           <th>Test Case ID</th>
-          <th>Status</th>
+          <th>Status (Score)</th>
           <th>Response Time</th>
           <th>Failed Dimensions</th>
         </tr>
       </thead>
       <tbody>
         {% for test in test_summary %}
-        <tr class="collapsible" onclick="toggleTestRow(this)" style="cursor: pointer;">
+        <tr>
           <td style="font-weight: 600;">
-            <span class="test-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
             {{ test.test_case_id }}: {{ test.query }}
           </td>
           <td>
@@ -489,13 +488,6 @@
             {% endif %}
           </td>
         </tr>
-        <tr class="test-details" style="display: none;">
-          <td colspan="4" style="padding: 0;">
-            <div style="padding: 1rem; background: var(--bg-tertiary);">
-              <strong>Query:</strong> {{ test.query }}
-            </div>
-          </td>
-        </tr>
         {% endfor %}
       </tbody>
     </table>
@@ -505,6 +497,11 @@
 <!-- Dimension Performance -->
 <div class="card fade-in">
   <h2 style="color: var(--text-primary); margin-top: 0;">Performance by Dimension</h2>
+  <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+    This section shows the average performance across all test cases for each evaluation dimension. 
+    Each dimension has a target score that must be met. The evaluation methods used are:
+    🔢 Deterministic (rule-based), 🤖 LLM Judge (AI evaluation), or 🔀 Hybrid (combination).
+  </p>
   
   {% for dim_data in dimension_performance %}
   <div class="dimension-card">
@@ -609,8 +606,8 @@
                         <th style="padding: 0.75rem;">Component</th>
                         <th style="padding: 0.75rem;">Method</th>
                         <th style="padding: 0.75rem;">Weight</th>
-                        <th style="padding: 0.75rem;">Score</th>
-                        <th style="padding: 0.75rem;">Contribution</th>
+                        <th style="padding: 0.75rem;">Raw Score<br/><span style="font-weight: normal; font-size: 0.75rem;">(0-1)</span></th>
+                        <th style="padding: 0.75rem;">Weighted<br/><span style="font-weight: normal; font-size: 0.75rem;">(Score × Weight)</span></th>
                         <th style="padding: 0.75rem;">Description</th>
                       </tr>
                     </thead>

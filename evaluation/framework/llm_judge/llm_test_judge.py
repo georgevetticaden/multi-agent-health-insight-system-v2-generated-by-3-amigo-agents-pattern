@@ -554,11 +554,22 @@ class LLMTestJudge:
             else:
                 result = json.loads(response_text)
             
+            # Extract recommendations from new format
+            recommendations = []
+            if result.get('recommendations'):
+                for rec in result['recommendations']:
+                    if isinstance(rec, dict):
+                        # New structured format
+                        recommendations.append(rec.get('recommendation', str(rec)))
+                    else:
+                        # Simple string format
+                        recommendations.append(str(rec))
+            
             return FailureAnalysis(
                 dimension="complexity_classification",
-                root_cause=result.get('root_cause', ''),
+                root_cause=result.get('root_cause', result.get('issue_description', '')),
                 specific_issues=result.get('complexity_indicators', []),
-                recommendations=result.get('specific_changes', []),
+                recommendations=recommendations,
                 priority=result.get('priority', 'medium'),
                 prompt_file=result.get('prompt_file'),
                 expected_impact=result.get('expected_impact')
@@ -611,14 +622,16 @@ class LLMTestJudge:
         
         try:
             response_text = response.content[0].text.strip()
+            logger.debug(f"Raw LLM response for specialist mismatch: {response_text[:500]}...")
             import re
             json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', response_text, re.DOTALL)
             if json_match:
                 result = json.loads(json_match.group())
             else:
                 result = json.loads(response_text)
+            logger.debug(f"Parsed JSON result: {result}")
             
-            # Extract specific issues from the response
+            # Extract specific issues from the new format
             specific_issues = []
             if result.get('missing_specialists_reason'):
                 for spec, reason in result['missing_specialists_reason'].items():
@@ -626,11 +639,22 @@ class LLMTestJudge:
             if result.get('unnecessary_specialists'):
                 specific_issues.append(f"Unnecessary: {', '.join(result['unnecessary_specialists'])}")
             
+            # Extract recommendations from new format
+            recommendations = []
+            if result.get('recommendations'):
+                for rec in result['recommendations']:
+                    if isinstance(rec, dict):
+                        # New structured format
+                        recommendations.append(rec.get('recommendation', str(rec)))
+                    else:
+                        # Simple string format
+                        recommendations.append(str(rec))
+            
             return FailureAnalysis(
                 dimension="specialty_selection",
                 root_cause=result.get('issue_description', ''),
                 specific_issues=specific_issues,
-                recommendations=result.get('specific_changes', []),
+                recommendations=recommendations,
                 priority=result.get('priority', 'medium'),
                 prompt_file=result.get('prompt_file')
             )
@@ -759,12 +783,21 @@ class LLMTestJudge:
             for component, analysis in result.get('weak_components', {}).items():
                 specific_issues.append(f"{component}: {analysis}")
             
-            # Extract recommendations from prompt improvements
+            # Extract recommendations from new format
             recommendations = []
             for prompt_file, improvements in result.get('prompt_improvements', {}).items():
                 if improvements.get('needs_update'):
-                    for change in improvements.get('specific_changes', []):
-                        recommendations.append(f"{prompt_file}: {change}")
+                    # Check if recommendations are in new format
+                    if improvements.get('recommendations'):
+                        for rec in improvements['recommendations']:
+                            if isinstance(rec, dict):
+                                recommendations.append(f"{prompt_file}: {rec.get('recommendation', str(rec))}")
+                            else:
+                                recommendations.append(f"{prompt_file}: {rec}")
+                    # Fallback to old format
+                    elif improvements.get('specific_changes'):
+                        for change in improvements['specific_changes']:
+                            recommendations.append(f"{prompt_file}: {change}")
             
             return FailureAnalysis(
                 dimension="analysis_quality",
@@ -820,11 +853,23 @@ class LLMTestJudge:
             else:
                 result = json.loads(response_text)
             
+            # Extract recommendations from new format
+            recommendations = []
+            if result.get('recommendations'):
+                for rec in result['recommendations']:
+                    if isinstance(rec, dict):
+                        recommendations.append(rec.get('recommendation', str(rec)))
+                    else:
+                        recommendations.append(str(rec))
+            # Fallback to old format
+            elif result.get('specific_improvements'):
+                recommendations = result['specific_improvements']
+            
             return FailureAnalysis(
                 dimension="tool_usage",
-                root_cause=result.get('root_cause', ''),
+                root_cause=result.get('root_cause', result.get('issue_description', '')),
                 specific_issues=[result.get('issue_description', '')],
-                recommendations=result.get('specific_improvements', []),
+                recommendations=recommendations,
                 priority=result.get('priority', 'medium')
             )
         except Exception as e:
@@ -868,11 +913,23 @@ class LLMTestJudge:
             else:
                 result = json.loads(response_text)
             
+            # Extract recommendations from new format
+            recommendations = []
+            if result.get('recommendations'):
+                for rec in result['recommendations']:
+                    if isinstance(rec, dict):
+                        recommendations.append(rec.get('recommendation', str(rec)))
+                    else:
+                        recommendations.append(str(rec))
+            # Fallback to old format
+            elif result.get('specific_improvements'):
+                recommendations = result['specific_improvements']
+            
             return FailureAnalysis(
                 dimension="response_structure",
                 root_cause=result.get('issue_description', ''),
                 specific_issues=result.get('structure_errors', structure_errors),
-                recommendations=result.get('specific_improvements', []),
+                recommendations=recommendations,
                 priority=result.get('priority', 'high')
             )
         except Exception as e:

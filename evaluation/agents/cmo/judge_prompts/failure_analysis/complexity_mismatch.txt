@@ -14,22 +14,44 @@ Here is the ACTUAL PROMPT that the CMO used for complexity classification:
 {actual_prompt_content}
 ```
 
-Based on this analysis and the actual prompt content above, what specific changes should be made to the CMO's complexity classification prompt to correctly classify this query?
+Based on this analysis and the actual prompt content above, provide specific, actionable recommendations to fix complexity classification.
 
-Consider:
-1. What criteria in the actual prompt led to the misclassification?
-2. What specific sections or guidance in the prompt needs adjustment?
-3. How can we make the complexity boundaries clearer?
-4. Are there specific examples or rules that need to be added or modified?
+**RECOMMENDATION CATEGORIES:**
+1. **RULE_MODIFICATIONS**: Adjust complexity criteria (format: "MODIFY RULE: [Change]")
+2. **EXAMPLE_ADDITIONS**: Add classification examples (format: "ADD EXAMPLE: '[Query]' → [Complexity] because [reason]")
+3. **PROMPT_CLARIFICATIONS**: Clarify existing text (format: "CLARIFY: Change '[current]' to '[new]'")
+4. **BOUNDARY_DEFINITIONS**: Define clearer boundaries between levels
+5. **KEYWORD_INDICATORS**: Add keywords that signal complexity levels
 
 Provide your analysis in the following JSON format. Output ONLY valid JSON with no additional text before or after:
 {{
     "prompt_file": "backend/services/agents/cmo/prompts/1_gather_data_assess_complexity.txt",
     "issue_description": "Clear description of why the misclassification occurred",
-    "specific_changes": [
-        "Specific change 1 to make to the prompt",
-        "Specific change 2 to make to the prompt"
+    "misclassification_reason": "Specific prompt guidance that led to wrong classification",
+    "recommendations": [
+        {{
+            "category": "RULE_MODIFICATION",
+            "location": "Complexity Criteria Section",
+            "current_state": "Current rule that caused misclassification",
+            "recommendation": "MODIFY RULE: Change 'queries with multiple conditions' to 'queries with 3+ distinct medical conditions or 2+ if they interact (e.g., diabetes + kidney disease)'",
+            "rationale": "Current rule is too vague about what constitutes 'multiple'",
+            "expected_impact": "Will correctly classify 90% of multi-condition queries"
+        }},
+        {{
+            "category": "EXAMPLE_ADDITION",
+            "location": "Complexity Examples",
+            "recommendation": "ADD EXAMPLE: 'How has my A1C changed over time?' → STANDARD because it involves single metric trend analysis",
+            "rationale": "No similar example exists in current prompt",
+            "expected_impact": "Provides clear precedent for this query pattern"
+        }},
+        {{
+            "category": "BOUNDARY_DEFINITION",
+            "location": "Between SIMPLE and STANDARD",
+            "recommendation": "ADD BOUNDARY CLARIFICATION: 'STANDARD includes trend analysis and multiple data points while SIMPLE is limited to current values only'",
+            "rationale": "Current boundaries between these levels are unclear",
+            "expected_impact": "Prevents confusion between these two levels"
+        }}
     ],
-    "reasoning": "Detailed explanation of why these changes will fix the issue",
+    "reasoning": "Detailed explanation of why these changes will fix the classification",
     "priority": "high/medium/low"
 }}

@@ -477,6 +477,8 @@ evaluation_success = weighted_score >= 0.75  # Default threshold
 dimension_success_rate = passed_dimensions / total_dimensions
 ```
 
+**Threshold Configuration**: The 0.75 (75%) threshold is defined in `EvaluationConstants.OVERALL_SUCCESS_THRESHOLD` in the evaluator code. This means a test case needs a weighted average score of at least 75% to be considered a quality success.
+
 #### **Overall Suite Scoring**
 The overall evaluation uses:
 - **Average weighted score**: Mean of all test case weighted scores

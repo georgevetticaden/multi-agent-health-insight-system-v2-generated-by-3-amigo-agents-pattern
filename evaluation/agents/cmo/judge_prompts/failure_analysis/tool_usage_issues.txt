@@ -8,18 +8,48 @@ Tool Success Rate: {tool_success_rate:.2f} (target: 0.90)
 Tool Relevance Score: {tool_relevance_score:.2f}
 Initial Data Gathered: {initial_data_gathered}
 
-Analyze why the tool usage was insufficient and suggest improvements. Consider:
+Analyze why the tool usage was insufficient. Consider:
 1. Were the right tools called for this query?
 2. Was the tool query specific and effective enough?
 3. Should additional tools have been used?
+4. Were there errors in query construction?
+
+**Tool Usage Issues to Check:**
+- Missing essential data queries
+- Query syntax errors
+- Overly broad or narrow queries
+- Missing temporal context in queries
+- Failed to query related data
 
 Provide your analysis in the following JSON format. Output ONLY valid JSON:
 {{
     "issue_description": "Clear description of the tool usage issue",
     "root_cause": "Why the tool usage was insufficient",
-    "specific_improvements": [
-        "Specific improvement 1 for tool usage",
-        "Specific improvement 2 for tool usage"
+    "failed_queries": [
+        {{
+            "query": "The actual query that was made",
+            "issue": "Why this query failed or was ineffective",
+            "better_query": "What the query should have been"
+        }}
+    ],
+    "missing_queries": [
+        {{
+            "data_needed": "What data should have been queried",
+            "suggested_query": "The specific query that should have been made",
+            "rationale": "Why this data is essential for the user's question"
+        }}
+    ],
+    "recommendations": [
+        {{
+            "category": "QUERY_PATTERN",
+            "recommendation": "ADD to tool usage guidance: 'For trending queries, always include date range parameters: WHERE date >= DATEADD(month, -3, CURRENT_DATE())'",
+            "expected_impact": "Will capture historical data needed for trend analysis"
+        }},
+        {{
+            "category": "ERROR_HANDLING", 
+            "recommendation": "ADD error recovery: 'If initial query returns no results, broaden search criteria and retry'",
+            "expected_impact": "Reduces false negatives from overly specific queries"
+        }}
     ],
     "priority": "high/medium/low"
 }}

@@ -603,12 +603,6 @@ class CMOAgent:
                     evaluation_method=EvaluationMethod.LLM_JUDGE
                 ),
                 QualityComponent(
-                    name="specialist_rationale",
-                    description="Clear reasoning for specialist task assignments",
-                    weight=0.20,
-                    evaluation_method=EvaluationMethod.LLM_JUDGE
-                ),
-                QualityComponent(
                     name="comprehensive_approach",
                     description="Coverage of all relevant medical concepts",
                     weight=0.25,

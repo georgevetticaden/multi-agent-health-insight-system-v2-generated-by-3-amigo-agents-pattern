@@ -117,13 +117,16 @@ class DynamicHTMLReportGenerator:
         
         for result in individual_results:
             failed_dims = self._get_failed_dimensions_dynamic(result)
-            test_passed = len(failed_dims) == 0
+            # Use evaluation_success (weighted score) for test status
+            test_passed = result.get('evaluation_success', False)
+            weighted_score = result.get('weighted_score', 0.0)
+            
             if test_passed:
                 tests_passed += 1
             
             test_summary.append({
                 'test_case_id': result.get('test_case_id', 'Unknown'),
-                'status': "✅ PASS" if test_passed else "❌ FAIL",
+                'status': f"✅ PASS ({weighted_score:.1%})" if test_passed else f"❌ FAIL ({weighted_score:.1%})",
                 'status_color': "rgba(16,185,129,0.2)" if test_passed else "rgba(239,68,68,0.2)",
                 'status_text_color': "#6ee7b7" if test_passed else "#fca5a5",
                 'failed_dimensions': failed_dims,
@@ -132,7 +135,8 @@ class DynamicHTMLReportGenerator:
                 'complexity': result.get('expected_complexity', 'Unknown'),
                 'complexity_color': self._get_complexity_color(result.get('expected_complexity', '')),
                 'complexity_text_color': self._get_complexity_text_color(result.get('expected_complexity', '')),
-                'query': result.get('query', 'Query not available')
+                'query': result.get('query', 'Query not available'),
+                'weighted_score': weighted_score
             })
         
         # Dimension performance - dynamic based on metadata
@@ -267,27 +271,53 @@ class DynamicHTMLReportGenerator:
         return prompts
     
     def _get_method_icon_dynamic(self, criteria: EvaluationCriteria) -> str:
-        """Get icon based on primary evaluation method"""
-        methods = [c.evaluation_method for c in self.agent_metadata.get_quality_components(criteria.dimension)]
-        if "llm_judge" in methods:
-            return "🧠"
-        elif "deterministic" in methods:
-            return "🔧"
+        """Get icon based on evaluation methods used"""
+        from evaluation.core.dimensions import EvaluationMethod
+        
+        methods_found = set()
+        components = self.agent_metadata.get_quality_components(criteria.dimension)
+        
+        # Collect all unique evaluation methods
+        for component in components:
+            methods_found.add(component.evaluation_method)
+        
+        # If we have multiple different methods, it's hybrid
+        if len(methods_found) > 1:
+            return "🔀"  # hybrid
+        elif len(methods_found) == 1:
+            method = list(methods_found)[0]
+            if method == EvaluationMethod.DETERMINISTIC:
+                return "🔢"
+            elif method == EvaluationMethod.LLM_JUDGE:
+                return "🤖"
+            else:
+                return "🔀"  # default to hybrid icon
         else:
-            return "🔄"  # hybrid
+            # No components, use criteria's method
+            if criteria.evaluation_method == EvaluationMethod.DETERMINISTIC:
+                return "🔢"
+            elif criteria.evaluation_method == EvaluationMethod.LLM_JUDGE:
+                return "🤖"
+            else:
+                return "🔀"
     
     def _get_primary_method(self, criteria: EvaluationCriteria) -> str:
-        """Get primary evaluation method"""
-        method_weights = {}
-        for component in self.agent_metadata.get_quality_components(criteria.dimension):
-            method = component.evaluation_method
-            method_weights[method] = method_weights.get(method, 0) + component.weight
+        """Get primary evaluation method - returns Hybrid if multiple methods are used"""
+        methods_found = set()
+        components = self.agent_metadata.get_quality_components(criteria.dimension)
         
-        if method_weights:
-            primary_method = max(method_weights.items(), key=lambda x: x[1])[0]
-            return primary_method.value.replace('_', ' ').title()
+        # Collect all unique evaluation methods from components
+        for component in components:
+            methods_found.add(component.evaluation_method)
+        
+        # If we have multiple different methods, it's hybrid
+        if len(methods_found) > 1:
+            return "Hybrid"
+        elif len(methods_found) == 1:
+            # Single method across all components
+            return list(methods_found)[0].value.replace('_', ' ').title()
         else:
-            # Fallback to the criteria's evaluation method
+            # No components, fallback to the criteria's evaluation method
             return criteria.evaluation_method.value.replace('_', ' ').title()
     
     def _get_method_icon(self, method) -> str:

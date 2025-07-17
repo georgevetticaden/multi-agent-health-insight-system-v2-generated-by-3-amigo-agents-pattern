@@ -104,3 +104,46 @@ def get_evaluation_logger(name: str) -> logging.Logger:
         Configured logger instance
     """
     return logging.getLogger(name)
+
+
+def set_evaluation_log_level(level: str):
+    """
+    Change the logging level for evaluation components at runtime.
+    
+    Args:
+        level: New log level (DEBUG, INFO, WARNING, ERROR)
+    
+    Usage:
+        set_evaluation_log_level("DEBUG")  # Enable detailed logging
+        set_evaluation_log_level("INFO")   # Normal logging
+    """
+    numeric_level = getattr(logging, level.upper(), logging.INFO)
+    
+    # Update root logger level
+    root_logger = logging.getLogger()
+    root_logger.setLevel(numeric_level)
+    
+    # Update console handler level
+    for handler in root_logger.handlers:
+        if isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
+            handler.setLevel(numeric_level)
+    
+    logging.info(f"🔧 Evaluation logging level changed to {level.upper()}")
+
+
+def toggle_debug_mode():
+    """
+    Toggle between DEBUG and INFO logging levels.
+    
+    Usage:
+        toggle_debug_mode()  # Switch to DEBUG if currently INFO, or vice versa
+    """
+    root_logger = logging.getLogger()
+    current_level = root_logger.level
+    
+    if current_level == logging.DEBUG:
+        set_evaluation_log_level("INFO")
+        print("📊 Switched to INFO logging (concise)")
+    else:
+        set_evaluation_log_level("DEBUG")
+        print("🔍 Switched to DEBUG logging (detailed)")

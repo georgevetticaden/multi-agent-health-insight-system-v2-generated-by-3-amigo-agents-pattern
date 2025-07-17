@@ -73,7 +73,7 @@ class AgentEvaluationMetadata:
                 "description": c.description,
                 "target_score": c.target_score,
                 "weight": c.weight,
-                "measurement_method": c.measurement_method
+                "evaluation_method": c.evaluation_method.value if hasattr(c.evaluation_method, 'value') else c.evaluation_method
             }
             for c in self.evaluation_criteria
         ]

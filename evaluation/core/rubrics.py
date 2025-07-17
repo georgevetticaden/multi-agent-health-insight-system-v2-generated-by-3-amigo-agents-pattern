@@ -73,7 +73,7 @@ class EvaluationRubric:
                 "passed": evaluation.passed,
                 "weight": evaluation.criteria.weight,
                 "weighted_score": evaluation.weighted_score,
-                "measurement_method": evaluation.criteria.measurement_method,
+                "evaluation_method": evaluation.criteria.evaluation_method.value if hasattr(evaluation.criteria.evaluation_method, 'value') else evaluation.criteria.evaluation_method,
                 "component_scores": {
                     name: comp_eval.score 
                     for name, comp_eval in evaluation.component_scores.items()

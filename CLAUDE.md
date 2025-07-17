@@ -602,3 +602,17 @@ async def test_new_specialist():
 - Provide use cases
 - Consider implementation impact
 - Suggest testing approach
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+
+## Update Guidelines
+When making updates to the codebase:
+- NO BACKWARD COMPATIBILITY REQUIRED - Feel free to make breaking changes when they improve the system
+- UPDATE README.md - When making significant changes, update the README to reflect the CURRENT STATE
+- MAINTAIN EXISTING STRUCTURE - Keep the existing outline/structure of documentation
+- DOCUMENT CURRENT STATE - Don't track incremental updates or maintain change logs
+- FOCUS ON "WHAT IS" - Documentation should describe how the system works NOW, not its history

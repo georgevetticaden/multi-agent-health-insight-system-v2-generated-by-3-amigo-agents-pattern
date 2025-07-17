@@ -28,7 +28,6 @@ from services.agents.models import MedicalSpecialty
 from tools.tool_registry import ToolRegistry
 
 # Import evaluators
-from evaluation.framework.evaluators import BaseEvaluator
 from evaluation.agents.cmo import CMOEvaluator
 from evaluation.agents.specialist import SpecialistEvaluator
 
@@ -38,7 +37,6 @@ from evaluation.agents.specialist import SpecialistTestCases
 
 # Import other evaluation components
 from evaluation.framework.report_generator import DynamicHTMLReportGenerator
-from evaluation.framework.llm_judge import LLMTestJudge, SpecialistSimilarityScorer
 from evaluation.utils import setup_evaluation_logging
 
 # Load environment variables
@@ -87,16 +85,10 @@ def _print_evaluation_summary(results: Dict[str, Any], test_dir: Path, agent_typ
                 if dim not in dimension_scores:
                     dimension_scores[dim] = []
                 
-                if dim == 'complexity_classification':
-                    dimension_scores[dim].append(1.0 if result.get('complexity_correct', False) else 0.0)
-                elif dim == 'specialty_selection':
-                    dimension_scores[dim].append(result.get('specialty_f1', 0.0))
-                elif dim == 'analysis_quality':
-                    dimension_scores[dim].append(result.get('analysis_quality_score', 0.0))
-                elif dim == 'tool_usage':
-                    dimension_scores[dim].append(result.get('tool_success_rate', 0.0))
-                elif dim == 'response_structure':
-                    dimension_scores[dim].append(1.0 if result.get('response_valid', False) else 0.0)
+                # Use metadata-driven dynamic score fields
+                score_key = f"{dim}_score"
+                score = result.get(score_key, 0.0)
+                dimension_scores[dim].append(score)
         
         for dim, scores in dimension_scores.items():
             if scores:
@@ -193,11 +185,8 @@ class EvaluationRunner:
         # Initialize tool registry
         self.tool_registry = ToolRegistry()
         
-        # Initialize LLM Judge for enhanced analysis
-        self.llm_judge = LLMTestJudge(
-            anthropic_client=self.anthropic_client,
-            model="claude-3-sonnet-20240229"  # Use Sonnet for detailed analysis
-        )
+        # LLM Judge is now handled within evaluators, not in CLI
+        # This ensures separation of concerns
         
         # Map of agent types to their evaluators
         self.evaluator_map = {
@@ -364,99 +353,9 @@ class EvaluationRunner:
         results["test_type"] = test_type
         results["category"] = category
         
-        # Enhance results with LLM Judge analysis for failures
-        if results.get("results"):
-            results = await self.enhance_with_llm_judge_analysis(results, agent_type)
-        
+        # No need to enhance here - failure analysis is now done in the evaluator
         return results
     
-    async def enhance_with_llm_judge_analysis(self, evaluation_result: Dict[str, Any], agent_type: str) -> Dict[str, Any]:
-        """Add LLM Judge analysis for failed dimensions"""
-        enhanced_results = []
-        
-        for result in evaluation_result.get("results", []):
-            enhanced_result = result.copy()
-            
-            # Analyze failures based on agent type
-            if agent_type == "cmo":
-                enhanced_result = await self._enhance_cmo_result(enhanced_result)
-            elif agent_type == "specialist":
-                enhanced_result = await self._enhance_specialist_result(enhanced_result)
-            
-            enhanced_results.append(enhanced_result)
-        
-        evaluation_result["results"] = enhanced_results
-        return evaluation_result
-    
-    async def _enhance_cmo_result(self, result: Dict[str, Any]) -> Dict[str, Any]:
-        """Enhance CMO evaluation result with LLM Judge analysis"""
-        # Analyze complexity failures
-        if not result.get("complexity_correct", True):
-            complexity_analysis = await self.llm_judge.analyze_complexity_mismatch(
-                test_case=result,  # Pass the full result as test_case
-                actual_complexity=result.get("actual_complexity", "Unknown"),
-                expected_complexity=result["expected_complexity"],
-                approach_text=result.get("approach_text", "")
-            )
-            if complexity_analysis:
-                result["complexity_analysis"] = complexity_analysis if isinstance(complexity_analysis, dict) else complexity_analysis.__dict__
-        
-        # Analyze specialist selection failures
-        if result.get("specialty_f1", 1.0) < 0.8:
-            # Get the actual and expected specialists - they may be sets or string representations
-            actual_spec = result.get("actual_specialties", set())
-            expected_spec = result.get("expected_specialties", set())
-            
-            # Convert to lists if they're sets
-            if isinstance(actual_spec, set):
-                actual_specialists = list(actual_spec)
-                expected_specialists = list(expected_spec)
-            else:
-                # They're string representations, parse them
-                import ast
-                try:
-                    actual_specialists = list(ast.literal_eval(actual_spec))
-                    expected_specialists = list(ast.literal_eval(expected_spec))
-                except:
-                    # Fallback parsing if ast.literal_eval fails
-                    actual_specialists = actual_spec.strip("{}").replace("'", "").split(", ") if actual_spec else []
-                    expected_specialists = expected_spec.strip("{}").replace("'", "").split(", ") if expected_spec else []
-            
-            # Calculate missing critical specialists
-            missing_critical = list(set(expected_specialists) - set(actual_specialists))
-            
-            specialist_analysis = await self.llm_judge.analyze_specialist_mismatch(
-                test_case=result,
-                actual_specialists=actual_specialists,
-                expected_specialists=expected_specialists,
-                approach_text=result.get("approach_text", ""),
-                f1_score=result.get("specialty_f1", 0.0),
-                missing_critical=missing_critical
-            )
-            if specialist_analysis:
-                result["specialist_analysis"] = specialist_analysis if isinstance(specialist_analysis, dict) else specialist_analysis.__dict__
-        
-        # Analyze quality failures
-        if result.get("analysis_quality_score", 1.0) < 0.8:
-            quality_analysis = await self.llm_judge.analyze_quality_issues(
-                query=result["query"],
-                approach_text=result.get("approach_text", ""),
-                quality_breakdown=result.get("quality_breakdown", {}),
-                key_data_points=result.get("key_data_points", []),
-                quality_score=result.get("analysis_quality_score", 0)
-            )
-            if quality_analysis:
-                result["quality_analysis"] = quality_analysis if isinstance(quality_analysis, dict) else quality_analysis.__dict__
-        
-        # Add other dimension analyses as needed...
-        
-        return result
-    
-    async def _enhance_specialist_result(self, result: Dict[str, Any]) -> Dict[str, Any]:
-        """Enhance specialist evaluation result with LLM Judge analysis"""
-        # Add specialist-specific LLM Judge analysis
-        # This would use the specialist prompts we created
-        return result
     
     def create_test_directory(self, agent_type: str, test_type: str) -> Path:
         """Create directory for test run outputs"""

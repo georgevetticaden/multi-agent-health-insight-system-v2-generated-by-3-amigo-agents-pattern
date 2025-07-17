@@ -9,16 +9,16 @@ report_generator/
 ├── __init__.py                    # Module exports
 ├── report_generator.py            # Main coordinator (HTML + visualizations)
 ├── html_report_generator.py       # HTML template processor
-├── report_template.html           # Jinja2 template
+├── report_template_health_insight.html  # Jinja2 template with health insight theme
 └── README.md                      # This file
 ```
 
 ## Template Structure
 
-### report_template.html
+### report_template_health_insight.html
 The main template file that generates the complete HTML report with:
 
-- **Dark gradient theme** with glassmorphism effects
+- **Light health insight theme** with clean, medical-grade styling
 - **Interactive collapsible sections** for detailed information
 - **Progress bars** for dimension performance visualization
 - **Animated failure cards** with gradient borders and pulse effects
@@ -53,10 +53,10 @@ The template uses these main data structures:
 
 ## Styling Features
 
-### Dark Theme
-- Gradient background: `#0f172a` → `#1e3a8a` → `#581c87`
-- Glassmorphism cards with backdrop blur
-- High contrast text colors for accessibility
+### Health Insight Theme
+- Light gradient background with subtle medical-grade styling
+- Clean card design with health insight branding
+- Accessible color scheme optimized for medical data visualization
 
 ### Interactive Elements
 - Collapsible sections with smooth animations
@@ -83,7 +83,7 @@ report_path = generator.generate_report(results, format_type="html")
 
 To customize the template:
 
-1. Edit `report_template.html` directly
+1. Edit `report_template_health_insight.html` directly
 2. Modify CSS styles in the `<style>` section
 3. Update template variables in `html_report_generator.py`
 4. Add new sections by extending the template structure

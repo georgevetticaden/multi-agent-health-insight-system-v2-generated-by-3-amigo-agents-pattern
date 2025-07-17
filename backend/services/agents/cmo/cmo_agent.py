@@ -201,7 +201,9 @@ class CMOAgent:
             # Extract complexity from initial assessment
             assessment_text = assessment_response.content[0].text
             complexity = self._extract_complexity(assessment_text)
-            initial_data = self._extract_key_findings(assessment_text)
+            # Update initial_data with key findings (don't overwrite)
+            key_findings_data = self._extract_key_findings(assessment_text)
+            initial_data.update(key_findings_data)
             
             # Add the assessment to messages
             messages.append({
@@ -216,7 +218,9 @@ class CMOAgent:
             })
             # Extract complexity from the response
             complexity = self._extract_complexity(response.content[0].text)
-            initial_data = self._extract_key_findings(response.content[0].text)
+            # Update initial_data with key findings (don't overwrite)
+            key_findings_data = self._extract_key_findings(response.content[0].text)
+            initial_data.update(key_findings_data)
         
         # Now ask for the analysis summary with the complexity already determined
         summary_prompt = self.prompts.get_analysis_summary_prompt().replace("{{COMPLEXITY}}", complexity.value)
@@ -320,12 +324,8 @@ class CMOAgent:
         match = re.search(r'<key_findings>(.*?)</key_findings>', text, re.IGNORECASE | re.DOTALL)
         key_findings = match.group(1).strip() if match else ""
         
-        # Also extract tool call information
-        tool_calls_made = 1 if "execute_health_query" in text else 0
-        
         return {
-            "summary": key_findings,
-            "tool_calls_made": tool_calls_made
+            "summary": key_findings
         }
     
     def _parse_tasks_from_xml(self, xml_text: str, complexity: QueryComplexity) -> List[SpecialistTask]:
@@ -522,6 +522,7 @@ class CMOAgent:
             QualityComponent,
             dimension_registry
         )
+        from evaluation.core.dimensions import EvaluationMethod
         from evaluation.agents import CMO_DIMENSIONS
         
         # Get core agent metadata
@@ -534,65 +535,58 @@ class CMOAgent:
                 description="Accuracy in classifying query complexity (SIMPLE/STANDARD/COMPLEX/COMPREHENSIVE)",
                 target_score=0.90,
                 weight=0.20,  # 20% of total evaluation
-                measurement_method="hybrid",
-                measurement_description="Binary accuracy against expert-labeled complexity"
+                evaluation_method=EvaluationMethod.DETERMINISTIC,
+                evaluation_description="Binary accuracy against expert-labeled complexity"
             ),
             EvaluationCriteria(
                 dimension=CMO_DIMENSIONS["specialty_selection"],
                 description="Precision in selecting appropriate medical specialists",
                 target_score=0.85,
                 weight=0.25,  # 25% of total evaluation
-                measurement_method="llm_judge",
-                measurement_description="F1 score for specialist selection with LLM judge for edge cases"
+                evaluation_method=EvaluationMethod.HYBRID,
+                evaluation_description="Weighted combination of deterministic precision and LLM judge rationale"
             ),
             EvaluationCriteria(
                 dimension=dimension_registry.get("analysis_quality"),  # Common dimension
                 description="Comprehensiveness and quality of medical analysis orchestration",
                 target_score=0.80,
                 weight=0.25,  # 25% of total evaluation
-                measurement_method="llm_judge",
-                measurement_description="Weighted score across quality components"
+                evaluation_method=EvaluationMethod.HYBRID,
+                evaluation_description="Weighted score across deterministic and LLM judge components"
             ),
             EvaluationCriteria(
                 dimension=dimension_registry.get("tool_usage"),  # Common dimension
                 description="Effectiveness of health data tool usage",
                 target_score=0.90,
                 weight=0.15,  # 15% of total evaluation
-                measurement_method="deterministic",
-                measurement_description="Success rate and relevance of execute_health_query_v2 calls"
+                evaluation_method=EvaluationMethod.HYBRID,
+                evaluation_description="Combination of success rate and relevance scoring"
             ),
             EvaluationCriteria(
                 dimension=dimension_registry.get("response_structure"),  # Common dimension
                 description="Compliance with expected XML response format",
                 target_score=0.95,
                 weight=0.15,  # 15% of total evaluation
-                measurement_method="deterministic",
-                measurement_description="Percentage of valid XML responses with required fields"
+                evaluation_method=EvaluationMethod.HYBRID,
+                evaluation_description="XML validation and required field presence"
             )
         ]
         
         # Define quality components for complex dimensions
         quality_components = {
-            CMO_DIMENSIONS["complexity_classification"]: [
-                QualityComponent(
-                    name="complexity_accuracy",
-                    description="Correct complexity level assignment",
-                    weight=1.0,
-                    evaluation_method="deterministic"
-                )
-            ],
+            # Complexity classification is deterministic - no components needed
             CMO_DIMENSIONS["specialty_selection"]: [
                 QualityComponent(
                     name="specialist_precision",
                     description="Selected specialists match expected set",
                     weight=0.6,
-                    evaluation_method="deterministic"
+                    evaluation_method=EvaluationMethod.DETERMINISTIC
                 ),
                 QualityComponent(
                     name="specialist_rationale",
                     description="Clear reasoning for specialist choices",
                     weight=0.4,
-                    evaluation_method="llm_judge"
+                    evaluation_method=EvaluationMethod.LLM_JUDGE
                 )
             ],
             dimension_registry.get("analysis_quality"): [
@@ -600,31 +594,31 @@ class CMOAgent:
                     name="data_gathering",
                     description="Appropriate tool calls to gather health data",
                     weight=0.20,
-                    evaluation_method="deterministic"
+                    evaluation_method=EvaluationMethod.DETERMINISTIC
                 ),
                 QualityComponent(
                     name="context_awareness",
                     description="Consideration of temporal context and patient history",
                     weight=0.15,
-                    evaluation_method="llm_judge"
+                    evaluation_method=EvaluationMethod.LLM_JUDGE
                 ),
                 QualityComponent(
                     name="specialist_rationale",
                     description="Clear reasoning for specialist task assignments",
                     weight=0.20,
-                    evaluation_method="llm_judge"
+                    evaluation_method=EvaluationMethod.LLM_JUDGE
                 ),
                 QualityComponent(
                     name="comprehensive_approach",
                     description="Coverage of all relevant medical concepts",
                     weight=0.25,
-                    evaluation_method="hybrid"
+                    evaluation_method=EvaluationMethod.LLM_JUDGE
                 ),
                 QualityComponent(
                     name="concern_identification",
                     description="Identification of health concerns and risks",
                     weight=0.20,
-                    evaluation_method="llm_judge"
+                    evaluation_method=EvaluationMethod.LLM_JUDGE
                 )
             ],
             dimension_registry.get("tool_usage"): [
@@ -632,13 +626,7 @@ class CMOAgent:
                     name="tool_success_rate",
                     description="Percentage of successful tool calls",
                     weight=0.5,
-                    evaluation_method="deterministic"
-                ),
-                QualityComponent(
-                    name="tool_relevance",
-                    description="Relevance of tool calls to query",
-                    weight=0.5,
-                    evaluation_method="deterministic"
+                    evaluation_method=EvaluationMethod.DETERMINISTIC
                 )
             ],
             dimension_registry.get("response_structure"): [
@@ -646,13 +634,13 @@ class CMOAgent:
                     name="xml_validity",
                     description="Valid XML structure in responses",
                     weight=0.7,
-                    evaluation_method="deterministic"
+                    evaluation_method=EvaluationMethod.DETERMINISTIC
                 ),
                 QualityComponent(
                     name="required_fields",
                     description="Presence of all required XML fields",
                     weight=0.3,
-                    evaluation_method="deterministic"
+                    evaluation_method=EvaluationMethod.DETERMINISTIC
                 )
             ]
         }

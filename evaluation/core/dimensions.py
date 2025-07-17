@@ -40,6 +40,13 @@ class DimensionCategory(Enum):
     VISUALIZATION = "visualization"  # Visualization agent-specific
 
 
+class EvaluationMethod(Enum):
+    """Methods for evaluating components and dimensions"""
+    DETERMINISTIC = "deterministic"  # Rule-based, algorithmic evaluation
+    LLM_JUDGE = "llm_judge"  # LLM-based semantic evaluation
+    HYBRID = "hybrid"  # Mix of deterministic and LLM judge (at dimension level)
+
+
 class DimensionRegistry:
     """Registry for evaluation dimensions"""
     
@@ -114,7 +121,7 @@ class QualityComponent:
     name: str
     description: str
     weight: float  # Weight within its dimension (should sum to 1.0)
-    evaluation_method: str  # "deterministic", "llm_judge", "hybrid"
+    evaluation_method: EvaluationMethod  # Method for evaluating this component
 
 
 @dataclass
@@ -123,8 +130,8 @@ class EvaluationCriteria:
     dimension: EvaluationDimension  # Now uses the flexible dimension type
     description: str
     target_score: float  # Expected minimum score (0.0 to 1.0)
-    measurement_method: str  # "deterministic", "llm_judge", "hybrid"
-    measurement_description: str
+    evaluation_method: EvaluationMethod  # Method for evaluating this dimension
+    evaluation_description: str
     weight: float = 1.0  # Weight in overall evaluation
     
     def is_passing(self, score: float) -> bool:
@@ -135,6 +142,7 @@ class EvaluationCriteria:
 __all__ = [
     'EvaluationDimension',
     'DimensionCategory',
+    'EvaluationMethod',
     'DimensionRegistry',
     'dimension_registry',
     'QualityComponent',

@@ -248,12 +248,22 @@
       height: 8px;
       overflow: hidden;
       margin: 0.5rem 0;
+      position: relative;
     }
 
     .progress-fill {
       height: 100%;
       border-radius: 9999px;
       transition: width 0.5s ease;
+    }
+
+    .progress-target {
+      position: absolute;
+      top: -2px;
+      bottom: -2px;
+      width: 2px;
+      background: var(--accent-primary);
+      opacity: 0.8;
     }
 
     /* Test case cards */
@@ -339,6 +349,43 @@
     ::-webkit-scrollbar-thumb:hover {
       background: var(--accent-primary);
     }
+
+    /* Collapsible sections */
+    .collapsible {
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.3s ease;
+    }
+
+    .collapsible:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .collapsible-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem;
+    }
+
+    .collapsible-arrow {
+      transition: transform 0.3s ease;
+      font-size: 1.2rem;
+    }
+
+    .collapsible-arrow.open {
+      transform: rotate(180deg);
+    }
+
+    .collapsible-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .collapsible-content.open {
+      max-height: 3000px;
+    }
   </style>
 </head>
 <body>
@@ -421,8 +468,11 @@
       </thead>
       <tbody>
         {% for test in test_summary %}
-        <tr>
-          <td style="font-weight: 600;">{{ test.test_case_id }}</td>
+        <tr class="collapsible" onclick="toggleTestRow(this)" style="cursor: pointer;">
+          <td style="font-weight: 600;">
+            <span class="test-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+            {{ test.test_case_id }}: {{ test.query }}
+          </td>
           <td>
             <span class="badge {% if 'PASS' in test.status %}badge-success{% else %}badge-danger{% endif %}">
               {{ test.status }}
@@ -437,6 +487,13 @@
             {% else %}
               <span style="color: #10b981;">None</span>
             {% endif %}
+          </td>
+        </tr>
+        <tr class="test-details" style="display: none;">
+          <td colspan="4" style="padding: 0;">
+            <div style="padding: 1rem; background: var(--bg-tertiary);">
+              <strong>Query:</strong> {{ test.query }}
+            </div>
           </td>
         </tr>
         {% endfor %}
@@ -462,6 +519,7 @@
     
     <div class="progress-bar">
       <div class="progress-fill" style="width: {{ (dim_data.score_percentage) }}%; background: {% if dim_data.passed %}var(--accent-success){% else %}var(--accent-danger){% endif %};"></div>
+      <div class="progress-target" style="left: {{ dim_data.target_percent }}%;"></div>
     </div>
     
     <p style="margin: 0.5rem 0 0 0; color: var(--text-tertiary); font-size: 0.875rem;">
@@ -489,6 +547,19 @@
   </div>
   
   <div class="test-case-content">
+    <!-- Collapsible Health Query Response -->
+    <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 1rem; overflow: hidden;">
+      <div class="collapsible collapsible-header" onclick="toggleSection(this)">
+        <strong style="color: var(--accent-primary);">Health Query Response/Analysis</strong>
+        <span class="collapsible-arrow">▼</span>
+      </div>
+      <div class="collapsible-content">
+        <div style="padding: 1rem; background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.875rem; line-height: 1.6;">
+          <pre style="white-space: pre-wrap; margin: 0; font-family: inherit;">{{ test_case.approach_text }}</pre>
+        </div>
+      </div>
+    </div>
+    
     <!-- Dimension Evaluation Summary -->
     <h4 style="color: var(--text-primary); margin-top: 0;">Dimension Evaluation</h4>
     <div style="overflow-x: auto;">
@@ -496,6 +567,7 @@
         <thead>
           <tr>
             <th>Dimension</th>
+            <th>Method</th>
             <th>Expected</th>
             <th>Actual</th>
             <th>Score</th>
@@ -505,13 +577,14 @@
         </thead>
         <tbody>
           {% for dimension in test_case.evaluation_dimensions %}
-          <tr {% if dimension.has_components or dimension.has_failure_info %}class="collapsible" onclick="toggleDimensionRow(this)" style="cursor: pointer;"{% endif %}>
+          <tr {% if dimension.is_expandable %}class="collapsible" onclick="toggleDimensionRow(this)" style="cursor: pointer;"{% endif %}>
             <td style="font-weight: 600;">
-              {% if dimension.has_components or dimension.has_failure_info %}
+              {% if dimension.is_expandable %}
               <span class="dimension-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
               {% endif %}
               {{ dimension.name }}
             </td>
+            <td>{{ dimension.method_icon }} {{ dimension.method }}</td>
             <td>{{ dimension.expected }}</td>
             <td>{{ dimension.actual }}</td>
             <td>{{ dimension.score }}</td>
@@ -522,80 +595,107 @@
               </span>
             </td>
           </tr>
-          {% if dimension.has_components %}
-          <tr class="dimension-components" style="display: none;">
-            <td colspan="6" style="padding: 0;">
-              <div style="padding: 1rem 1.5rem; background: var(--bg-primary);">
-                <h5 style="color: var(--accent-primary); margin: 0 0 0.5rem 0;">Quality Score Components:</h5>
-                <table style="font-size: 0.875rem;">
-                  <thead>
-                    <tr>
-                      <th>Component</th>
-                      <th>Weight</th>
-                      <th>Score</th>
-                      <th>Weighted</th>
-                      <th>Description</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for component in dimension.components %}
-                    <tr>
-                      <td style="font-weight: 600;">{{ component.name }}</td>
-                      <td>{{ component.weight }}</td>
-                      <td>{{ component.score }}</td>
-                      <td style="color: var(--accent-primary);">{{ component.weighted }}</td>
-                      <td style="color: var(--text-tertiary);">{{ component.description }}</td>
-                    </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
-            </td>
-          </tr>
-          {% elif dimension.has_failure_info %}
-          <tr class="dimension-failure" style="display: none;">
-            <td colspan="6" style="padding: 0;">
-              <div style="padding: 1.5rem; background: linear-gradient(135deg, rgba(239, 68, 68, 0.05), rgba(239, 68, 68, 0.02)); border-top: 2px solid rgba(239, 68, 68, 0.2);">
-                <div style="display: grid; gap: 1rem;">
-                  {% if dimension.failure_info.prompt_files %}
-                  <div>
-                    <h5 style="color: var(--accent-danger); margin: 0 0 0.5rem 0;">📄 Associated Prompt Files:</h5>
-                    <ul style="margin: 0; padding-left: 1.5rem;">
-                      {% for file in dimension.failure_info.prompt_files %}
-                      <li style="color: var(--text-secondary);">{{ file.name }}</li>
+          {% if dimension.is_expandable %}
+          <tr class="dimension-details" style="display: none;">
+            <td colspan="7" style="padding: 0;">
+              <div style="padding: 1.5rem; background: {% if dimension.has_failure_info %}linear-gradient(135deg, rgba(239, 68, 68, 0.05), rgba(239, 68, 68, 0.02)){% else %}var(--bg-primary){% endif %}; border-top: 2px solid {% if dimension.has_failure_info %}rgba(239, 68, 68, 0.2){% else %}var(--border-color){% endif %};">
+                <!-- Component Scores Section -->
+                {% if dimension.has_components %}
+                <div style="margin-bottom: {% if dimension.has_failure_info %}1.5rem{% else %}0{% endif %};">
+                  <h5 style="color: var(--accent-primary); margin: 0 0 0.75rem 0;">📊 Quality Score Components:</h5>
+                  <table style="font-size: 0.875rem; background: var(--bg-secondary); border-radius: 8px;">
+                    <thead>
+                      <tr>
+                        <th style="padding: 0.75rem;">Component</th>
+                        <th style="padding: 0.75rem;">Method</th>
+                        <th style="padding: 0.75rem;">Weight</th>
+                        <th style="padding: 0.75rem;">Score</th>
+                        <th style="padding: 0.75rem;">Contribution</th>
+                        <th style="padding: 0.75rem;">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for component in dimension.components %}
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">{{ component.name }}</td>
+                        <td style="padding: 0.75rem;">{{ component.method_icon }} {{ component.method }}</td>
+                        <td style="padding: 0.75rem;">{{ component.weight }}</td>
+                        <td style="padding: 0.75rem; color: {% if component.score|float < 0.7 %}var(--accent-danger){% elif component.score|float < 0.9 %}var(--accent-warning){% else %}var(--accent-success){% endif %};">{{ component.score }}</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">{{ component.weighted }}</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">{{ component.description }}</td>
+                      </tr>
                       {% endfor %}
-                    </ul>
-                  </div>
-                  {% endif %}
-                  
-                  {% if dimension.failure_info.root_cause %}
-                  <div>
-                    <h5 style="color: var(--accent-danger); margin: 0 0 0.5rem 0;">🔍 Root Cause Analysis:</h5>
-                    <p style="margin: 0; color: var(--text-secondary); background: rgba(0, 0, 0, 0.02); padding: 0.75rem; border-radius: 6px;">
-                      {{ dimension.failure_info.root_cause }}
-                    </p>
-                  </div>
-                  {% endif %}
-                  
-                  {% if dimension.failure_info.recommendations %}
-                  <div>
-                    <h5 style="color: var(--accent-primary); margin: 0 0 0.5rem 0;">💡 Recommended Improvements:</h5>
-                    <ul style="margin: 0; padding-left: 1.5rem;">
-                      {% for rec in dimension.failure_info.recommendations %}
-                      <li style="color: var(--text-secondary);">{{ rec }}</li>
-                      {% endfor %}
-                    </ul>
-                  </div>
-                  {% endif %}
-                  
-                  {% if dimension.failure_info.priority %}
-                  <div style="text-align: right;">
-                    <span class="badge badge-{% if dimension.failure_info.priority == 'high' %}danger{% elif dimension.failure_info.priority == 'medium' %}warning{% else %}success{% endif %}">
-                      Priority: {{ dimension.failure_info.priority|upper }}
-                    </span>
-                  </div>
-                  {% endif %}
+                    </tbody>
+                  </table>
                 </div>
+                {% elif dimension.dimension_note %}
+                <!-- Dimension evaluation explanation -->
+                <div style="margin-bottom: {% if dimension.has_failure_info %}1.5rem{% else %}0{% endif %}; padding: 0.75rem; background: rgba(59, 130, 246, 0.05); border-radius: 6px;">
+                  <p style="margin: 0; color: var(--text-secondary); font-size: 0.875rem;">
+                    ℹ️ <strong>Evaluation Method:</strong> {{ dimension.dimension_note }}
+                  </p>
+                </div>
+                {% endif %}
+                
+                <!-- Failure Analysis Section -->
+                {% if dimension.has_failure_info %}
+                <div style="border-top: {% if dimension.has_components %}1px solid var(--border-color){% else %}none{% endif %}; padding-top: {% if dimension.has_components %}1.5rem{% else %}0{% endif %};">
+                  <!-- LLM Judge Analysis Container - More integrated design -->
+                  <div style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.03)); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 8px; padding: 1.5rem;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                      <h4 style="color: var(--accent-danger); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 1.2rem;">🔍</span>
+                        LLM Judge Analysis
+                      </h4>
+                      {% if dimension.failure_info.priority %}
+                      <span class="badge badge-{% if dimension.failure_info.priority == 'high' %}danger{% elif dimension.failure_info.priority == 'medium' %}warning{% else %}success{% endif %}">
+                        Priority: {{ dimension.failure_info.priority|upper }}
+                      </span>
+                      {% endif %}
+                    </div>
+                  
+                  <div style="display: grid; gap: 1rem;">
+                    {% if dimension.failure_info.prompt_files %}
+                    <div>
+                      <h5 style="color: var(--accent-danger); margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>📄</span> Associated Prompt Files
+                      </h5>
+                      <ul style="margin: 0; padding-left: 1.5rem;">
+                        {% for file in dimension.failure_info.prompt_files %}
+                        <li style="color: var(--text-secondary);">{{ file.name }}</li>
+                        {% endfor %}
+                      </ul>
+                    </div>
+                    {% endif %}
+                    
+                    {% if dimension.failure_info.root_cause %}
+                    <div>
+                      <h5 style="color: var(--accent-danger); margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>🔍</span> Root Cause Analysis
+                      </h5>
+                      <p style="margin: 0; color: var(--text-secondary); background: var(--bg-secondary); padding: 0.75rem; border-radius: 6px; border-left: 4px solid var(--accent-danger);">
+                        {{ dimension.failure_info.root_cause }}
+                      </p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if dimension.failure_info.recommendations %}
+                    <div>
+                      <h5 style="color: var(--accent-primary); margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>💡</span> Recommended Improvements
+                      </h5>
+                      <ul style="margin: 0; padding-left: 1.5rem;">
+                        {% for rec in dimension.failure_info.recommendations %}
+                        <li style="color: var(--text-secondary); margin-bottom: 0.25rem;">{{ rec }}</li>
+                        {% endfor %}
+                      </ul>
+                    </div>
+                    {% endif %}
+                    
+                  </div>
+                  </div>
+                </div>
+                {% endif %}
               </div>
             </td>
           </tr>
@@ -641,7 +741,22 @@ function toggleDimensionRow(row) {
   const nextRow = row.nextElementSibling;
   const arrow = row.querySelector('.dimension-arrow');
   
-  if (nextRow && (nextRow.classList.contains('dimension-components') || nextRow.classList.contains('dimension-failure'))) {
+  if (nextRow && nextRow.classList.contains('dimension-details')) {
+    if (nextRow.style.display === 'none') {
+      nextRow.style.display = 'table-row';
+      arrow.style.transform = 'rotate(90deg)';
+    } else {
+      nextRow.style.display = 'none';
+      arrow.style.transform = 'rotate(0deg)';
+    }
+  }
+}
+
+function toggleTestRow(row) {
+  const nextRow = row.nextElementSibling;
+  const arrow = row.querySelector('.test-arrow');
+  
+  if (nextRow && nextRow.classList.contains('test-details')) {
     if (nextRow.style.display === 'none') {
       nextRow.style.display = 'table-row';
       arrow.style.transform = 'rotate(90deg)';

@@ -22,12 +22,11 @@ from evaluation.core.dimensions import (
 class DynamicHTMLReportGenerator:
     """Generates evaluation reports dynamically based on agent metadata"""
     
-    def __init__(self, test_run_dir: Path, agent_type: str, use_health_insight_theme: bool = True):
+    def __init__(self, test_run_dir: Path, agent_type: str):
         self.test_run_dir = test_run_dir
         self.report_dir = test_run_dir / "report"
         self.report_dir.mkdir(exist_ok=True, parents=True)
         self.agent_type = agent_type
-        self.use_health_insight_theme = use_health_insight_theme
         
         # Get metadata directly from agent class
         self.agent_metadata = None
@@ -67,7 +66,7 @@ class DynamicHTMLReportGenerator:
         template_data['agent_metadata'] = self.agent_metadata.to_report_data()
         
         # Load template and render
-        template_file = "report_template_health_insight.html" if self.use_health_insight_theme else "report_template.html"
+        template_file = "report_template_health_insight.html"
         template = self.env.get_template(template_file)
         html_content = template.render(**template_data)
         
@@ -99,7 +98,8 @@ class DynamicHTMLReportGenerator:
         # Executive summary
         summary = eval_results.get("summary", {})
         overall_result = "PASS" if summary.get("overall_success", False) else "FAIL"
-        overall_score = summary.get("success_rate", 0.0) * 100
+        # Use weighted_score for overall score, not success_rate
+        overall_score = summary.get("weighted_score", 0.0) * 100
         
         # Test statistics
         total_tests = len(individual_results) if individual_results else 0
@@ -131,7 +131,8 @@ class DynamicHTMLReportGenerator:
                 'response_time': result.get('total_response_time_ms', 0),
                 'complexity': result.get('expected_complexity', 'Unknown'),
                 'complexity_color': self._get_complexity_color(result.get('expected_complexity', '')),
-                'complexity_text_color': self._get_complexity_text_color(result.get('expected_complexity', ''))
+                'complexity_text_color': self._get_complexity_text_color(result.get('expected_complexity', '')),
+                'query': result.get('query', 'Query not available')
             })
         
         # Dimension performance - dynamic based on metadata
@@ -149,11 +150,16 @@ class DynamicHTMLReportGenerator:
                     'name': dim_name.replace('_', ' ').title(),
                     'score_percent': f"{data['score_percent']:.1f}",
                     'target_percent': f"{data['target_percent']:.1f}",
+                    'score_percentage': data['score_percent'],  # For progress bar width
+                    'actual_score': f"{data['score_percent']:.1f}%",
+                    'target_score': f"{data['target_percent']:.1f}%",
+                    'passed': passed,
                     'score_color': "#10b981" if passed else "#ef4444",
                     'progress_gradient': "linear-gradient(to right, #10b981, #059669)" if passed else "linear-gradient(to right, #ef4444, #dc2626)",
                     'method_icon': self._get_method_icon_dynamic(criteria),
                     'method': self._get_primary_method(criteria),
-                    'description': criteria.description
+                    'description': criteria.description,
+                    'icon': self._get_method_icon_dynamic(criteria)
                 })
         
         # Get prompts from metadata
@@ -227,22 +233,9 @@ class DynamicHTMLReportGenerator:
     
     def _extract_dimension_score(self, result: Dict[str, Any], dimension: str) -> Optional[float]:
         """Extract score for a dimension from result data"""
-        # Map dimension names to result fields
-        dimension_field_map = {
-            'complexity_classification': lambda r: 1.0 if r.get('complexity_correct', False) else 0.0,
-            'specialty_selection': lambda r: r.get('specialty_f1', 0.0),
-            'analysis_quality': lambda r: r.get('analysis_quality_score', 0.0),
-            'tool_usage': lambda r: r.get('tool_success_rate', 0.0),
-            'response_structure': lambda r: 1.0 if r.get('response_valid', False) else 0.0,
-            'medical_accuracy': lambda r: r.get('medical_accuracy_score', 0.0),
-            'recommendation_quality': lambda r: r.get('recommendation_score', 0.0),
-            'synthesis_quality': lambda r: r.get('synthesis_score', 0.0)
-        }
-        
-        extractor = dimension_field_map.get(dimension)
-        if extractor:
-            return extractor(result)
-        return None
+        # Only use the metadata-driven dynamic score field
+        dynamic_score_key = f"{dimension}_score"
+        return result.get(dynamic_score_key, None)
     
     def _get_failed_dimensions_dynamic(self, result: Dict[str, Any]) -> List[str]:
         """Get failed dimensions based on agent metadata"""
@@ -292,10 +285,24 @@ class DynamicHTMLReportGenerator:
         
         if method_weights:
             primary_method = max(method_weights.items(), key=lambda x: x[1])[0]
-            return primary_method.replace('_', ' ').title()
+            return primary_method.value.replace('_', ' ').title()
         else:
-            # Fallback to the criteria's measurement method
-            return criteria.measurement_method.replace('_', ' ').title()
+            # Fallback to the criteria's evaluation method
+            return criteria.evaluation_method.value.replace('_', ' ').title()
+    
+    def _get_method_icon(self, method) -> str:
+        """Get method icon for evaluation method enum"""
+        # Import here to avoid circular imports
+        from evaluation.core.dimensions import EvaluationMethod
+        
+        if method == EvaluationMethod.DETERMINISTIC:
+            return "🔢"
+        elif method == EvaluationMethod.LLM_JUDGE:
+            return "🤖"
+        elif method == EvaluationMethod.HYBRID:
+            return "🔀"
+        else:
+            return "❓"
     
     def _prepare_test_case_data_dynamic(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """Prepare test case data using metadata"""
@@ -344,37 +351,64 @@ class DynamicHTMLReportGenerator:
                 
                 passed = score >= criteria.target_score
                 
-                # Get quality components if this is analysis_quality dimension
+                # Get quality components from metadata and breakdowns
                 quality_components = None
-                if dim_name == 'analysis_quality' and 'quality_breakdown' in result:
+                dimension_note = None
+                
+                # Get components from metadata
+                components = self.agent_metadata.get_quality_components(criteria.dimension)
+                if components:
                     quality_components = []
-                    breakdown = result['quality_breakdown']
-                    # Define component details
-                    component_info = {
-                        'data_gathering': ('Data Gathering', 0.20, 'Appropriate tool calls to gather health data'),
-                        'context_awareness': ('Context Awareness', 0.15, 'Consideration of temporal context and patient history'),
-                        'specialist_rationale': ('Specialist Rationale', 0.20, 'Clear reasoning for specialist task assignments'),
-                        'comprehensive_approach': ('Comprehensive Approach', 0.25, 'Coverage of all relevant medical concepts'),
-                        'concern_identification': ('Concern Identification', 0.20, 'Identification of health concerns and risks')
+                    # Get the breakdown for this dimension - map dimension names to actual breakdown keys
+                    breakdown_key_map = {
+                        'specialty_selection': 'specialty_component_breakdown',
+                        'analysis_quality': 'analysis_quality_breakdown',
+                        'tool_usage': 'tool_component_breakdown',
+                        'response_structure': 'response_component_breakdown'
                     }
+                    breakdown_key = breakdown_key_map.get(dim_name, f"{dim_name}_component_breakdown")
                     
-                    for comp_key, (comp_name, weight, description) in component_info.items():
-                        if comp_key in breakdown:
-                            quality_components.append({
-                                'name': comp_name,
-                                'weight': f"{weight:.2f}",
-                                'score': f"{breakdown[comp_key]:.2f}",
-                                'weighted': f"{breakdown[comp_key] * weight:.3f}",
-                                'description': description
-                            })
+                    if breakdown_key in result:
+                        breakdown = result[breakdown_key]
+                    elif dim_name == 'analysis_quality' and 'quality_breakdown' in result:
+                        breakdown = result['quality_breakdown']
+                    else:
+                        breakdown = {}
+                    
+                    # Build component data from metadata
+                    for component in components:
+                        comp_score = breakdown.get(component.name, 0.0)
+                        quality_components.append({
+                            'name': component.name.replace('_', ' ').title(),
+                            'weight': f"{component.weight:.2f}",
+                            'score': f"{comp_score:.2f}",
+                            'weighted': f"{comp_score * component.weight:.3f}",
+                            'description': component.description,
+                            'method': component.evaluation_method.value.replace('_', ' ').title(),
+                            'method_icon': self._get_method_icon(component.evaluation_method)
+                        })
+                else:
+                    # Add explanatory notes for dimensions without components
+                    dimension_notes = {
+                        'complexity_classification': 'Binary evaluation: Either the complexity level matches expected or it doesn\'t',
+                        'specialty_selection': 'Set-based evaluation: Measures precision/recall/F1 of selected specialties',
+                        'tool_usage': 'Binary evaluation: Checks if tools were used effectively',
+                        'response_structure': 'Binary evaluation: Validates XML structure compliance'
+                    }
+                    dimension_note = dimension_notes.get(dim_name)
                 
                 # Get failure analysis and prompt improvements for failed dimensions
                 failure_info = None
                 if not passed:
                     failure_info = self._get_dimension_failure_info(result, dim_name)
                 
+                # Determine if row should be expandable (has components OR has failure info OR has dimension note)
+                is_expandable = quality_components is not None or failure_info is not None or dimension_note is not None
+                
                 dimensions.append({
                     'name': dim_name.replace('_', ' ').title(),
+                    'method': self._get_primary_method(criteria),
+                    'method_icon': self._get_method_icon_dynamic(criteria),
                     'expected': expected,
                     'actual': actual,
                     'score': f"{score:.2f}",
@@ -384,17 +418,44 @@ class DynamicHTMLReportGenerator:
                     'status_text_color': "#6ee7b7" if passed else "#fca5a5",
                     'expected_small': len(str(expected)) > 50,
                     'actual_small': len(str(actual)) > 50,
+                    'is_expandable': is_expandable,
                     'has_components': quality_components is not None,
                     'components': quality_components,
                     'has_failure_info': failure_info is not None,
-                    'failure_info': failure_info
+                    'failure_info': failure_info,
+                    'dimension_note': dimension_note
                 })
         
         return dimensions
     
     def _get_dimension_failure_info(self, result: Dict[str, Any], dimension: str) -> Optional[Dict[str, Any]]:
         """Get failure analysis and prompt improvements for a dimension"""
-        # Map dimension names to analysis keys
+        # Check if we have failure analyses (new format)
+        if 'failure_analyses' in result and result['failure_analyses']:
+            # Find the analysis for this dimension
+            for analysis in result['failure_analyses']:
+                if analysis.get('dimension') == dimension:
+                    # Build failure info from new format
+                    failure_info = {
+                        'prompt_files': [],
+                        'root_cause': analysis.get('root_cause', ''),
+                        'recommendations': analysis.get('recommendations', []),
+                        'priority': analysis.get('priority', 'medium')
+                    }
+                    
+                    # Add prompt file if available
+                    if analysis.get('prompt_file'):
+                        prompt_file = analysis['prompt_file']
+                        if '/' in prompt_file:
+                            prompt_file = prompt_file.split('/')[-1]
+                        failure_info['prompt_files'].append({
+                            'name': prompt_file,
+                            'full_path': f'backend/services/agents/{self.agent_type}/prompts/{prompt_file}'
+                        })
+                    
+                    return failure_info
+        
+        # Fallback to old format for backward compatibility
         analysis_key_map = {
             'specialty_selection': 'specialist_analysis',
             'analysis_quality': 'quality_analysis',
@@ -659,6 +720,29 @@ class DynamicHTMLReportGenerator:
         
         # Collect improvements from each result
         for result in results:
+            # Check new format first (failure_analyses)
+            if 'failure_analyses' in result and result['failure_analyses']:
+                for analysis in result['failure_analyses']:
+                    if analysis.get('prompt_file'):
+                        prompt_file = analysis['prompt_file']
+                        if '/' in prompt_file:
+                            prompt_file = prompt_file.split('/')[-1]
+                        
+                        if prompt_file not in prompt_improvements:
+                            prompt_improvements[prompt_file] = {
+                                'issues': set(),
+                                'changes': set(),
+                                'priorities': [],
+                                'test_cases': []
+                            }
+                        
+                        prompt_improvements[prompt_file]['issues'].add(analysis.get('root_cause', ''))
+                        prompt_improvements[prompt_file]['changes'].update(analysis.get('recommendations', []))
+                        prompt_improvements[prompt_file]['priorities'].append(analysis.get('priority', 'medium'))
+                        prompt_improvements[prompt_file]['test_cases'].append(result.get('test_case_id', 'Unknown'))
+                continue  # Skip old format processing for this result
+            
+            # Fallback to old format for backward compatibility
             # Check quality analysis for prompt improvements
             if 'quality_analysis' in result and 'prompt_improvements' in result['quality_analysis']:
                 for prompt_file, improvements in result['quality_analysis']['prompt_improvements'].items():
@@ -731,6 +815,20 @@ class DynamicHTMLReportGenerator:
         """Prepare prompt improvement recommendations for a specific test case"""
         improvements = []
         
+        # Check new format first (failure_analyses)
+        if 'failure_analyses' in result and result['failure_analyses']:
+            for analysis in result['failure_analyses']:
+                if analysis.get('prompt_file') and analysis.get('recommendations'):
+                    improvements.append({
+                        'dimension': analysis.get('dimension', 'Unknown'),
+                        'prompt_file': analysis['prompt_file'],
+                        'recommendations': analysis['recommendations'],
+                        'priority': analysis.get('priority', 'medium'),
+                        'root_cause': analysis.get('root_cause', '')
+                    })
+            return improvements
+        
+        # Fallback to old format for backward compatibility
         # Check if we have quality analysis with prompt improvements
         if 'quality_analysis' in result and 'prompt_improvements' in result['quality_analysis']:
             for prompt_file, improvement_data in result['quality_analysis']['prompt_improvements'].items():

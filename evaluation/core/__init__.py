@@ -7,6 +7,7 @@ Provides core evaluation types including dimensions, results, and rubrics.
 from .dimensions import (
     EvaluationDimension,
     DimensionCategory,
+    EvaluationMethod,
     DimensionRegistry,
     dimension_registry,
     QualityComponent,
@@ -27,6 +28,7 @@ __all__ = [
     # Dimensions
     'EvaluationDimension',
     'DimensionCategory',
+    'EvaluationMethod',
     'DimensionRegistry',
     'dimension_registry',
     'QualityComponent',

@@ -1,0 +1,17 @@
+Evaluate how comprehensive this CMO analysis approach is.
+
+Query: {query}
+
+Expected Key Concepts: {key_concepts_str}
+
+CMO Analysis:
+{analysis}
+
+Rate on a scale of 0.0 to 1.0 how well the CMO:
+1. Covered all relevant medical aspects of the query
+2. Addressed the expected key concepts
+3. Provided a complete analytical approach without major gaps
+
+Respond with your evaluation in this exact format:
+<score>0.0-1.0</score>
+<reasoning>Brief explanation of the score</reasoning>

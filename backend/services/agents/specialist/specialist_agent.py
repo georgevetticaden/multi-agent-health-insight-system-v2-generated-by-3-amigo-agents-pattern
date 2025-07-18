@@ -1,5 +1,6 @@
 import os
 import re
+import time
 import logging
 from typing import Dict, Any, List, Optional, TYPE_CHECKING, Union
 from anthropic import Anthropic
@@ -128,17 +129,69 @@ class SpecialistAgent:
                     tool_calls_made += 1
                     
                     try:
+                        # Track start time for duration
+                        tool_start_time = time.time()
+                        
                         # Execute the tool (tool invocation will be auto-traced by streaming client)
                         result = await self.tool_registry.execute_tool(tool_name, tool_input)
                         
+                        # Calculate duration
+                        tool_duration_ms = (time.time() - tool_start_time) * 1000
+                        
                         # Store findings data (keep top 10 results)
+                        result_count = 0
                         if isinstance(result, dict) and "results" in result:
                             query_key = f"query_{tool_calls_made}"
+                            result_count = result.get("result_count", 0)
                             findings_data[query_key] = {
                                 "query": tool_input.get("query", ""),
-                                "result_count": result.get("result_count", 0),
+                                "result_count": result_count,
                                 "results": result.get("results", [])[:10]  # Keep top 10
                             }
+                        
+                        # Trace tool result if tracing is enabled
+                        if TRACING_AVAILABLE and self.trace_collector:
+                            # Create result summary
+                            if isinstance(result, dict):
+                                if result.get("query_successful", False):
+                                    result_summary = f"Found {result_count} results for: {tool_input.get('query', '')}"
+                                else:
+                                    result_summary = "No data found for the query"
+                            else:
+                                result_summary = f"Tool returned {type(result).__name__}"
+                            
+                            # Prepare result data - include actual results but limit size
+                            result_data_for_trace = {}
+                            if isinstance(result, dict):
+                                # Include key fields from result
+                                result_data_for_trace = {
+                                    "query_successful": result.get("query_successful", False),
+                                    "result_count": result.get("result_count", 0),
+                                    "results": result.get("results", [])[:5],  # Limit to first 5 results
+                                    "query": result.get("query", ""),
+                                    "error": result.get("error")
+                                }
+                            
+                            await self.trace_collector.add_event(
+                                event_type=TraceEventType.TOOL_RESULT,
+                                agent_type=task.specialist.value.lower(),
+                                stage="analysis",
+                                data={
+                                    "tool_name": tool_name,
+                                    "tool_id": content.id,
+                                    "success": True,
+                                    "result_summary": result_summary,
+                                    "result_data": result_data_for_trace,
+                                    "duration_ms": tool_duration_ms,
+                                    "linked_tool_invocation_id": content.id  # Link to invocation
+                                },
+                                duration_ms=tool_duration_ms,
+                                metadata={
+                                    "tool_input": tool_input,
+                                    "specialist": task.specialist.value,
+                                    "tool_output": result  # Store complete output
+                                }
+                            )
                         
                         response_content.append({
                             "type": "tool_use",
@@ -156,6 +209,26 @@ class SpecialistAgent:
                         
                     except Exception as e:
                         logger.error(f"Tool execution failed: {str(e)}")
+                        
+                        # Trace tool error if tracing is enabled
+                        if TRACING_AVAILABLE and self.trace_collector:
+                            await self.trace_collector.add_event(
+                                event_type=TraceEventType.TOOL_RESULT,
+                                agent_type=task.specialist.value.lower(),
+                                stage="analysis",
+                                data={
+                                    "tool_name": tool_name,
+                                    "tool_id": content.id,
+                                    "success": False,
+                                    "error": str(e),
+                                    "error_type": type(e).__name__
+                                },
+                                metadata={
+                                    "tool_input": tool_input,
+                                    "specialist": task.specialist.value
+                                }
+                            )
+                        
                         tool_results.append({
                             "type": "tool_result",
                             "tool_use_id": content.id,

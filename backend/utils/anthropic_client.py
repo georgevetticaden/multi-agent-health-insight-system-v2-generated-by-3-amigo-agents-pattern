@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import time
+import copy
 from typing import Dict, List, Any, Optional, Union
 from anthropic import Anthropic, APIError, APITimeoutError, APIConnectionError
 
@@ -197,14 +198,14 @@ class AnthropicStreamingClient:
         prompt_event_id = None
         
         try:
-            # Create prompt data
+            # Create prompt data with deep copy of messages to preserve state
             prompt_data = {
                 "prompt_file": prompt_file,
                 "populated_prompt": prompt_text,
                 "model": model,
                 "temperature": temperature,
                 "max_tokens": max_tokens,
-                "messages": messages,
+                "messages": copy.deepcopy(messages),  # Deep copy to preserve current state
                 "system_prompt": system,
                 "tools": [t.get('name', 'unknown') for t in tools] if tools else [],
                 "message_count": len(messages),

@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import time
 import logging
 from typing import Dict, Any, List, Tuple, Optional, TYPE_CHECKING, Union
 from anthropic import Anthropic
@@ -156,8 +157,14 @@ class CMOAgent:
                 })
                 
                 try:
+                    # Track start time for duration
+                    tool_start_time = time.time()
+                    
                     # Execute the tool (tool invocation will be auto-traced by streaming client)
                     result = await self.tool_registry.execute_tool(tool_name, tool_input)
+                    
+                    # Calculate duration
+                    tool_duration_ms = (time.time() - tool_start_time) * 1000
                     
                     # Extract summary information
                     if isinstance(result, dict):
@@ -171,6 +178,40 @@ class CMOAgent:
                         else:
                             initial_data["summary"] = "No data found for the query"
                     
+                    # Trace tool result if tracing is enabled
+                    if TRACING_AVAILABLE and self.trace_collector:
+                        # Prepare result data - include actual results but limit size
+                        result_data_for_trace = {}
+                        if isinstance(result, dict):
+                            # Include key fields from result
+                            result_data_for_trace = {
+                                "query_successful": result.get("query_successful", False),
+                                "result_count": result.get("result_count", 0),
+                                "results": result.get("results", [])[:5],  # Limit to first 5 results
+                                "query": result.get("query", ""),
+                                "error": result.get("error")
+                            }
+                        
+                        await self.trace_collector.add_event(
+                            event_type=TraceEventType.TOOL_RESULT,
+                            agent_type="cmo",
+                            stage="query_analysis",
+                            data={
+                                "tool_name": tool_name,
+                                "tool_id": tool_id,
+                                "success": True,
+                                "result_summary": initial_data.get("summary", ""),
+                                "result_data": result_data_for_trace,
+                                "duration_ms": tool_duration_ms,
+                                "linked_tool_invocation_id": tool_id  # Link to invocation
+                            },
+                            duration_ms=tool_duration_ms,
+                            metadata={
+                                "tool_input": tool_input,
+                                "tool_output": result  # Store complete output
+                            }
+                        )
+                    
                     tool_results.append({
                         "tool_id": tool_id,
                         "tool": tool_name,
@@ -181,6 +222,23 @@ class CMOAgent:
                 except Exception as e:
                     logger.error(f"Tool execution failed: {str(e)}")
                     initial_data["summary"] = f"Tool execution failed: {str(e)}"
+                    
+                    # Trace tool error if tracing is enabled
+                    if TRACING_AVAILABLE and self.trace_collector:
+                        await self.trace_collector.add_event(
+                            event_type=TraceEventType.TOOL_RESULT,
+                            agent_type="cmo",
+                            stage="query_analysis",
+                            data={
+                                "tool_name": tool_name,
+                                "tool_id": tool_id,
+                                "success": False,
+                                "error": str(e),
+                                "error_type": type(e).__name__
+                            },
+                            metadata={"tool_input": tool_input}
+                        )
+                    
                     tool_results.append({
                         "tool_id": tool_id,
                         "tool": tool_name,
@@ -232,6 +290,14 @@ class CMOAgent:
             
             logger.info(f"Added tool results to conversation. Total messages: {len(messages)}")
             
+            # Update metadata for assessment response (still part of initial gathering)
+            self.streaming_client.set_metadata(
+                agent_type="cmo",
+                stage="query_analysis",
+                prompt_file="1_gather_data_assess_complexity.txt",
+                prompt_phase="assessment_after_tool"
+            )
+            
             # Get the final response with initial assessment
             assessment_response = await self.streaming_client.create_message_with_retry_async(
                 model=self.model,
@@ -271,6 +337,13 @@ class CMOAgent:
             "content": summary_prompt
         })
         
+        # Update metadata for analytical approach
+        self.streaming_client.set_metadata(
+            agent_type="cmo",
+            stage="query_analysis",
+            prompt_file="2_define_analytical_approach.txt"
+        )
+        
         summary_response = await self.streaming_client.create_message_with_retry_async(
             model=self.model,
             messages=messages,
@@ -284,6 +357,19 @@ class CMOAgent:
         
         logger.info(f"Query analysis complete - Complexity: {complexity.value}, Tool calls: {initial_data['tool_calls_made']}")
         
+        # Add stage end marker
+        if TRACING_AVAILABLE and self.trace_collector:
+            await self.trace_collector.add_event(
+                event_type=TraceEventType.STAGE_END,
+                agent_type="cmo",
+                stage="query_analysis",
+                data={
+                    "complexity": complexity.value,
+                    "approach": approach,
+                    "tool_calls_made": initial_data['tool_calls_made']
+                }
+            )
+        
         return complexity, approach, initial_data
     
     async def create_specialist_tasks(
@@ -294,6 +380,18 @@ class CMOAgent:
         initial_data: Dict[str, Any]
     ) -> List[SpecialistTask]:
         """Create specific tasks for specialists based on analysis"""
+        
+        # Add stage start marker
+        if TRACING_AVAILABLE and self.trace_collector:
+            await self.trace_collector.add_event(
+                event_type=TraceEventType.STAGE_START,
+                agent_type="cmo",
+                stage="task_creation",
+                data={
+                    "complexity": complexity.value,
+                    "initial_data_summary": initial_data.get("summary", "")
+                }
+            )
         
         num_specialists = self._get_specialist_count(complexity)
         
@@ -346,6 +444,18 @@ class CMOAgent:
         tasks = self._parse_tasks_from_xml(tasks_text, complexity)
         
         logger.info(f"Created {len(tasks)} specialist tasks")
+        
+        # Add stage end marker
+        if TRACING_AVAILABLE and self.trace_collector:
+            await self.trace_collector.add_event(
+                event_type=TraceEventType.STAGE_END,
+                agent_type="cmo",
+                stage="task_creation",
+                data={
+                    "task_count": len(tasks),
+                    "specialists": [task.specialist.value for task in tasks]
+                }
+            )
         
         return tasks
     

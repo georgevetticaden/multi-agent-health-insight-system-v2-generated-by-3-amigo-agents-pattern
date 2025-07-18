@@ -2,13 +2,20 @@ import os
 import re
 import json
 import logging
-from typing import Dict, Any, List, Tuple, Optional, TYPE_CHECKING
+from typing import Dict, Any, List, Tuple, Optional, TYPE_CHECKING, Union
 from anthropic import Anthropic
 
 from services.agents.models import QueryComplexity, SpecialistTask, MedicalSpecialty
 from services.agents.cmo.cmo_prompts import CMOPrompts
 from utils.anthropic_client import AnthropicStreamingClient
 from tools.tool_registry import ToolRegistry
+
+# Import tracing components
+try:
+    from services.tracing import get_trace_collector, TraceEventType
+    TRACING_AVAILABLE = True
+except ImportError:
+    TRACING_AVAILABLE = False
 
 # Avoid circular import
 if TYPE_CHECKING:
@@ -28,9 +35,14 @@ class CMOAgent:
         max_tokens_analysis: int = 4000,
         max_tokens_planning: int = 6000,
         max_tokens_synthesis: int = 16384,
-        default_max_tool_calls: int = 5
+        default_max_tool_calls: int = 5,
+        enable_tracing: bool = True
     ):
-        self.client = anthropic_client or Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        # Initialize base client
+        self.client = anthropic_client
+        if self.client is None:
+            self.client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+            
         self.tool_registry = tool_registry or ToolRegistry()
         self.model = model or os.getenv("CMO_MODEL", "claude-3-5-sonnet-20241022")
         self.max_tokens_analysis = max_tokens_analysis
@@ -38,7 +50,12 @@ class CMOAgent:
         self.max_tokens_synthesis = max_tokens_synthesis
         self.default_max_tool_calls = default_max_tool_calls
         self.prompts = CMOPrompts()
+        
+        # Use the same client for streaming (traced or not)
         self.streaming_client = AnthropicStreamingClient(self.client)
+        
+        # Set up tracing collector if available
+        self.trace_collector = get_trace_collector() if TRACING_AVAILABLE else None
         
     async def analyze_query_with_tools(self, query: str) -> Tuple[QueryComplexity, str, Dict[str, Any]]:
         """
@@ -70,8 +87,32 @@ class CMOAgent:
         logger.info(f"Calling Anthropic API with {len(cmo_tools)} tools available")
         logger.info(f"Messages in conversation: {len(messages)}")
         
+        # Debug: Check if we have a trace context
+        if TRACING_AVAILABLE:
+            from services.tracing import TraceContextManager
+            context = TraceContextManager.get_context()
+            if context:
+                logger.debug(f"CMO: Trace context available: {context.trace_id}")
+            else:
+                logger.warning("CMO: No trace context found when making LLM call")
+        
+        # Set tracing metadata for this call
+        self.streaming_client.set_metadata(
+            agent_type="cmo",
+            stage="query_analysis",
+            prompt_file="1_gather_data_assess_complexity.txt"
+        )
+        
+        # Also update the trace context if available
+        if TRACING_AVAILABLE and self.trace_collector:
+            self.trace_collector.update_context(
+                current_agent="cmo",
+                current_stage="query_analysis",
+                current_prompt_file="1_gather_data_assess_complexity.txt"
+            )
+        
         try:
-            response = self.streaming_client.create_message_with_retry(
+            response = await self.streaming_client.create_message_with_retry_async(
                 model=self.model,
                 messages=messages,
                 max_tokens=self.max_tokens_analysis,
@@ -115,6 +156,7 @@ class CMOAgent:
                 })
                 
                 try:
+                    # Execute the tool (tool invocation will be auto-traced by streaming client)
                     result = await self.tool_registry.execute_tool(tool_name, tool_input)
                     
                     # Extract summary information
@@ -191,7 +233,7 @@ class CMOAgent:
             logger.info(f"Added tool results to conversation. Total messages: {len(messages)}")
             
             # Get the final response with initial assessment
-            assessment_response = self.streaming_client.create_message_with_retry(
+            assessment_response = await self.streaming_client.create_message_with_retry_async(
                 model=self.model,
                 messages=messages,
                 max_tokens=1000,
@@ -229,7 +271,7 @@ class CMOAgent:
             "content": summary_prompt
         })
         
-        summary_response = self.streaming_client.create_message_with_retry(
+        summary_response = await self.streaming_client.create_message_with_retry_async(
             model=self.model,
             messages=messages,
             max_tokens=1000,
@@ -244,7 +286,7 @@ class CMOAgent:
         
         return complexity, approach, initial_data
     
-    def create_specialist_tasks(
+    async def create_specialist_tasks(
         self,
         query: str,
         complexity: QueryComplexity,
@@ -276,7 +318,22 @@ class CMOAgent:
             tool_limit=tool_limit
         )
         
-        response = self.streaming_client.create_message_with_retry(
+        # Set tracing metadata for task creation
+        self.streaming_client.set_metadata(
+            agent_type="cmo",
+            stage="task_creation",
+            prompt_file="3_assign_specialist_tasks.txt"
+        )
+        
+        # Also update the trace context if available
+        if TRACING_AVAILABLE and self.trace_collector:
+            self.trace_collector.update_context(
+                current_agent="cmo",
+                current_stage="task_creation",
+                current_prompt_file="3_assign_specialist_tasks.txt"
+            )
+        
+        response = await self.streaming_client.create_message_with_retry_async(
             model=self.model,
             messages=[{"role": "user", "content": task_prompt}],
             max_tokens=self.max_tokens_planning,
@@ -449,9 +506,24 @@ class CMOAgent:
         # Create message
         messages = [{"role": "user", "content": synthesis_prompt}]
         
+        # Set tracing metadata for synthesis
+        self.streaming_client.set_metadata(
+            agent_type="cmo",
+            stage="synthesis",
+            prompt_file="4_synthesis.txt"
+        )
+        
+        # Also update the trace context if available
+        if TRACING_AVAILABLE and self.trace_collector:
+            self.trace_collector.update_context(
+                current_agent="cmo",
+                current_stage="synthesis",
+                current_prompt_file="4_synthesis.txt"
+            )
+        
         if stream:
             # Return streaming response for the orchestrator to handle
-            return self.streaming_client.create_message_with_retry(
+            return await self.streaming_client.create_message_with_retry_async(
                 model=self.model,
                 messages=messages,
                 max_tokens=self.max_tokens_synthesis,
@@ -460,7 +532,7 @@ class CMOAgent:
             )
         else:
             # Return complete synthesis
-            response = self.streaming_client.create_message_with_retry(
+            response = await self.streaming_client.create_message_with_retry_async(
                 model=self.model,
                 messages=messages,
                 max_tokens=self.max_tokens_synthesis,

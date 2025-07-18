@@ -1,13 +1,20 @@
 import os
 import re
 import logging
-from typing import Dict, Any, List, Optional, TYPE_CHECKING
+from typing import Dict, Any, List, Optional, TYPE_CHECKING, Union
 from anthropic import Anthropic
 
 from services.agents.models import MedicalSpecialty, SpecialistTask, SpecialistResult
 from services.agents.specialist.specialist_prompts import SpecialistPrompts
 from utils.anthropic_client import AnthropicStreamingClient
 from tools.tool_registry import ToolRegistry
+
+# Import tracing components
+try:
+    from services.tracing import get_trace_collector, TraceEventType
+    TRACING_AVAILABLE = True
+except ImportError:
+    TRACING_AVAILABLE = False
 
 # Avoid circular import
 if TYPE_CHECKING:
@@ -23,14 +30,24 @@ class SpecialistAgent:
         anthropic_client: Optional[Anthropic] = None,
         tool_registry: Optional[ToolRegistry] = None,
         model: Optional[str] = None,
-        max_tokens: int = 4000
+        max_tokens: int = 4000,
+        enable_tracing: bool = True
     ):
-        self.client = anthropic_client or Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        # Initialize base client
+        self.client = anthropic_client
+        if self.client is None:
+            self.client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+            
         self.tool_registry = tool_registry or ToolRegistry()
         self.model = model or os.getenv("SPECIALIST_MODEL", "claude-3-5-sonnet-20241022")
         self.max_tokens = max_tokens
         self.prompts = SpecialistPrompts()
+        
+        # Use the same client for streaming (traced or not)
         self.streaming_client = AnthropicStreamingClient(self.client)
+        
+        # Set up tracing collector if available
+        self.trace_collector = get_trace_collector() if TRACING_AVAILABLE else None
     
     async def execute_task(self, task: SpecialistTask) -> SpecialistResult:
         """Execute a specialist task and return structured results"""
@@ -48,6 +65,14 @@ class SpecialistAgent:
             max_tool_calls=task.max_tool_calls
         )
         
+        # Set tracing metadata for this specialist execution
+        if hasattr(self.client, 'set_metadata'):
+            self.client.set_metadata(
+                agent_type=task.specialist.value,
+                stage="specialist_execution",
+                prompt_file=f"system_{task.specialist.value}.txt"
+            )
+        
         # Get specialist tools (only execute_health_query_v2)
         specialist_tools = [
             tool for tool in self.tool_registry.get_tool_definitions()
@@ -63,7 +88,22 @@ class SpecialistAgent:
         conversation_messages = []
         
         while tool_calls_made < task.max_tool_calls:
-            response = self.streaming_client.create_message_with_retry(
+            # Set tracing metadata for this call
+            self.streaming_client.set_metadata(
+                agent_type=task.specialist.value,
+                stage="analysis",
+                prompt_file="specialist_analysis.txt"
+            )
+            
+            # Also update the trace context if available
+            if TRACING_AVAILABLE and self.trace_collector:
+                self.trace_collector.update_context(
+                    current_agent=task.specialist.value,
+                    current_stage="analysis",
+                    current_prompt_file="specialist_analysis.txt"
+                )
+            
+            response = await self.streaming_client.create_message_with_retry_async(
                 model=self.model,
                 system=system_prompt,
                 messages=messages,
@@ -88,6 +128,7 @@ class SpecialistAgent:
                     tool_calls_made += 1
                     
                     try:
+                        # Execute the tool (tool invocation will be auto-traced by streaming client)
                         result = await self.tool_registry.execute_tool(tool_name, tool_input)
                         
                         # Store findings data (keep top 10 results)
@@ -158,7 +199,22 @@ class SpecialistAgent:
             "content": self.prompts.get_final_analysis_prompt()
         })
         
-        final_response = self.streaming_client.create_message_with_retry(
+        # Set tracing metadata for final synthesis
+        self.streaming_client.set_metadata(
+            agent_type=task.specialist.value,
+            stage="synthesis",
+            prompt_file="specialist_synthesis.txt"
+        )
+        
+        # Also update the trace context if available
+        if TRACING_AVAILABLE and self.trace_collector:
+            self.trace_collector.update_context(
+                current_agent=task.specialist.value,
+                current_stage="synthesis",
+                current_prompt_file="specialist_synthesis.txt"
+            )
+        
+        final_response = await self.streaming_client.create_message_with_retry_async(
             model=self.model,
             system=system_prompt,
             messages=messages,

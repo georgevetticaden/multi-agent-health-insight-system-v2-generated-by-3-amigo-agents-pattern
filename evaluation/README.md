@@ -107,8 +107,12 @@ evaluation/
 │   └── {agent}-{test_type}_{timestamp}/ # Unique directory per test run
 │       ├── evaluation.log        # Log file for this run
 │       ├── results.json          # Raw evaluation results
+│       ├── traces/               # Execution traces (if enabled)
+│       │   └── {YYYY-MM-DD}/     # Date-organized trace files
+│       │       ├── {trace_id}.json  # Raw trace data
+│       │       └── {trace_id}.html  # Standalone trace viewer
 │       └── report/               # Report directory
-│           ├── report.html       # Beautiful HTML report
+│           ├── report.html       # Beautiful HTML report with trace links
 │           ├── raw_results.json  # Copy of raw results
 │           └── *.png            # Visualization charts
 └── README.md                     # This file
@@ -385,6 +389,18 @@ python -m evaluation.cli.run_evaluation --agent specialist --specialty cardiolog
 python -m evaluation.cli.run_evaluation --agent cmo --test real-world
 ```
 
+### Trace Collection During Evaluation
+
+By default, all test executions are traced for debugging and analysis:
+- Traces are automatically stored in `{test_dir}/traces/`
+- Each test case in the report includes a trace viewer link
+- No backend server required to view traces
+
+To disable tracing for faster execution:
+```bash
+ENABLE_TRACING=false python -m evaluation.cli.run_evaluation --agent cmo --test example
+```
+
 ### Command Line Options
 
 | Parameter | Description | Values | Example |
@@ -577,6 +593,17 @@ def get_evaluation_metadata(cls) -> AgentEvaluationMetadata:
 #### 4. **Component evaluation errors**
 **Solution**: Check that component names match between metadata and evaluator methods
 
+#### 5. **Tracing import errors**
+**Symptom**: "Tracing not available in evaluation: cannot import name..."
+**Solution**: This is usually a circular import issue. Check that you're running from the project root and that the backend path is properly added to Python path.
+
+#### 6. **Missing trace files**
+**Symptom**: No traces directory created or trace links broken
+**Solution**: 
+- Verify `ENABLE_TRACING` is not set to "false"
+- Check evaluation logs for trace storage errors
+- Ensure write permissions in the test directory
+
 ### Debug Mode
 ```bash
 LOG_LEVEL=DEBUG python -m evaluation.cli.run_evaluation --agent cmo --test example
@@ -628,6 +655,82 @@ LOG_LEVEL=DEBUG python -m evaluation.cli.run_evaluation --agent cmo --test examp
    - Interactive evaluation dashboards
    - Component-level performance tracking
    - Failure pattern visualization
+
+## 🔍 Execution Tracing
+
+The evaluation framework includes comprehensive execution tracing with automatic trace collection and offline viewing capabilities:
+
+### **Default Behavior**
+- **Tracing is ENABLED by default** for all evaluation runs
+- Every test case execution is automatically traced without requiring backend server
+- Traces capture complete execution sequence: LLM prompts, responses, tool calls, agent states
+- Both JSON and HTML files are generated for each trace
+
+### **Trace Storage Location**
+Traces are stored within each test run directory:
+```
+evaluation/test_runs/{agent}-{test_type}_{timestamp}/
+└── traces/
+    └── {YYYY-MM-DD}/
+        ├── {trace_id}.json  # Raw trace data
+        └── {trace_id}.html  # Standalone HTML viewer
+```
+
+### **Viewing Traces**
+1. **From Evaluation Report**: Click "🔍 View Execution Trace" links in the HTML report
+2. **Direct File Access**: Open the HTML files directly in your browser (no backend required)
+3. **Via API** (if backend is running): Access at `/api/traces/{trace_id}/viewer`
+
+### **Configuration Options**
+
+Tracing behavior can be configured via environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ENABLE_TRACING` | `"true"` | Enable/disable tracing ("true"/"false") |
+| `TRACE_STORAGE_PATH` | `"./traces"` | Base directory for trace storage |
+| `TRACE_STORAGE_TYPE` | `"filesystem"` | Storage backend ("filesystem"/"memory") |
+| `TRACE_RETENTION_DAYS` | `"30"` | Days to retain trace files |
+| `TRACE_SAMPLING_RATE` | `"1.0"` | Fraction of executions to trace (0.0-1.0) |
+
+**Note**: During evaluation runs, `TRACE_STORAGE_PATH` is automatically set to `{test_dir}/traces` to keep traces with test results.
+
+### **Configuration Locations**
+
+1. **Default Configuration**: `backend/services/tracing/__init__.py`
+   ```python
+   TRACING_ENABLED = os.getenv("ENABLE_TRACING", "true").lower() == "true"
+   TRACE_STORAGE_TYPE = os.getenv("TRACE_STORAGE_TYPE", "filesystem")
+   TRACE_STORAGE_PATH = Path(os.getenv("TRACE_STORAGE_PATH", "./traces"))
+   ```
+
+2. **Evaluation Override**: `evaluation/cli/run_evaluation.py` (line ~456)
+   ```python
+   os.environ["TRACE_STORAGE_PATH"] = str(test_dir / "traces")
+   os.environ["TRACE_STORAGE_TYPE"] = "filesystem"
+   ```
+
+### **Disabling Tracing**
+To run evaluations without tracing:
+```bash
+ENABLE_TRACING=false python -m evaluation.cli.run_evaluation --agent cmo --test example
+```
+
+### **Trace Contents**
+Each trace includes:
+- Complete LLM conversation history
+- Tool invocations and results
+- Timing information for each operation
+- Token usage statistics
+- Error messages and stack traces (if any)
+- Agent-specific metadata (test case ID, user ID, etc.)
+
+### **Benefits**
+- **🔧 Debug Failed Tests**: See exact LLM prompts, responses, and tool calls
+- **📊 Performance Analysis**: Token usage, response times, bottlenecks
+- **🧠 Prompt Engineering**: Verify prompt templates and agent reasoning
+- **🏥 Multi-Agent Flow**: Understand orchestration and specialist interactions
+- **📱 Offline Access**: View traces without running backend server
 
 ---
 

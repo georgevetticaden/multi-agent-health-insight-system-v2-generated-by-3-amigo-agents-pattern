@@ -32,6 +32,15 @@ from pathlib import Path
 from functools import lru_cache
 
 from anthropic import Anthropic
+from typing import Union
+
+# Import tracing support
+try:
+    from services.tracing import TRACING_ENABLED
+    TRACING_AVAILABLE = True
+except ImportError:
+    TRACING_AVAILABLE = False
+    TRACING_ENABLED = False
 
 logger = logging.getLogger(__name__)
 
@@ -119,8 +128,32 @@ class LLMTestJudge:
         self.client = anthropic_client
         self.model = model
         self._prompt_cache = {}
+        
+        # Set metadata for tracing if available
+        if hasattr(self.client, 'set_metadata'):
+            self.client.set_metadata(
+                agent_type="llm_judge",
+                stage="evaluation"
+            )
     
     # ==================== Prompt Management ====================
+    
+    def _make_traced_call(self, messages: list, dimension: str, operation: str, max_tokens: int = 500):
+        """Make an LLM call with tracing metadata if available."""
+        # Set metadata for this specific call if tracing is available
+        if hasattr(self.client, 'set_metadata'):
+            self.client.set_metadata(
+                agent_type="llm_judge",
+                stage=f"{dimension}_{operation}",
+                dimension=dimension,
+                operation=operation
+            )
+        
+        return self.client.messages.create(
+            model=self.model,
+            max_tokens=max_tokens,
+            messages=messages
+        )
     
     @lru_cache(maxsize=32)
     def _load_prompt(self, agent_type: str, prompt_category: str, prompt_name: str) -> str:

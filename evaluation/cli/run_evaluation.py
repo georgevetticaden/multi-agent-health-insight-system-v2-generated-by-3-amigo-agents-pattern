@@ -21,6 +21,14 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../../backend"))
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
+# Import tracing components
+try:
+    from services.tracing import TRACING_ENABLED
+    TRACING_AVAILABLE = True
+except ImportError:
+    TRACING_AVAILABLE = False
+    TRACING_ENABLED = False
+
 # Import agent implementations
 from services.agents.cmo.cmo_agent import CMOAgent
 from services.agents.specialist.specialist_agent import SpecialistAgent
@@ -187,7 +195,16 @@ class EvaluationRunner:
         if not api_key:
             raise ValueError("ANTHROPIC_API_KEY environment variable not set")
         
+        # Create Anthropic client - tracing will be handled by AnthropicStreamingClient
         self.anthropic_client = Anthropic(api_key=api_key)
+        
+        if TRACING_AVAILABLE and TRACING_ENABLED:
+            logger.info("Tracing enabled - AnthropicStreamingClient will handle trace recording")
+        else:
+            if not TRACING_AVAILABLE:
+                logger.warning("Tracing not available")
+            elif not TRACING_ENABLED:
+                logger.info("Tracing disabled")
         
         # Initialize tool registry
         self.tool_registry = ToolRegistry()
@@ -214,7 +231,8 @@ class EvaluationRunner:
             tool_registry=self.tool_registry,
             model="claude-3-opus-20240229",  # Use Opus for evaluation
             max_tokens_analysis=3000,  # Reduced for Opus limit
-            max_tokens_planning=4000   # Reduced for Opus limit (max 4096)
+            max_tokens_planning=4000,   # Reduced for Opus limit (max 4096)
+            enable_tracing=True  # Enable tracing for evaluation
         )
         return CMOEvaluator(cmo_agent, self.anthropic_client)
     
@@ -225,7 +243,8 @@ class EvaluationRunner:
             anthropic_client=self.anthropic_client,
             tool_registry=self.tool_registry,
             model="claude-3-opus-20240229",  # Use Opus for evaluation
-            max_tokens=3500  # Reduced for Opus limit
+            max_tokens=3500,  # Reduced for Opus limit
+            enable_tracing=True  # Enable tracing for evaluation
         )
         return SpecialistEvaluator(specialist_agent, MedicalSpecialty.CARDIOLOGY, self.anthropic_client)
     
@@ -235,7 +254,8 @@ class EvaluationRunner:
             anthropic_client=self.anthropic_client,
             tool_registry=self.tool_registry,
             model="claude-3-opus-20240229",  # Use Opus for evaluation
-            max_tokens=3500  # Reduced for Opus limit
+            max_tokens=3500,  # Reduced for Opus limit
+            enable_tracing=True  # Enable tracing for evaluation
         )
         medical_specialty = MedicalSpecialty(specialty)
         return SpecialistEvaluator(specialist_agent, medical_specialty, self.anthropic_client)
@@ -449,9 +469,24 @@ async def main():
     # Setup logging for this test run
     setup_evaluation_logging(log_level=log_level, log_to_file=True, log_dir=test_dir)
     
+    # Configure trace storage to use test directory BEFORE any imports that might initialize tracing
+    os.environ["TRACE_STORAGE_PATH"] = str(test_dir / "traces")
+    os.environ["TRACE_STORAGE_TYPE"] = "filesystem"
+    
+    # Reset the trace collector if it was already initialized with default path
+    if TRACING_AVAILABLE:
+        from services.tracing.trace_collector import set_trace_collector, TraceCollector
+        from services.tracing.storage import FileSystemTraceStorage
+        # Create a new trace collector with the correct storage path
+        storage = FileSystemTraceStorage(test_dir / "traces")
+        new_collector = TraceCollector(storage_backend=storage)
+        set_trace_collector(new_collector)
+        logger.info(f"Reset trace collector with storage path: {test_dir / 'traces'}")
+    
     logger.info(f"Starting {args.agent} agent evaluation")
     logger.info(f"Test type: {args.test}")
     logger.info(f"Test directory: {test_dir}")
+    logger.info(f"Trace storage: {test_dir / 'traces'}")
     
     try:
         # Run evaluation

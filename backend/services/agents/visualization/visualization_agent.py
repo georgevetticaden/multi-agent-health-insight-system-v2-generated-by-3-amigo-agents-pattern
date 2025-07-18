@@ -16,7 +16,8 @@ from anthropic import Anthropic
 
 from services.agents.specialist.specialist_agent import SpecialistResult
 from services.agents.visualization.prompts import VisualizationPrompts
-from utils.anthropic_streaming import AnthropicStreamingClient, StreamingMode
+from utils.anthropic_client import AnthropicStreamingClient
+from utils.anthropic_streaming import StreamingMode
 
 logger = logging.getLogger(__name__)
 

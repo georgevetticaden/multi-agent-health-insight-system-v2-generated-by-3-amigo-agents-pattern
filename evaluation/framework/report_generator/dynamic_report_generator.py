@@ -335,7 +335,10 @@ class DynamicHTMLReportGenerator:
             'evaluation_dimensions': self._prepare_evaluation_dimensions_dynamic(result),
             'quality_breakdown': None,
             'total_quality_score': None,
-            'failure_analysis': None
+            'failure_analysis': None,
+            'trace_id': result.get('trace_id'),  # Add trace ID for debugging links
+            'has_trace': bool(result.get('trace_id')),  # Boolean for template conditionals
+            'trace_date': self._get_trace_date(result)  # Get actual trace date
         }
         
         # Add quality breakdown if available
@@ -559,6 +562,19 @@ class DynamicHTMLReportGenerator:
             if (criteria.dimension.name if hasattr(criteria.dimension, 'name') else str(criteria.dimension)) == dimension:
                 return criteria.target_score
         return 0.8  # default
+    
+    def _get_trace_date(self, result: Dict[str, Any]) -> str:
+        """Get the date when the trace was stored"""
+        # If we have trace metadata with a timestamp, use that
+        if 'trace_start_time' in result:
+            try:
+                trace_time = datetime.fromisoformat(result['trace_start_time'])
+                return trace_time.strftime("%Y-%m-%d")
+            except:
+                pass
+        
+        # Otherwise use current date (trace was just created)
+        return datetime.now().strftime("%Y-%m-%d")
     
     def _prepare_quality_breakdown_dynamic(self, result: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Prepare quality breakdown using metadata"""

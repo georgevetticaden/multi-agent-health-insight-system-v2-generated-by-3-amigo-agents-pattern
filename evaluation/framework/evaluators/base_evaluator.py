@@ -63,6 +63,14 @@ from anthropic import Anthropic
 
 logger = logging.getLogger(__name__)
 
+# Import tracing components
+try:
+    from services.tracing import get_trace_collector, TraceEventType, TraceContextManager
+    TRACING_AVAILABLE = True
+except ImportError as e:
+    TRACING_AVAILABLE = False
+    logger.warning(f"Tracing not available in evaluation: {e}")
+
 
 @dataclass
 class EvaluationResult:
@@ -97,6 +105,7 @@ class EvaluationResult:
     total_response_time_ms: float
     tokens_used: int
     error_message: Optional[str] = None
+    trace_id: Optional[str] = None  # Optional trace ID for debugging
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert evaluation result to dictionary"""
@@ -151,6 +160,10 @@ class BaseEvaluator(ABC):
         self.anthropic_client = anthropic_client
         self.agent_metadata = None  # Should be set by subclasses
         # LLM Judge is now initialized in specific evaluators as needed
+        
+        # Set up tracing if available
+        self.tracing_enabled = TRACING_AVAILABLE
+        self.trace_collector = get_trace_collector() if TRACING_AVAILABLE else None
     
     @abstractmethod
     async def evaluate_single_test_case(self, test_case: Any) -> EvaluationResult:
@@ -281,9 +294,54 @@ class BaseEvaluator(ABC):
         async def eval_with_semaphore(tc):
             async with semaphore:
                 logger.debug(f"Starting evaluation of test case: {tc.id}")
-                result = await self.evaluate_single_test_case(tc)
-                logger.debug(f"Completed evaluation of test case: {tc.id} - {'SUCCESS' if result.success else 'FAILURE'}")
-                return result
+                
+                # Use trace context manager if tracing is enabled
+                if self.tracing_enabled and self.trace_collector:
+                    # Start a new trace for this test case
+                    trace_id = await self.trace_collector.start_trace(
+                        source="evaluation",
+                        initial_input=getattr(tc, 'query', str(tc)),
+                        test_case_id=tc.id,
+                        metadata={
+                            "test_case_id": tc.id,
+                            "evaluated_agent": getattr(self.agent_metadata, 'agent_type', 'unknown') if self.agent_metadata else 'unknown',
+                            "evaluation_type": "single_test_case"
+                        }
+                    )
+                    logger.debug(f"Started trace {trace_id} for test case {tc.id}")
+                    
+                    try:
+                        # Important: The trace context should already be set by start_trace
+                        # Let's verify it's available
+                        from services.tracing import TraceContextManager
+                        current_context = TraceContextManager.get_context()
+                        if current_context:
+                            logger.debug(f"Trace context available: {current_context.trace_id}")
+                        else:
+                            logger.warning(f"No trace context found after starting trace {trace_id}")
+                        
+                        result = await self.evaluate_single_test_case(tc)
+                        
+                        # Add trace_id to result if available
+                        if trace_id and hasattr(result, '__dict__'):
+                            result.trace_id = trace_id
+                        
+                        # End the trace
+                        await self.trace_collector.end_trace(trace_id)
+                        logger.debug(f"Ended trace {trace_id} for test case {tc.id}")
+                        
+                        logger.debug(f"Completed evaluation of test case: {tc.id} - {'SUCCESS' if result.success else 'FAILURE'}")
+                        return result
+                    except Exception as e:
+                        # End trace even on error
+                        if trace_id:
+                            await self.trace_collector.end_trace(trace_id)
+                        raise
+                else:
+                    # No tracing
+                    result = await self.evaluate_single_test_case(tc)
+                    logger.debug(f"Completed evaluation of test case: {tc.id} - {'SUCCESS' if result.success else 'FAILURE'}")
+                    return result
         
         # Run evaluations concurrently
         logger.info(f"📊 Executing concurrent evaluations...")

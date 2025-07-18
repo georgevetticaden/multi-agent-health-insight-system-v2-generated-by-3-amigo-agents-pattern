@@ -273,7 +273,7 @@ class CMOEvaluator(BaseEvaluator):
             task_creation_error = None
             
             try:
-                specialist_tasks = self.cmo_agent.create_specialist_tasks(
+                specialist_tasks = await self.cmo_agent.create_specialist_tasks(
                     query=test_case.query,
                     complexity=complexity,
                     approach=approach,

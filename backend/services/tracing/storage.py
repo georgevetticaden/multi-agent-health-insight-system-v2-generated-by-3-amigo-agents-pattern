@@ -15,6 +15,7 @@ from dataclasses import asdict
 
 from .trace_models import CompleteTrace
 from .html_generator import generate_trace_viewer_html
+from .hierarchical_html_generator import generate_hierarchical_trace_html
 
 
 class TraceStorage(ABC):
@@ -187,11 +188,18 @@ class FileSystemTraceStorage(TraceStorage):
                 with open(trace_path, 'w', encoding='utf-8') as f:
                     json.dump(asdict(trace), f, indent=2, default=str, ensure_ascii=False)
                 
-                # Also generate and store HTML viewer
+                # Generate and store both HTML viewers
+                # 1. Original timeline viewer
                 html_path = trace_path.with_suffix('.html')
                 html_content = generate_trace_viewer_html(trace)
                 with open(html_path, 'w', encoding='utf-8') as f:
                     f.write(html_content)
+                
+                # 2. New hierarchical viewer
+                hierarchical_path = trace_path.with_suffix('.hierarchical.html')
+                hierarchical_content = generate_hierarchical_trace_html(trace)
+                with open(hierarchical_path, 'w', encoding='utf-8') as f:
+                    f.write(hierarchical_content)
             
             # Cleanup old traces
             await self._cleanup_old_traces()
@@ -288,12 +296,15 @@ class FileSystemTraceStorage(TraceStorage):
                 if date_dir.is_dir() and date_dir.name.count('-') == 2:
                     trace_path = date_dir / f"{trace_id}.json"
                     html_path = date_dir / f"{trace_id}.html"
+                    hierarchical_path = date_dir / f"{trace_id}.hierarchical.html"
                     if trace_path.exists():
                         async with self._lock:
                             trace_path.unlink()
-                            # Also delete HTML file if it exists
+                            # Also delete HTML files if they exist
                             if html_path.exists():
                                 html_path.unlink()
+                            if hierarchical_path.exists():
+                                hierarchical_path.unlink()
                         return True
             
             return False

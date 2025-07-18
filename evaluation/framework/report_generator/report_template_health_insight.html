@@ -595,11 +595,17 @@
         <h3 style="margin: 0; color: var(--text-primary);">Test Case: {{ test_case.test_case_id }}</h3>
         <p style="margin: 0.5rem 0 0 0; color: var(--text-tertiary);">{{ test_case.query }}</p>
         {% if test_case.has_trace %}
-        <p style="margin: 0.25rem 0 0 0;">
+        <p style="margin: 0.25rem 0 0 0; display: flex; gap: 1rem;">
           <a href="../traces/{{ test_case.trace_date }}/{{ test_case.trace_id }}.html" 
              target="_blank" 
              style="color: var(--accent-primary); text-decoration: none; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.25rem;">
-            🔍 View Execution Trace
+            📅 Timeline View
+            <span style="font-size: 0.75rem;">↗</span>
+          </a>
+          <a href="../traces/{{ test_case.trace_date }}/{{ test_case.trace_id }}.hierarchical.html" 
+             target="_blank" 
+             style="color: var(--accent-secondary); text-decoration: none; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+            🌳 Hierarchical View
             <span style="font-size: 0.75rem;">↗</span>
           </a>
         </p>

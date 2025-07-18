@@ -227,7 +227,7 @@ class HealthAnalystService:
                     current_stage="task_creation"
                 )
             
-            tasks = self.cmo_agent.create_specialist_tasks(query, complexity, approach, initial_data)
+            tasks = await self.cmo_agent.create_specialist_tasks(query, complexity, approach, initial_data)
             
             # Record task creation
             if self.tracing_enabled and self.trace_collector:

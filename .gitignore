@@ -129,6 +129,9 @@ lerna-debug.log*
 backend/logs/
 backend/logs/*.log
 
+# Backend traces
+backend/traces/
+
 # Evaluation logs
 evaluation/logs/
 evaluation/logs/*.log

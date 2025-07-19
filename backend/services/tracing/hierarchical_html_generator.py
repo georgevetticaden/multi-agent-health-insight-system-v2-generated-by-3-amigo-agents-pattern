@@ -43,6 +43,7 @@ def generate_hierarchical_trace_html(trace: CompleteTrace) -> str:
 <body>
     <div class="container">
         {_generate_header(trace, summary)}
+        {_generate_filter_panel()}
         {_generate_summary_cards(sections, summary)}
         {_generate_timeline(sections)}
         {_generate_agent_sections(sections)}
@@ -107,6 +108,96 @@ def _generate_css() -> str:
             border-radius: 12px;
             margin-bottom: 30px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        /* Filter Panel */
+        .filter-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .filter-label {
+            font-size: 14px;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
+        .filter-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .filter-checkbox:hover {
+            background: #e9ecef;
+        }
+        
+        .filter-checkbox input[type="checkbox"] {
+            cursor: pointer;
+        }
+        
+        .filter-checkbox label {
+            cursor: pointer;
+            font-size: 13px;
+            color: #495057;
+        }
+        
+        .view-toggle {
+            display: flex;
+            gap: 5px;
+            background: #f8f9fa;
+            padding: 4px;
+            border-radius: 6px;
+        }
+        
+        .view-toggle button {
+            padding: 6px 12px;
+            border: none;
+            background: transparent;
+            color: #495057;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        
+        .view-toggle button.active {
+            background: white;
+            color: #2c3e50;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .view-toggle button:hover:not(.active) {
+            background: rgba(255,255,255,0.5);
+        }
+        
+        .filter-group select {
+            padding: 6px 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #495057;
+            background: white;
+            cursor: pointer;
         }
         
         /* Summary Cards */
@@ -210,6 +301,19 @@ def _generate_css() -> str:
             transform: translateX(-50%);
         }
         
+        /* Vertical gridlines */
+        .time-marker::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            width: 1px;
+            height: calc(100vh - 200px);
+            background: rgba(189, 195, 199, 0.15);
+            transform: translateX(-50%);
+            z-index: 0;
+        }
+        
         /* Timeline Lanes */
         .timeline-lanes {
             position: relative;
@@ -285,6 +389,18 @@ def _generate_css() -> str:
             height: 40px;
             background: #f8f9fa;
             border-radius: 4px;
+            background-image: repeating-linear-gradient(
+                90deg,
+                transparent,
+                transparent 10%,
+                rgba(0,0,0,0.02) 10%,
+                rgba(0,0,0,0.02) 10.1%
+            );
+        }
+        
+        /* Highlight parallel execution */
+        .specialist-group .timeline-track {
+            background-color: #f0fcf4;
         }
         
         /* Stage Bars */
@@ -333,6 +449,40 @@ def _generate_css() -> str:
             z-index: 2;
             justify-content: center;
             height: 100%;
+        }
+        
+        /* Status indicators */
+        .timeline-stage-bar.success::after {
+            content: '✓';
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            opacity: 0.9;
+        }
+        
+        .timeline-stage-bar.error::after {
+            content: '✗';
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .timeline-stage-bar.running {
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+            50% { opacity: 0.8; box-shadow: 0 2px 12px rgba(0,0,0,0.25); }
+            100% { opacity: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
         }
         
         .stage-bar-name {
@@ -819,6 +969,33 @@ def _generate_css() -> str:
             border-left-color: #9b59b6;
         }
         
+        .agent-metric-efficiency {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #e9ecef;
+            font-size: 11px;
+        }
+        
+        .efficiency-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .efficiency-label {
+            color: #7f8c8d;
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+        
+        .efficiency-value {
+            font-weight: 600;
+            color: #2ecc71;
+            margin-top: 2px;
+        }
+        
         .agent-metric-header {
             display: flex;
             justify-content: space-between;
@@ -1195,6 +1372,123 @@ def _generate_javascript() -> str:
                 drawFlowArrow(source, target, isCritical);
             });
         }
+        
+        // Filter functions
+        function filterAgents() {
+            const showCMO = document.getElementById('filter-cmo').checked;
+            const showSpecialists = document.getElementById('filter-specialists').checked;
+            const showVisualization = document.getElementById('filter-visualization').checked;
+            
+            // Filter timeline lanes
+            document.querySelectorAll('.timeline-lane-row').forEach(row => {
+                const label = row.querySelector('.timeline-agent-label');
+                if (label.classList.contains('cmo')) {
+                    row.style.display = showCMO ? 'flex' : 'none';
+                } else if (label.classList.contains('visualization')) {
+                    row.style.display = showVisualization ? 'flex' : 'none';
+                } else {
+                    row.style.display = showSpecialists ? 'flex' : 'none';
+                }
+            });
+            
+            // Filter agent sections
+            document.querySelectorAll('.agent-section').forEach(section => {
+                const header = section.querySelector('.agent-header');
+                if (header.classList.contains('cmo')) {
+                    section.style.display = showCMO ? 'block' : 'none';
+                } else if (header.classList.contains('visualization')) {
+                    section.style.display = showVisualization ? 'block' : 'none';
+                } else {
+                    section.style.display = showSpecialists ? 'block' : 'none';
+                }
+            });
+        }
+        
+        function filterByDuration() {
+            const minDuration = parseInt(document.getElementById('duration-filter').value);
+            
+            document.querySelectorAll('.timeline-stage-bar').forEach(bar => {
+                const durationText = bar.querySelector('.stage-bar-time').textContent;
+                const duration = parseDuration(durationText);
+                bar.style.opacity = duration >= minDuration ? '1' : '0.3';
+            });
+        }
+        
+        function parseDuration(text) {
+            // Parse duration text like "1 min 30 sec" to milliseconds
+            let ms = 0;
+            const minMatch = text.match(/(\d+)\s*min/);
+            const secMatch = text.match(/(\d+(?:\.\d+)?)\s*sec/);
+            const msMatch = text.match(/(\d+(?:\.\d+)?)\s*ms/);
+            
+            if (minMatch) ms += parseInt(minMatch[1]) * 60000;
+            if (secMatch) ms += parseFloat(secMatch[1]) * 1000;
+            if (msMatch) ms += parseFloat(msMatch[1]);
+            
+            return ms;
+        }
+        
+        function setView(viewType) {
+            document.querySelectorAll('.view-toggle button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            if (viewType === 'simplified') {
+                // Hide detailed event trees
+                document.querySelectorAll('.event-tree').forEach(tree => {
+                    tree.style.display = 'none';
+                });
+                // Show only key findings
+                document.querySelectorAll('.key-findings').forEach(findings => {
+                    findings.style.display = 'block';
+                });
+            } else {
+                // Show everything
+                document.querySelectorAll('.event-tree').forEach(tree => {
+                    tree.style.display = 'block';
+                });
+            }
+        }
+    """
+
+
+def _generate_filter_panel() -> str:
+    """Generate filter configuration panel"""
+    return """
+    <div class="filter-panel">
+        <div class="filter-group">
+            <span class="filter-label">Show Agents:</span>
+            <div class="filter-checkbox">
+                <input type="checkbox" id="filter-cmo" checked onchange="filterAgents()">
+                <label for="filter-cmo">CMO</label>
+            </div>
+            <div class="filter-checkbox">
+                <input type="checkbox" id="filter-specialists" checked onchange="filterAgents()">
+                <label for="filter-specialists">Specialists</label>
+            </div>
+            <div class="filter-checkbox">
+                <input type="checkbox" id="filter-visualization" checked onchange="filterAgents()">
+                <label for="filter-visualization">Visualization</label>
+            </div>
+        </div>
+        
+        <div class="filter-group">
+            <span class="filter-label">Min Duration:</span>
+            <select id="duration-filter" onchange="filterByDuration()">
+                <option value="0">All</option>
+                <option value="1000">≥ 1s</option>
+                <option value="5000">≥ 5s</option>
+                <option value="10000">≥ 10s</option>
+                <option value="30000">≥ 30s</option>
+            </select>
+        </div>
+        
+        <div class="view-toggle">
+            <button class="active" onclick="setView('detailed')">Detailed</button>
+            <button onclick="setView('simplified')">Simplified</button>
+        </div>
+    </div>
     """
 
 
@@ -1295,11 +1589,15 @@ def _generate_summary_cards(sections: List[AgentSection], summary: Dict[str, Any
 
 
 def _generate_agent_metric_cards(metrics: List[Dict[str, Any]]) -> str:
-    """Generate individual agent metric cards"""
+    """Generate individual agent metric cards with enhanced metrics"""
     cards = []
     
     for metric in metrics[:5]:  # Show top 5 agents by duration
         agent_class = "cmo" if metric['type'] == "cmo" else "specialist" if "specialist" in metric['type'].lower() else "visualization"
+        
+        # Calculate efficiency metrics
+        tokens_per_sec = (metric['tokens'] / (metric['duration'] / 1000)) if metric['duration'] > 0 else 0
+        avg_tokens_per_call = (metric['tokens'] / metric['llm_calls']) if metric['llm_calls'] > 0 else 0
         
         cards.append(f"""
         <div class="agent-metric-card {agent_class}">
@@ -1323,6 +1621,16 @@ def _generate_agent_metric_cards(metrics: List[Dict[str, Any]]) -> str:
                 <div class="metric-item">
                     <span class="metric-label">Avg Response:</span>
                     <span class="metric-value">{format_duration(metric['avg_response'])}</span>
+                </div>
+            </div>
+            <div class="agent-metric-efficiency">
+                <div class="efficiency-item">
+                    <span class="efficiency-label">Speed:</span>
+                    <span class="efficiency-value">{tokens_per_sec:.0f} tok/s</span>
+                </div>
+                <div class="efficiency-item">
+                    <span class="efficiency-label">Efficiency:</span>
+                    <span class="efficiency-value">{avg_tokens_per_call:.0f} tok/call</span>
                 </div>
             </div>
         </div>
@@ -1431,14 +1739,13 @@ def _generate_timeline(sections: List[AgentSection]) -> str:
                 display_name = _format_stage_name(stage['stage_name'])
                 
                 # Create detailed hover info
-                hover_info = f"""{display_name}
-Duration: {format_duration(stage['duration_ms'])}
-LLM Calls: {stage['stage_info'].llm_calls}
-Tool Calls: {stage['stage_info'].tool_calls}
-Tokens: {format_token_count(stage['stage_info'].tokens_used)}"""
+                hover_info = _create_stage_hover_info(stage, display_name)
+                
+                # Determine stage status (completed stages have end_time)
+                status_class = "success" if stage['stage_info'].end_time else ""
                 
                 stages_html.append(f"""
-                <div class="timeline-stage-bar cmo" 
+                <div class="timeline-stage-bar cmo {status_class}" 
                      style="left: {left_percent:.1f}%; width: {width_percent:.1f}%;"
                      title="{hover_info}"
                      data-stage-id="cmo-{stage['stage_name']}">
@@ -1487,14 +1794,13 @@ Tokens: {format_token_count(stage['stage_info'].tokens_used)}"""
             display_name = _format_stage_name(stage['stage_name'])
             
             # Create detailed hover info
-            hover_info = f"""{display_name}
-Duration: {format_duration(stage['duration_ms'])}
-LLM Calls: {stage['stage_info'].llm_calls}
-Tool Calls: {stage['stage_info'].tool_calls}
-Tokens: {format_token_count(stage['stage_info'].tokens_used)}"""
+            hover_info = _create_stage_hover_info(stage, display_name)
+            
+            # Determine stage status
+            status_class = "success" if stage['stage_info'].end_time else ""
             
             stages_html.append(f"""
-            <div class="timeline-stage-bar {specialist_type}" 
+            <div class="timeline-stage-bar {specialist_type} {status_class}" 
                  style="left: {left_percent:.1f}%; width: {width_percent:.1f}%;"
                  title="{hover_info}"
                  data-stage-id="{specialist_type}-{stage['stage_name']}">
@@ -1539,14 +1845,13 @@ Tokens: {format_token_count(stage['stage_info'].tokens_used)}"""
             display_name = _format_stage_name(stage['stage_name'])
             
             # Create detailed hover info
-            hover_info = f"""{display_name}
-Duration: {format_duration(stage['duration_ms'])}
-LLM Calls: {stage['stage_info'].llm_calls}
-Tool Calls: {stage['stage_info'].tool_calls}
-Tokens: {format_token_count(stage['stage_info'].tokens_used)}"""
+            hover_info = _create_stage_hover_info(stage, display_name)
+            
+            # Determine stage status
+            status_class = "success" if stage['stage_info'].end_time else ""
             
             stages_html.append(f"""
-            <div class="timeline-stage-bar cmo" 
+            <div class="timeline-stage-bar cmo {status_class}" 
                  style="left: {left_percent:.1f}%; width: {width_percent:.1f}%;"
                  title="{hover_info}"
                  data-stage-id="cmo-{stage['stage_name']}">
@@ -1589,14 +1894,13 @@ Tokens: {format_token_count(stage['stage_info'].tokens_used)}"""
             display_name = _format_stage_name(stage['stage_name'])
             
             # Create detailed hover info
-            hover_info = f"""{display_name}
-Duration: {format_duration(stage['duration_ms'])}
-LLM Calls: {stage['stage_info'].llm_calls}
-Tool Calls: {stage['stage_info'].tool_calls}
-Tokens: {format_token_count(stage['stage_info'].tokens_used)}"""
+            hover_info = _create_stage_hover_info(stage, display_name)
+            
+            # Determine stage status
+            status_class = "success" if stage['stage_info'].end_time else ""
             
             stages_html.append(f"""
-            <div class="timeline-stage-bar visualization" 
+            <div class="timeline-stage-bar visualization {status_class}" 
                  style="left: {left_percent:.1f}%; width: {width_percent:.1f}%;"
                  title="{hover_info}"
                  data-stage-id="visualization-{stage['stage_name']}">
@@ -1664,6 +1968,24 @@ Tokens: {format_token_count(stage['stage_info'].tokens_used)}"""
         </div>
     </div>
     """
+
+
+def _create_stage_hover_info(stage: Dict[str, Any], display_name: str) -> str:
+    """Create detailed hover information for a stage"""
+    start_time = stage.get('start_time', 'N/A')
+    end_time = stage['stage_info'].end_time or 'In Progress'
+    tokens_per_sec = (stage['stage_info'].tokens_used / (stage['duration_ms'] / 1000)) if stage['duration_ms'] > 0 and stage['stage_info'].tokens_used > 0 else 0
+    
+    return f"""{display_name}
+━━━━━━━━━━━━━━━━━━━━━
+Duration: {format_duration(stage['duration_ms'])}
+Start: {start_time.split('T')[1].split('.')[0] if 'T' in str(start_time) else start_time}
+End: {end_time.split('T')[1].split('.')[0] if 'T' in str(end_time) else end_time}
+━━━━━━━━━━━━━━━━━━━━━
+LLM Calls: {stage['stage_info'].llm_calls}
+Tool Calls: {stage['stage_info'].tool_calls}
+Tokens: {format_token_count(stage['stage_info'].tokens_used)}
+Speed: {tokens_per_sec:.0f} tokens/sec"""
 
 
 def _format_stage_name(stage_name: str) -> str:
@@ -1843,6 +2165,12 @@ def _generate_event_tree(events: List[HierarchicalEvent], agent_id: str) -> str:
     html_parts = []
     
     for event in events:
+        # Skip phantom events with Unknown stage
+        if event.event.event_type in [TraceEventType.STAGE_START, TraceEventType.STAGE_END]:
+            stage_name = event.event.data.get('stage', '') if event.event.data else ''
+            if not stage_name or stage_name.lower() == 'unknown':
+                continue
+        
         html_parts.append(_generate_event_node(event, agent_id))
     
     return "\n".join(html_parts)

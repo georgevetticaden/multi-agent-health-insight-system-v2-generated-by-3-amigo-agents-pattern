@@ -197,7 +197,9 @@ def build_trace_hierarchy(trace: CompleteTrace) -> Tuple[List[AgentSection], Dic
         # Filter out phantom stages (those with only STAGE_START/END events or no meaningful events)
         valid_stages = {}
         for stage_name, stage_info in section.stages.items():
-            # Skip stages with problematic names
+            # Skip stages with problematic names or empty names
+            if not stage_name or stage_name.strip() == '':
+                continue
             if any(skip in stage_name.lower() for skip in ['specialist_analysis', 'unknown']):
                 continue
                 

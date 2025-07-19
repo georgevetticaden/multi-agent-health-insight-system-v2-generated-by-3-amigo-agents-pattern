@@ -352,11 +352,21 @@ class AnthropicStreamingClient:
                     trace_collector = get_trace_collector()
                     if trace_collector:
                         duration_ms = (asyncio.get_event_loop().time() - start_time) * 1000
+                        # Estimate tokens (rough approximation: 1 token ≈ 4 characters)
+                        prompt_tokens = sum(len(msg.get('content', '')) for msg in messages) // 4
+                        output_tokens = len(full_code) // 4
+                        total_tokens = prompt_tokens + output_tokens
+                        
                         response_data = {
                             "response_text": full_code,
                             "response_length": len(full_code),
                             "model": model,
-                            "visualization_generated": True
+                            "visualization_generated": True,
+                            "usage": {
+                                "input_tokens": prompt_tokens,
+                                "output_tokens": output_tokens,
+                                "total_tokens": total_tokens
+                            }
                         }
                         
                         await trace_collector.add_event(
@@ -365,6 +375,7 @@ class AnthropicStreamingClient:
                             stage="visualization_generation",
                             data=response_data,
                             duration_ms=duration_ms,
+                            tokens_used=total_tokens,
                             parent_event_id=prompt_event_id
                         )
                 

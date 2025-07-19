@@ -19,6 +19,13 @@ from services.agents.visualization.prompts import VisualizationPrompts
 from utils.anthropic_client import AnthropicStreamingClient
 from utils.anthropic_streaming import StreamingMode
 
+# Import tracing components
+try:
+    from services.tracing import get_trace_collector, TraceEventType
+    TRACING_AVAILABLE = True
+except ImportError:
+    TRACING_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 
@@ -52,6 +59,17 @@ class MedicalVisualizationAgent:
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Stream self-contained visualization code with embedded data"""
         
+        # Add stage start marker if tracing is enabled
+        if TRACING_AVAILABLE:
+            trace_collector = get_trace_collector()
+            if trace_collector:
+                await trace_collector.add_event(
+                    event_type=TraceEventType.STAGE_START,
+                    agent_type="visualization",
+                    stage="visualization_generation",
+                    data={"stage": "visualization_generation"}
+                )
+        
         # Extract key data points from specialist results and synthesis
         key_data_points = self._extract_key_data_points(specialist_results, synthesis_text)
         
@@ -82,14 +100,46 @@ class MedicalVisualizationAgent:
         logger.info(prompt[:1000] + "..." if len(prompt) > 1000 else prompt)
         logger.info("=" * 80 + "\n")
 
-        # Use streaming utility for visualization generation
-        async for chunk in self.streaming_client.stream_visualization(
+        # Set tracing metadata for visualization
+        self.streaming_client.set_metadata(
+            agent_type="visualization",
+            stage="visualization_generation",
+            prompt_file="visualization_generation.txt"
+        )
+        
+        # Use standard streaming method with tracing
+        response = await self.streaming_client.create_message_with_retry_async(
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=self.max_tokens,
-            context_label="Visualization generation"
-        ):
-            yield chunk
+            temperature=0.0,
+            stream=True
+        )
+        
+        # Process the stream and yield visualization chunks
+        full_content = ""
+        async for event in response:
+            if event.type == "content_block_delta":
+                if hasattr(event, 'delta') and hasattr(event.delta, 'text'):
+                    text = event.delta.text
+                    full_content += text
+                    
+                    # Check if this is a code block
+                    if "```" in text:
+                        yield {"type": "code_start", "content": text}
+                    else:
+                        yield {"type": "code_chunk", "content": text}
+            elif event.type == "message_stop":
+                # Add stage end marker when complete
+                if TRACING_AVAILABLE:
+                    trace_collector = get_trace_collector()
+                    if trace_collector:
+                        await trace_collector.add_event(
+                            event_type=TraceEventType.STAGE_END,
+                            agent_type="visualization",
+                            stage="visualization_generation",
+                            data={"stage": "visualization_generation", "content_length": len(full_content)}
+                        )
     
     def _extract_key_data_points(
         self, 

@@ -6,7 +6,7 @@ agents and showing clear parent-child relationships.
 """
 
 import json
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 from .trace_models import CompleteTrace, TraceEventType, TraceEvent
 from .trace_hierarchy import build_trace_hierarchy, HierarchicalEvent, AgentSection, StageInfo
 from .trace_formatters import (
@@ -100,11 +100,20 @@ def _generate_css() -> str:
             opacity: 0.9;
         }
         
+        /* Summary Section */
+        .summary-section {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
         /* Summary Cards */
         .summary-cards {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
             margin-bottom: 30px;
         }
         
@@ -163,27 +172,285 @@ def _generate_css() -> str:
             font-size: 20px;
         }
         
-        .timeline {
-            display: flex;
-            gap: 20px;
+        .timeline-container {
+            position: relative;
             overflow-x: auto;
             padding: 20px 0;
         }
         
-        .timeline-agent {
+        .timeline-wrapper {
+            min-width: 1200px;
+            position: relative;
+        }
+        
+        /* Time Axis */
+        .timeline-axis {
+            position: relative;
+            height: 30px;
+            border-bottom: 2px solid #e9ecef;
+            margin-bottom: 10px;
+        }
+        
+        .time-marker {
+            position: absolute;
+            bottom: 0;
+            font-size: 11px;
+            color: #7f8c8d;
+            transform: translateX(-50%);
+        }
+        
+        .time-marker::before {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            width: 1px;
+            height: 8px;
+            background: #bdc3c7;
+            transform: translateX(-50%);
+        }
+        
+        /* Timeline Lanes */
+        .timeline-lanes {
+            position: relative;
+        }
+        
+        .timeline-lane-row {
+            display: flex;
+            align-items: center;
+            height: 60px;
+            margin-bottom: 5px;
+        }
+        
+        .timeline-agent-label {
             flex: 0 0 200px;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 13px;
+            padding: 8px 15px;
             background: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px;
+            border-radius: 6px;
             border-left: 4px solid #3498db;
+            margin-right: 20px;
+            text-align: center;
         }
         
-        .timeline-agent.cmo {
+        .timeline-agent-label.cmo {
             border-left-color: #e74c3c;
+            background: #fee;
         }
         
-        .timeline-agent.specialist {
+        .timeline-agent-label.cardiology,
+        .timeline-agent-label.endocrinology,
+        .timeline-agent-label.laboratory_medicine,
+        .timeline-agent-label.pharmacy {
             border-left-color: #2ecc71;
+            background: #efe;
+        }
+        
+        .timeline-agent-label.visualization {
+            border-left-color: #9b59b6;
+            background: #fef;
+        }
+        
+        /* Timeline Track */
+        .timeline-track {
+            flex: 1;
+            position: relative;
+            height: 40px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        /* Stage Bars */
+        .timeline-stage-bar {
+            position: absolute;
+            top: 5px;
+            height: 30px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            cursor: pointer;
+            overflow: hidden;
+            min-width: 60px;
+        }
+        
+        .timeline-stage-bar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 10;
+        }
+        
+        .timeline-stage-bar.cmo {
+            background: #e74c3c;
+            border: 1px solid #c0392b;
+        }
+        
+        .timeline-stage-bar.cardiology,
+        .timeline-stage-bar.endocrinology,
+        .timeline-stage-bar.laboratory_medicine,
+        .timeline-stage-bar.pharmacy {
+            background: #2ecc71;
+            border: 1px solid #27ae60;
+        }
+        
+        .timeline-stage-bar.visualization {
+            background: #9b59b6;
+            border: 1px solid #8e44ad;
+        }
+        
+        .stage-bar-content {
+            padding: 4px 8px;
+            color: white;
+            font-size: 11px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 100%;
+        }
+        
+        .stage-bar-name {
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .stage-bar-time {
+            font-size: 10px;
+            opacity: 0.9;
+        }
+        
+        /* Stage Bar Hover Details */
+        .stage-bar-hover {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
+            display: none;
+            margin-bottom: 8px;
+            z-index: 100;
+        }
+        
+        .stage-bar-hover::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid rgba(0, 0, 0, 0.9);
+        }
+        
+        .timeline-stage-bar:hover .stage-bar-hover {
+            display: block;
+        }
+        
+        .hover-metric {
+            margin: 2px 0;
+        }
+        
+        /* Flow arrows and critical path visualization */
+        .flow-arrow {
+            position: absolute;
+            height: 2px;
+            background: rgba(52, 152, 219, 0.3);
+            transform-origin: left center;
+            pointer-events: none;
+            z-index: 1;
+            transition: opacity 0.3s;
+        }
+        
+        .flow-arrow::after {
+            content: '';
+            position: absolute;
+            right: -8px;
+            top: -3px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid rgba(52, 152, 219, 0.5);
+            border-top: 4px solid transparent;
+            border-bottom: 4px solid transparent;
+        }
+        
+        .flow-arrow.critical {
+            background: rgba(231, 76, 60, 0.5);
+            height: 3px;
+            box-shadow: 0 0 8px rgba(231, 76, 60, 0.5);
+        }
+        
+        .flow-arrow.critical::after {
+            border-left-color: rgba(231, 76, 60, 0.8);
+        }
+        
+        /* Stage highlighting for interaction */
+        .timeline-stage-bar.highlighted {
+            opacity: 1 !important;
+            transform: translateY(-2px) scaleY(1.1);
+            box-shadow: 0 0 10px currentColor;
+            z-index: 20;
+        }
+        
+        .timeline-stage-bar.dimmed {
+            opacity: 0.3 !important;
+        }
+        
+        .timeline-stage-bar.related {
+            opacity: 0.7 !important;
+            border-width: 2px;
+        }
+        
+        /* Timeline legend */
+        .timeline-legend {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+        
+        .legend-color {
+            width: 30px;
+            height: 3px;
+            margin-right: 8px;
+            border-radius: 2px;
+        }
+        
+        .legend-color.cmo {
+            background: #e74c3c;
+        }
+        
+        .legend-color.specialist {
+            background: #3498db;
+        }
+        
+        .legend-color.visualization {
+            background: #2ecc71;
+        }
+        
+        .legend-color.flow {
+            background: rgba(52, 152, 219, 0.5);
+        }
+        
+        .legend-color.critical {
+            background: rgba(231, 76, 60, 0.5);
         }
         
         /* Agent Sections */
@@ -229,6 +496,18 @@ def _generate_css() -> str:
             gap: 15px;
             font-size: 12px;
             color: #7f8c8d;
+            align-items: center;
+        }
+        
+        .stage-toggle {
+            margin-left: auto;
+            font-size: 14px;
+            color: #95a5a6;
+            transition: transform 0.3s;
+        }
+        
+        .stage-header.expanded .stage-toggle {
+            transform: rotate(180deg);
         }
         
         .stage-content {
@@ -481,6 +760,80 @@ def _generate_css() -> str:
             color: #2980b9;
         }
         
+        /* Agent Metrics */
+        .agent-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+        }
+        
+        .agent-metric-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            border-left: 4px solid #3498db;
+            transition: all 0.2s;
+        }
+        
+        .agent-metric-card:hover {
+            background: #fff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .agent-metric-card.cmo {
+            border-left-color: #e74c3c;
+        }
+        
+        .agent-metric-card.specialist {
+            border-left-color: #2ecc71;
+        }
+        
+        .agent-metric-card.visualization {
+            border-left-color: #9b59b6;
+        }
+        
+        .agent-metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .agent-name {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+        
+        .agent-duration {
+            background: #3498db;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        
+        .agent-metric-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        
+        .metric-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+        }
+        
+        .metric-label {
+            color: #7f8c8d;
+        }
+        
+        .metric-value {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
         /* Utility Classes */
         .hidden {
             display: none;
@@ -521,6 +874,75 @@ def _generate_css() -> str:
         ::-webkit-scrollbar-thumb:hover {
             background: #555;
         }
+        
+        /* Data Value Highlighting */
+        .data-value {
+            background: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+            font-family: 'Courier New', monospace;
+            display: inline-block;
+            margin: 0 2px;
+        }
+        
+        .data-value.data-glucose {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-color: #bee5eb;
+        }
+        
+        .data-value.data-bp {
+            background: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+        
+        .data-value.data-cholesterol {
+            background: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+        
+        .data-value.data-hba1c {
+            background: #e2e3e5;
+            color: #383d41;
+            border-color: #d6d8db;
+        }
+        
+        /* Data Flow Connectors */
+        .data-flow-indicator {
+            position: absolute;
+            left: -30px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            background: #3498db;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        
+        .has-data-flow {
+            position: relative;
+        }
+        
+        .has-data-flow::before {
+            content: '';
+            position: absolute;
+            left: -20px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, #3498db, #2ecc71);
+        }
     """
 
 
@@ -533,6 +955,22 @@ def _generate_javascript() -> str:
             
             header.classList.toggle('expanded');
             content.classList.toggle('show');
+        }
+        
+        function toggleStage(header) {
+            const parent = header.parentElement;
+            const content = parent.querySelector('.stage-content');
+            const toggle = header.querySelector('.stage-toggle');
+            
+            header.classList.toggle('expanded');
+            content.classList.toggle('show');
+            
+            // Update toggle arrow
+            if (header.classList.contains('expanded')) {
+                toggle.textContent = '▼';
+            } else {
+                toggle.textContent = '▶';
+            }
         }
         
         function toggleEventDetails(eventId) {
@@ -597,7 +1035,139 @@ def _generate_javascript() -> str:
             if (firstAgent) {
                 firstAgent.click();
             }
+            
+            // Add click handlers for timeline stages
+            document.querySelectorAll('.timeline-stage-bar').forEach(bar => {
+                bar.addEventListener('click', function() {
+                    const stageId = this.getAttribute('data-stage-id');
+                    highlightRelatedStages(stageId);
+                });
+            });
         });
+        
+        function highlightRelatedStages(stageId) {
+            // Clear existing highlights
+            document.querySelectorAll('.timeline-stage-bar').forEach(bar => {
+                bar.classList.remove('highlighted', 'dimmed', 'related');
+            });
+            
+            // Clear existing arrows
+            document.querySelectorAll('.flow-arrow').forEach(arrow => arrow.remove());
+            
+            // Highlight clicked stage
+            const clickedStage = document.querySelector(`[data-stage-id="${stageId}"]`);
+            if (!clickedStage) return;
+            
+            clickedStage.classList.add('highlighted');
+            
+            // Get stage type and lane
+            const stageType = stageId.split('-')[0];
+            const stageName = stageId.split('-').slice(1).join('-');
+            
+            // Dim all other stages
+            document.querySelectorAll('.timeline-stage-bar').forEach(bar => {
+                if (bar !== clickedStage) {
+                    bar.classList.add('dimmed');
+                }
+            });
+            
+            // Draw flow arrows based on stage relationships
+            if (stageType === 'cmo') {
+                if (stageName === 'task_creation') {
+                    // Draw arrows from task_creation to all specialists
+                    drawFlowArrows(clickedStage, '.timeline-stage-bar[data-stage-id*="specialist"]', false);
+                    
+                    // Highlight related specialists
+                    document.querySelectorAll('.timeline-stage-bar[data-stage-id*="analysis"]').forEach(bar => {
+                        bar.classList.remove('dimmed');
+                        bar.classList.add('related');
+                    });
+                } else if (stageName === 'synthesis' || stageName === 'final_synthesis') {
+                    // Draw arrows from all specialists to synthesis
+                    document.querySelectorAll('.timeline-stage-bar[data-stage-id*="synthesis"]').forEach(source => {
+                        if (source !== clickedStage && source.getAttribute('data-stage-id').includes('specialist')) {
+                            drawFlowArrow(source, clickedStage, true);
+                        }
+                    });
+                    
+                    // Highlight specialist synthesis stages
+                    document.querySelectorAll('.timeline-stage-bar[data-stage-id*="synthesis"]').forEach(bar => {
+                        if (bar !== clickedStage) {
+                            bar.classList.remove('dimmed');
+                            bar.classList.add('related');
+                        }
+                    });
+                }
+            } else if (stageType.includes('specialist')) {
+                // Highlight CMO task creation
+                const cmoTaskBar = document.querySelector('[data-stage-id="cmo-task_creation"]');
+                if (cmoTaskBar) {
+                    cmoTaskBar.classList.remove('dimmed');
+                    cmoTaskBar.classList.add('related');
+                    drawFlowArrow(cmoTaskBar, clickedStage, false);
+                }
+                
+                // Highlight CMO synthesis
+                const cmoSynthesisBar = document.querySelector('[data-stage-id="cmo-synthesis"], [data-stage-id="cmo-final_synthesis"]');
+                if (cmoSynthesisBar && stageName.includes('synthesis')) {
+                    cmoSynthesisBar.classList.remove('dimmed');
+                    cmoSynthesisBar.classList.add('related');
+                    drawFlowArrow(clickedStage, cmoSynthesisBar, true);
+                }
+            } else if (stageType === 'visualization') {
+                // Highlight CMO synthesis as input
+                const cmoSynthesisBar = document.querySelector('[data-stage-id="cmo-synthesis"], [data-stage-id="cmo-final_synthesis"]');
+                if (cmoSynthesisBar) {
+                    cmoSynthesisBar.classList.remove('dimmed');
+                    cmoSynthesisBar.classList.add('related');
+                    drawFlowArrow(cmoSynthesisBar, clickedStage, false);
+                }
+            }
+            
+            // Click anywhere else to reset
+            setTimeout(() => {
+                document.addEventListener('click', function resetHighlight(e) {
+                    if (!e.target.closest('.timeline-stage-bar')) {
+                        document.querySelectorAll('.timeline-stage-bar').forEach(bar => {
+                            bar.classList.remove('highlighted', 'dimmed', 'related');
+                        });
+                        document.querySelectorAll('.flow-arrow').forEach(arrow => arrow.remove());
+                        document.removeEventListener('click', resetHighlight);
+                    }
+                }, { once: true });
+            }, 100);
+        }
+        
+        function drawFlowArrow(source, target, isCritical) {
+            const sourceRect = source.getBoundingClientRect();
+            const targetRect = target.getBoundingClientRect();
+            const containerRect = document.querySelector('.timeline-container').getBoundingClientRect();
+            
+            const arrow = document.createElement('div');
+            arrow.className = 'flow-arrow' + (isCritical ? ' critical' : '');
+            
+            // Calculate positions relative to container
+            const x1 = sourceRect.right - containerRect.left;
+            const y1 = sourceRect.top + sourceRect.height / 2 - containerRect.top;
+            const x2 = targetRect.left - containerRect.left;
+            const y2 = targetRect.top + targetRect.height / 2 - containerRect.top;
+            
+            const distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+            const angle = Math.atan2(y2 - y1, x2 - x1) * (180 / Math.PI);
+            
+            arrow.style.left = x1 + 'px';
+            arrow.style.top = y1 + 'px';
+            arrow.style.width = distance + 'px';
+            arrow.style.transform = `rotate(${angle}deg)`;
+            
+            document.querySelector('.timeline-container').appendChild(arrow);
+        }
+        
+        function drawFlowArrows(source, targetSelector, isCritical) {
+            document.querySelectorAll(targetSelector).forEach(target => {
+                drawFlowArrow(source, target, isCritical);
+            });
+        }
     """
 
 
@@ -630,64 +1200,357 @@ def _generate_header(trace: CompleteTrace, summary: Dict[str, Any]) -> str:
 
 
 def _generate_summary_cards(sections: List[AgentSection], summary: Dict[str, Any]) -> str:
-    """Generate summary cards"""
+    """Generate summary cards with agent breakdown"""
+    
+    # Calculate agent-specific metrics
+    agent_metrics = []
+    for section in sections:
+        success_rate = 100  # Calculate based on errors if needed
+        avg_response_time = section.total_duration_ms / section.llm_calls if section.llm_calls > 0 else 0
+        
+        agent_metrics.append({
+            'name': section.agent_name,
+            'type': section.agent_type,
+            'stages': len(section.stages),
+            'duration': section.total_duration_ms,
+            'llm_calls': section.llm_calls,
+            'tool_calls': section.tool_calls,
+            'tokens': section.tokens_used,
+            'avg_response': avg_response_time
+        })
+    
+    # Sort by duration to show slowest agents
+    agent_metrics.sort(key=lambda x: x['duration'], reverse=True)
+    
     return f"""
-    <div class="summary-cards">
-        <div class="summary-card">
-            <div class="icon">👥</div>
-            <div class="value">{summary['total_agents']}</div>
-            <div class="label">Agents Involved</div>
+    <div class="summary-section">
+        <h3 style="margin-bottom: 20px; color: #2c3e50;">Execution Summary</h3>
+        
+        <div class="summary-cards">
+            <div class="summary-card">
+                <div class="icon">👥</div>
+                <div class="value">{summary['total_agents']}</div>
+                <div class="label">Agents Involved</div>
+            </div>
+            <div class="summary-card">
+                <div class="icon">📊</div>
+                <div class="value">{summary.get('total_stages', 0)}</div>
+                <div class="label">Execution Stages</div>
+            </div>
+            <div class="summary-card">
+                <div class="icon">🔵</div>
+                <div class="value">{summary['total_llm_calls']}</div>
+                <div class="label">LLM Calls</div>
+            </div>
+            <div class="summary-card">
+                <div class="icon">🔧</div>
+                <div class="value">{summary['total_tool_calls']}</div>
+                <div class="label">Tool Calls</div>
+            </div>
+            <div class="summary-card">
+                <div class="icon">🎯</div>
+                <div class="value">{format_token_count(summary['total_tokens'])}</div>
+                <div class="label">Tokens Used</div>
+            </div>
+            <div class="summary-card">
+                <div class="icon">💰</div>
+                <div class="value">{format_cost(estimate_api_cost(summary['total_tokens']))}</div>
+                <div class="label">Est. Cost</div>
+            </div>
         </div>
-        <div class="summary-card">
-            <div class="icon">🔵</div>
-            <div class="value">{summary['total_llm_calls']}</div>
-            <div class="label">LLM Calls</div>
-        </div>
-        <div class="summary-card">
-            <div class="icon">🔧</div>
-            <div class="value">{summary['total_tool_calls']}</div>
-            <div class="label">Tool Calls</div>
-        </div>
-        <div class="summary-card">
-            <div class="icon">🎯</div>
-            <div class="value">{format_token_count(summary['total_tokens'])}</div>
-            <div class="label">Tokens Used</div>
+        
+        <h4 style="margin: 30px 0 15px 0; color: #2c3e50;">Agent Performance</h4>
+        <div class="agent-metrics">
+            {_generate_agent_metric_cards(agent_metrics)}
         </div>
     </div>
     """
 
 
+def _generate_agent_metric_cards(metrics: List[Dict[str, Any]]) -> str:
+    """Generate individual agent metric cards"""
+    cards = []
+    
+    for metric in metrics[:5]:  # Show top 5 agents by duration
+        agent_class = "cmo" if metric['type'] == "cmo" else "specialist" if "specialist" in metric['type'].lower() else "visualization"
+        
+        cards.append(f"""
+        <div class="agent-metric-card {agent_class}">
+            <div class="agent-metric-header">
+                <span class="agent-name">{metric['name']}</span>
+                <span class="agent-duration">{format_duration(metric['duration'])}</span>
+            </div>
+            <div class="agent-metric-details">
+                <div class="metric-item">
+                    <span class="metric-label">Stages:</span>
+                    <span class="metric-value">{metric['stages']}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">LLM Calls:</span>
+                    <span class="metric-value">{metric['llm_calls']}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Tool Calls:</span>
+                    <span class="metric-value">{metric['tool_calls']}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Avg Response:</span>
+                    <span class="metric-value">{format_duration(metric['avg_response'])}</span>
+                </div>
+            </div>
+        </div>
+        """)
+    
+    return "".join(cards)
+
+
 def _generate_timeline(sections: List[AgentSection]) -> str:
-    """Generate timeline visualization showing stages"""
-    timeline_items = []
+    """Generate temporal timeline visualization showing true execution flow"""
+    
+    # Collect all stages with timing info
+    all_stages = []
     
     for section in sections:
-        agent_class = "cmo" if section.agent_type == "cmo" else "specialist"
+        for stage_name, stage_info in section.stages.items():
+            # Calculate actual start/end times
+            start_time = stage_info.first_event_time or stage_info.start_time
+            if start_time:
+                all_stages.append({
+                    'agent_name': section.agent_name,
+                    'agent_type': section.agent_type,
+                    'stage_name': stage_name,
+                    'stage_info': stage_info,
+                    'start_time': start_time,
+                    'duration_ms': stage_info.duration_ms or 0,
+                    'execution_order': stage_info.execution_order
+                })
+    
+    if not all_stages:
+        return '<div class="timeline-section"><p>No timeline data available</p></div>'
+    
+    # Sort by start time to find min/max
+    all_stages.sort(key=lambda x: x['start_time'])
+    
+    # Calculate timeline bounds
+    try:
+        from datetime import datetime
+        min_time = datetime.fromisoformat(all_stages[0]['start_time'].replace('Z', '+00:00'))
+        max_time = min_time
         
-        # Show each stage as a timeline item
-        for stage_name, stage_info in sorted(section.stages.items(), key=lambda x: x[1].start_time or ""):
-            timeline_items.append(f"""
-            <div class="timeline-agent {agent_class}">
-                <div style="font-weight: 600; margin-bottom: 5px;">{section.agent_name}</div>
-                <div style="font-size: 11px; color: #34495e; margin-bottom: 3px;">📍 {stage_name}</div>
-                <div style="font-size: 12px; color: #7f8c8d;">
-                    <div>⏱️ {format_duration(stage_info.duration_ms)}</div>
-                    <div>🔵 {stage_info.llm_calls} LLM calls</div>
-                    <div>🔧 {stage_info.tool_calls} tool calls</div>
+        for stage in all_stages:
+            stage_time = datetime.fromisoformat(stage['start_time'].replace('Z', '+00:00'))
+            stage['start_datetime'] = stage_time
+            
+            # Calculate end time
+            if stage['duration_ms'] > 0:
+                from datetime import timedelta
+                end_time = stage_time + timedelta(milliseconds=stage['duration_ms'])
+                if end_time > max_time:
+                    max_time = end_time
+        
+        # Total timeline duration
+        total_duration = (max_time - min_time).total_seconds() * 1000  # in ms
+        timeline_width = 1200  # pixels
+        
+    except Exception as e:
+        # Fallback to simple ordering
+        return _generate_simple_timeline(sections)
+    
+    # Group stages by agent for lanes
+    agent_lanes = {}
+    for stage in all_stages:
+        agent_key = stage['agent_type']
+        if agent_key not in agent_lanes:
+            agent_lanes[agent_key] = {
+                'name': stage['agent_name'],
+                'type': stage['agent_type'],
+                'stages': []
+            }
+        agent_lanes[agent_key]['stages'].append(stage)
+    
+    # Order lanes: CMO -> Specialists -> Visualization
+    lane_order = ['cmo'] + [k for k in agent_lanes.keys() if k not in ['cmo', 'visualization']] + ['visualization']
+    
+    # Generate timeline HTML
+    timeline_html = []
+    
+    for agent_type in lane_order:
+        if agent_type not in agent_lanes:
+            continue
+            
+        lane = agent_lanes[agent_type]
+        stages_html = []
+        
+        for stage in lane['stages']:
+            # Calculate position and width
+            offset_ms = (stage['start_datetime'] - min_time).total_seconds() * 1000
+            left_percent = (offset_ms / total_duration) * 100 if total_duration > 0 else 0
+            width_percent = (stage['duration_ms'] / total_duration) * 100 if total_duration > 0 else 5
+            
+            # Ensure minimum width for visibility
+            width_percent = max(width_percent, 5)
+            
+            # Format stage name
+            display_name = _format_stage_name(stage['stage_name'])
+            
+            # Create detailed hover info
+            hover_info = f"""{display_name}
+Duration: {format_duration(stage['duration_ms'])}
+LLM Calls: {stage['stage_info'].llm_calls}
+Tool Calls: {stage['stage_info'].tool_calls}
+Tokens: {format_token_count(stage['stage_info'].tokens_used)}"""
+            
+            stages_html.append(f"""
+            <div class="timeline-stage-bar {agent_type}" 
+                 style="left: {left_percent:.1f}%; width: {width_percent:.1f}%;"
+                 title="{hover_info}"
+                 data-stage-id="{agent_type}-{stage['stage_name']}">
+                <div class="stage-bar-content">
+                    <div class="stage-bar-name">{display_name}</div>
+                    <div class="stage-bar-time">{format_duration(stage['duration_ms'])}</div>
+                </div>
+                <div class="stage-bar-hover">
+                    <div class="hover-metric">🔵 {stage['stage_info'].llm_calls} LLM</div>
+                    <div class="hover-metric">🔧 {stage['stage_info'].tool_calls} Tools</div>
+                    <div class="hover-metric">🎯 {format_token_count(stage['stage_info'].tokens_used)}</div>
                 </div>
             </div>
             """)
+        
+        timeline_html.append(f"""
+        <div class="timeline-lane-row">
+            <div class="timeline-agent-label {agent_type}">{lane['name']}</div>
+            <div class="timeline-track">
+                {"".join(stages_html)}
+            </div>
+        </div>
+        """)
+    
+    # Add time axis
+    time_markers = _generate_time_axis(min_time, max_time, timeline_width)
     
     return f"""
     <div class="timeline-section">
         <div class="timeline-header">
             <h2>📊 Execution Timeline</h2>
             <span style="font-size: 13px; color: #7f8c8d;">
-                Scroll horizontally to see all agents →
+                Showing actual execution times and durations (click stages to see relationships)
             </span>
         </div>
-        <div class="timeline">
-            {"".join(timeline_items)}
+        <div class="timeline-container">
+            <div class="timeline-legend">
+                <div class="legend-item">
+                    <div class="legend-color cmo"></div>
+                    <span>CMO (Orchestrator)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color specialist"></div>
+                    <span>Medical Specialists</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color visualization"></div>
+                    <span>Visualization Agent</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color flow"></div>
+                    <span>Task Flow</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color critical"></div>
+                    <span>Critical Path</span>
+                </div>
+            </div>
+            <div class="timeline-wrapper">
+                {time_markers}
+                <div class="timeline-lanes">
+                    {"".join(timeline_html)}
+                </div>
+            </div>
+        </div>
+    </div>
+    """
+
+
+def _format_stage_name(stage_name: str) -> str:
+    """Format stage name for display"""
+    name_map = {
+        'query_analysis': 'Query Analysis',
+        'task_creation': 'Task Creation',
+        'synthesis': 'Synthesis',
+        'final_synthesis': 'Final Synthesis',
+        'analysis': 'Medical Analysis',
+        'specialist_execution': 'Analysis',
+        'medical_analysis': 'Medical Analysis',
+        'findings_synthesis': 'Synthesis',
+        'visualization_generation': 'Chart Generation',
+        'visualization': 'Visualization'
+    }
+    return name_map.get(stage_name, stage_name.replace('_', ' ').title())
+
+
+def _generate_time_axis(min_time, max_time, width: int) -> str:
+    """Generate time axis markers"""
+    duration = (max_time - min_time).total_seconds()
+    
+    # Determine appropriate interval
+    if duration < 10:  # Less than 10 seconds
+        interval = 1  # 1 second
+    elif duration < 60:  # Less than 1 minute
+        interval = 5  # 5 seconds
+    elif duration < 300:  # Less than 5 minutes
+        interval = 30  # 30 seconds
+    else:
+        interval = 60  # 1 minute
+    
+    markers = []
+    current = 0
+    while current <= duration:
+        left_percent = (current / duration) * 100 if duration > 0 else 0
+        label = f"{int(current)}s" if current < 60 else f"{current/60:.1f}m"
+        markers.append(f'<div class="time-marker" style="left: {left_percent:.1f}%;">{label}</div>')
+        current += interval
+    
+    return f'<div class="timeline-axis">{"".join(markers)}</div>'
+
+
+def _generate_simple_timeline(sections: List[AgentSection]) -> str:
+    """Fallback simple timeline if datetime parsing fails"""
+    timeline_html = []
+    
+    for section in sections:
+        if not section.stages:
+            continue
+            
+        stages_html = []
+        for stage_name, stage_info in section.stages.items():
+            display_name = _format_stage_name(stage_name)
+            stages_html.append(f"""
+            <div class="timeline-stage {section.agent_type}">
+                <div class="stage-name">{display_name}</div>
+                <div class="stage-stats">
+                    <span>⏱️ {format_duration(stage_info.duration_ms)}</span>
+                    <span>🔵 {stage_info.llm_calls}</span>
+                    <span>🔧 {stage_info.tool_calls}</span>
+                </div>
+            </div>
+            """)
+        
+        timeline_html.append(f"""
+        <div class="timeline-lane-row">
+            <div class="timeline-agent-label {section.agent_type}">{section.agent_name}</div>
+            <div class="timeline-stages">
+                {"".join(stages_html)}
+            </div>
+        </div>
+        """)
+    
+    return f"""
+    <div class="timeline-section">
+        <div class="timeline-header">
+            <h2>📊 Execution Timeline</h2>
+        </div>
+        <div class="timeline-container">
+            {"".join(timeline_html)}
         </div>
     </div>
     """
@@ -703,21 +1566,32 @@ def _generate_agent_sections(sections: List[AgentSection]) -> str:
         
         # Generate stage sections
         stages_html = []
-        for stage_name, stage_info in sorted(section.stages.items(), key=lambda x: x[1].start_time or ""):
+        sorted_stages = sorted(section.stages.items(), key=lambda x: x[1].start_time or "")
+        
+        for idx, (stage_name, stage_info) in enumerate(sorted_stages):
             stage_id = f"{agent_id}-{stage_name.replace(' ', '-')}"
             stage_events_html = _generate_event_tree(stage_info.events, stage_id)
             
+            # Determine if stage should be expanded by default
+            is_synthesis = "synthesis" in stage_name.lower()
+            is_final_stage = (idx == len(sorted_stages) - 1)
+            has_errors = any(e.event.event_type == TraceEventType.ERROR for e in stage_info.events)
+            
+            # Expand synthesis stages, final stages, or stages with errors
+            expand_by_default = is_synthesis or is_final_stage or has_errors
+            
             stages_html.append(f"""
             <div class="stage-section">
-                <div class="stage-header" onclick="toggleSection(this)">
+                <div class="stage-header {'expanded' if expand_by_default else ''}" onclick="toggleStage(this)">
                     <h4>📍 {stage_name.replace('_', ' ').title()}</h4>
                     <div class="stage-meta">
                         <span>⏱️ {format_duration(stage_info.duration_ms)}</span>
                         <span>🔵 {stage_info.llm_calls} LLM calls</span>
                         <span>🔧 {stage_info.tool_calls} tool calls</span>
+                        <span class="stage-toggle">{'▼' if expand_by_default else '▶'}</span>
                     </div>
                 </div>
-                <div class="stage-content show">
+                <div class="stage-content {'show' if expand_by_default else ''}">
                     {stage_events_html}
                 </div>
             </div>
@@ -850,7 +1724,7 @@ def _get_event_icon(event_type: TraceEventType) -> str:
 
 
 def _generate_event_summary(event: TraceEvent) -> str:
-    """Generate human-readable event summary"""
+    """Generate human-readable event summary with highlighted data values"""
     data = event.data or {}
     
     if event.event_type == TraceEventType.LLM_PROMPT:
@@ -870,23 +1744,39 @@ def _generate_event_summary(event: TraceEvent) -> str:
         tool_name = data.get('tool_name', 'Unknown')
         tool_input = data.get('tool_input', {})
         query = tool_input.get('query', '') if isinstance(tool_input, dict) else ''
-        return f"<strong>Tool:</strong> {tool_name} | <strong>Query:</strong> {query}"
+        # Highlight the query
+        highlighted_query = f'<span class="data-value">{query}</span>' if query else 'N/A'
+        return f"<strong>Tool:</strong> {tool_name} | <strong>Query:</strong> {highlighted_query}"
         
     elif event.event_type == TraceEventType.TOOL_RESULT:
         success = data.get('success', False)
         result_data = data.get('result_data', {})
         if success and result_data:
             count = result_data.get('result_count', 0)
-            # Extract key value if present
+            # Extract and highlight key values
             results = result_data.get('results', [])
             if results and len(results) > 0:
                 first_result = results[0]
-                if 'GLUCOSE_VALUE' in first_result:
-                    value = first_result.get('GLUCOSE_VALUE')
-                    unit = first_result.get('UNIT', '')
-                    date = first_result.get('RECORD_DATE', '')
-                    return f"<strong>✅ Result:</strong> {value} {unit} on {date} ({count} total results)"
-            return f"<strong>✅ Success:</strong> {count} results found"
+                # Check for various health data types
+                value_fields = [
+                    ('GLUCOSE_VALUE', 'UNIT', 'glucose'),
+                    ('VALUE_NUMERIC', 'MEASUREMENT_DIMENSION', 'numeric'),
+                    ('SYSTOLIC_BP', 'UNIT', 'bp'),
+                    ('HDL_CHOLESTEROL', 'UNIT', 'cholesterol'),
+                    ('LDL_CHOLESTEROL', 'UNIT', 'cholesterol'),
+                    ('HBA1C_VALUE', 'UNIT', 'hba1c')
+                ]
+                
+                for value_field, unit_field, data_type in value_fields:
+                    if value_field in first_result:
+                        value = first_result.get(value_field)
+                        unit = first_result.get(unit_field, '')
+                        date = first_result.get('RECORD_DATE', '')
+                        # Highlight the value with data type
+                        highlighted_value = f'<span class="data-value data-{data_type}">{value} {unit}</span>'
+                        return f"<strong>✅ Result:</strong> {highlighted_value} on {date} ({count} total results)"
+                
+            return f"<strong>✅ Success:</strong> <span class='data-value'>{count}</span> results found"
         else:
             error = data.get('error', 'Unknown error')
             return f"<strong>❌ Failed:</strong> {error}"

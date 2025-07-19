@@ -7,6 +7,7 @@ between events (LLM calls, tool invocations, responses, etc.).
 
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, field
+from datetime import datetime
 from .trace_models import TraceEvent, TraceEventType, CompleteTrace
 
 
@@ -40,10 +41,12 @@ class StageInfo:
     events: List[HierarchicalEvent] = field(default_factory=list)
     start_time: Optional[str] = None
     end_time: Optional[str] = None
+    first_event_time: Optional[str] = None  # Time of first actual event (not STAGE_START)
     duration_ms: float = 0
     llm_calls: int = 0
     tool_calls: int = 0
     tokens_used: int = 0
+    execution_order: int = 0  # For logical ordering
 
 @dataclass
 class AgentSection:
@@ -80,8 +83,8 @@ def build_trace_hierarchy(trace: CompleteTrace) -> Tuple[List[AgentSection], Dic
         agent_type = event.agent_type
         stage = event.stage
         
-        # Skip system/user events for agent grouping
-        if agent_type in ['system', 'user']:
+        # Skip non-agent events for agent grouping
+        if agent_type in ['system', 'user', 'health_analyst_service', 'orchestrator']:
             continue
             
         # Create agent section if needed
@@ -102,6 +105,11 @@ def build_trace_hierarchy(trace: CompleteTrace) -> Tuple[List[AgentSection], Dic
             )
         
         stage_info = section.stages[stage]
+        
+        # Track first actual event time (not STAGE_START)
+        if event.event_type not in [TraceEventType.STAGE_START, TraceEventType.STAGE_END]:
+            if stage_info.first_event_time is None:
+                stage_info.first_event_time = event.timestamp
         hierarchical_event = HierarchicalEvent(event=event, event_index=i)
         
         # Handle different event types
@@ -186,8 +194,35 @@ def build_trace_hierarchy(trace: CompleteTrace) -> Tuple[List[AgentSection], Dic
     
     # Flatten stages into events for each agent section
     for section in agent_groups.values():
-        # Sort stages by start time
-        sorted_stages = sorted(section.stages.items(), key=lambda x: x[1].start_time or "")
+        # Filter out phantom stages (those with only STAGE_START/END events or no meaningful events)
+        valid_stages = {}
+        for stage_name, stage_info in section.stages.items():
+            # Skip stages with problematic names
+            if any(skip in stage_name.lower() for skip in ['specialist_analysis', 'unknown']):
+                continue
+                
+            # Count meaningful events (not just stage markers)
+            meaningful_events = [e for e in stage_info.events 
+                               if e.event.event_type not in [TraceEventType.STAGE_START, TraceEventType.STAGE_END]]
+            
+            # Only keep stages with actual work
+            if meaningful_events:
+                valid_stages[stage_name] = stage_info
+                # Update stage metrics based on actual events
+                if stage_info.first_event_time is None and meaningful_events:
+                    stage_info.first_event_time = meaningful_events[0].event.timestamp
+        
+        # Replace stages with valid ones
+        section.stages = valid_stages
+        
+        # Apply logical ordering to stages based on agent type
+        _apply_stage_ordering(section)
+        
+        # Sort stages by execution order, then by first event time
+        sorted_stages = sorted(
+            section.stages.items(), 
+            key=lambda x: (x[1].execution_order, x[1].first_event_time or x[1].start_time or "")
+        )
         
         # Flatten events from all stages into section events
         for stage_name, stage_info in sorted_stages:
@@ -195,8 +230,9 @@ def build_trace_hierarchy(trace: CompleteTrace) -> Tuple[List[AgentSection], Dic
         
         # Update section end time
         if section.stages:
-            last_stage = sorted_stages[-1][1]
-            section.end_time = last_stage.end_time or last_stage.start_time
+            last_stage = sorted_stages[-1][1] if sorted_stages else None
+            if last_stage:
+                section.end_time = last_stage.end_time or last_stage.start_time
     
     # Convert to list and sort by first event time
     sections = list(agent_groups.values())
@@ -226,10 +262,59 @@ def _format_agent_name(agent_type: str) -> str:
         "pharmacy": "Pharmacy Specialist",
         "nutrition": "Nutrition Specialist",
         "preventive_medicine": "Preventive Medicine Specialist",
+        "visualization": "Visualization Agent",
         "user": "User",
-        "system": "System"
+        "system": "System",
+        "health_analyst_service": "Health Analyst Service"
     }
     return name_map.get(agent_type.lower(), agent_type.title())
+
+
+def _apply_stage_ordering(section: AgentSection) -> None:
+    """Apply logical execution order to stages based on agent type"""
+    # Define stage ordering for different agent types
+    stage_orders = {
+        "cmo": {
+            "query_analysis": 1,
+            "task_creation": 2,
+            "synthesis": 10,  # After all specialists
+            "final_synthesis": 10
+        },
+        "visualization": {
+            "visualization_generation": 20,  # After synthesis
+            "visualization": 20
+        }
+    }
+    
+    # Default ordering for specialists
+    default_specialist_order = {
+        "analysis": 5,
+        "specialist_execution": 5,
+        "medical_analysis": 5,
+        "synthesis": 6,
+        "findings_synthesis": 6
+    }
+    
+    # Apply ordering
+    agent_orders = stage_orders.get(section.agent_type, default_specialist_order)
+    for stage_name, stage_info in section.stages.items():
+        # Try to match exact stage name first
+        if stage_name in agent_orders:
+            stage_info.execution_order = agent_orders[stage_name]
+        else:
+            # Try partial matches
+            for pattern, order in agent_orders.items():
+                if pattern in stage_name.lower():
+                    stage_info.execution_order = order
+                    break
+            else:
+                # Default order based on common patterns
+                if "analysis" in stage_name.lower() or "query" in stage_name.lower():
+                    stage_info.execution_order = 5
+                elif "synthesis" in stage_name.lower():
+                    stage_info.execution_order = 15
+                else:
+                    stage_info.execution_order = 7
 
 
 def _extract_key_findings(event: TraceEvent, findings: List[str]) -> None:

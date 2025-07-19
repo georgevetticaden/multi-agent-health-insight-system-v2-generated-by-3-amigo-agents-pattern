@@ -46,7 +46,7 @@ def generate_hierarchical_trace_html(trace: CompleteTrace) -> str:
         {_generate_filter_panel()}
         {_generate_summary_cards(sections, summary)}
         {_generate_timeline(sections)}
-        {_generate_agent_sections(sections)}
+        {_generate_agent_analysis_section(sections)}
     </div>
     
     <script>
@@ -200,6 +200,39 @@ def _generate_css() -> str:
             cursor: pointer;
         }
         
+        .filter-preset {
+            padding: 6px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            background: white;
+            color: #495057;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .filter-preset:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
+        }
+        
+        .filter-preset.reset {
+            background: #f8f9fa;
+            color: #dc3545;
+            border-color: #dc3545;
+        }
+        
+        .filter-preset.reset:hover {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .filter-status {
+            font-size: 13px;
+            color: #6c757d;
+            font-style: italic;
+        }
+        
         /* Summary Cards */
         .summary-cards {
             display: grid;
@@ -234,6 +267,19 @@ def _generate_css() -> str:
             margin: 10px 0;
         }
         
+        /* Performance-based color coding */
+        .summary-card.performance-good .value {
+            color: #2ecc71;
+        }
+        
+        .summary-card.performance-warning .value {
+            color: #f39c12;
+        }
+        
+        .summary-card.performance-critical .value {
+            color: #e74c3c;
+        }
+        
         .summary-card .label {
             font-size: 14px;
             color: #7f8c8d;
@@ -255,6 +301,44 @@ def _generate_css() -> str:
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        /* Zoom controls */
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 6px;
+        }
+        
+        .zoom-controls button {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .zoom-controls button:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
+        }
+        
+        .zoom-controls button:active {
+            transform: scale(0.95);
+        }
+        
+        .zoom-level {
+            font-size: 13px;
+            color: #6c757d;
+            min-width: 50px;
+            text-align: center;
         }
         
         .timeline-header h2 {
@@ -362,6 +446,14 @@ def _generate_css() -> str:
             border-left: 4px solid #3498db;
             margin-right: 20px;
             text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .timeline-agent-label:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         
         .timeline-agent-label.cmo {
@@ -372,7 +464,9 @@ def _generate_css() -> str:
         .timeline-agent-label.cardiology,
         .timeline-agent-label.endocrinology,
         .timeline-agent-label.laboratory_medicine,
-        .timeline-agent-label.pharmacy {
+        .timeline-agent-label.pharmacy,
+        .timeline-agent-label.nutrition,
+        .timeline-agent-label.preventive_medicine {
             border-left-color: #2ecc71;
             background: #efe;
         }
@@ -429,7 +523,9 @@ def _generate_css() -> str:
         .timeline-stage-bar.cardiology,
         .timeline-stage-bar.endocrinology,
         .timeline-stage-bar.laboratory_medicine,
-        .timeline-stage-bar.pharmacy {
+        .timeline-stage-bar.pharmacy,
+        .timeline-stage-bar.nutrition,
+        .timeline-stage-bar.preventive_medicine {
             background: #2ecc71;
             border: 1px solid #27ae60;
         }
@@ -437,6 +533,20 @@ def _generate_css() -> str:
         .timeline-stage-bar.visualization {
             background: #9b59b6;
             border: 1px solid #8e44ad;
+        }
+        
+        /* Anomaly detection - unusually long stages */
+        .timeline-stage-bar.anomaly {
+            border: 3px solid #e74c3c !important;
+            box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+        }
+        
+        .timeline-stage-bar.anomaly .stage-bar-content::before {
+            content: '⚠️';
+            position: absolute;
+            top: -15px;
+            right: 5px;
+            font-size: 12px;
         }
         
         .stage-bar-content {
@@ -449,6 +559,26 @@ def _generate_css() -> str:
             z-index: 2;
             justify-content: center;
             height: 100%;
+        }
+        
+        /* Execution order badge */
+        .execution-order {
+            position: absolute;
+            top: -8px;
+            left: -8px;
+            background: #2c3e50;
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 10;
         }
         
         /* Status indicators */
@@ -477,12 +607,63 @@ def _generate_css() -> str:
         
         .timeline-stage-bar.running {
             animation: pulse 1.5s infinite;
+            position: relative;
+            overflow: visible;
+        }
+        
+        .timeline-stage-bar.running::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, 
+                rgba(255,255,255,0) 0%, 
+                rgba(255,255,255,0.3) 50%, 
+                rgba(255,255,255,0) 100%);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        /* Progress indicator for incomplete stages */
+        .progress-indicator {
+            position: absolute;
+            bottom: -20px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: #3498db;
+            animation: progress 3s infinite;
+            border-radius: 2px;
+        }
+        
+        @keyframes progress {
+            0% { width: 0%; }
+            50% { width: 80%; }
+            100% { width: 100%; }
         }
         
         @keyframes pulse {
             0% { opacity: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
             50% { opacity: 0.8; box-shadow: 0 2px 12px rgba(0,0,0,0.25); }
             100% { opacity: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+        }
+        
+        @keyframes flash {
+            0%, 100% { background-color: inherit; }
+            50% { background-color: #fff3cd; }
         }
         
         .stage-bar-name {
@@ -574,61 +755,44 @@ def _generate_css() -> str:
             transform: translateY(-2px) scaleY(1.1);
             box-shadow: 0 0 10px currentColor;
             z-index: 20;
+            animation: pulse-highlight 1.5s infinite;
+        }
+        
+        @keyframes pulse-highlight {
+            0% { box-shadow: 0 0 10px currentColor; }
+            50% { box-shadow: 0 0 20px currentColor, 0 0 30px currentColor; }
+            100% { box-shadow: 0 0 10px currentColor; }
         }
         
         .timeline-stage-bar.dimmed {
-            opacity: 0.3 !important;
+            opacity: 0.2 !important;
+            filter: grayscale(50%);
         }
         
         .timeline-stage-bar.related {
-            opacity: 0.7 !important;
-            border-width: 2px;
+            opacity: 0.8 !important;
+            border-width: 3px;
+            animation: glow 2s ease-in-out infinite;
         }
         
-        /* Timeline legend */
-        .timeline-legend {
+        @keyframes glow {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+        
+        /* Relationship indicators */
+        .relationship-label {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
             border-radius: 4px;
             font-size: 11px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 100;
+            pointer-events: none;
+            white-space: nowrap;
         }
         
-        .legend-item {
-            display: flex;
-            align-items: center;
-            margin: 5px 0;
-        }
-        
-        .legend-color {
-            width: 30px;
-            height: 3px;
-            margin-right: 8px;
-            border-radius: 2px;
-        }
-        
-        .legend-color.cmo {
-            background: #e74c3c;
-        }
-        
-        .legend-color.specialist {
-            background: #3498db;
-        }
-        
-        .legend-color.visualization {
-            background: #2ecc71;
-        }
-        
-        .legend-color.flow {
-            background: rgba(52, 152, 219, 0.5);
-        }
-        
-        .legend-color.critical {
-            background: rgba(231, 76, 60, 0.5);
-        }
         
         /* Agent Sections */
         .agent-section {
@@ -937,105 +1101,119 @@ def _generate_css() -> str:
             color: #2980b9;
         }
         
-        /* Agent Metrics */
-        .agent-metrics {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 15px;
-        }
-        
-        .agent-metric-card {
-            background: #f8f9fa;
+        /* Agent Metrics Table */
+        .agent-metrics-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
             border-radius: 8px;
-            padding: 15px;
-            border-left: 4px solid #3498db;
-            transition: all 0.2s;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
         
-        .agent-metric-card:hover {
-            background: #fff;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        .agent-metrics-table thead {
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
         }
         
-        .agent-metric-card.cmo {
-            border-left-color: #e74c3c;
+        .agent-metrics-table th {
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 13px;
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            white-space: nowrap;
         }
         
-        .agent-metric-card.specialist {
-            border-left-color: #2ecc71;
+        .agent-metrics-table th:hover {
+            background: #e9ecef;
         }
         
-        .agent-metric-card.visualization {
-            border-left-color: #9b59b6;
-        }
-        
-        .agent-metric-efficiency {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid #e9ecef;
+        .agent-metrics-table th.sortable::after {
+            content: '↕';
+            position: absolute;
+            right: 10px;
+            color: #bdc3c7;
             font-size: 11px;
         }
         
-        .efficiency-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+        .agent-metrics-table th.sorted-asc::after {
+            content: '↑';
+            color: #3498db;
         }
         
-        .efficiency-label {
-            color: #7f8c8d;
-            font-size: 10px;
-            text-transform: uppercase;
+        .agent-metrics-table th.sorted-desc::after {
+            content: '↓';
+            color: #3498db;
         }
         
-        .efficiency-value {
-            font-weight: 600;
-            color: #2ecc71;
-            margin-top: 2px;
+        .agent-metrics-table tbody tr {
+            border-bottom: 1px solid #f1f1f1;
+            transition: background 0.2s;
         }
         
-        .agent-metric-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
+        .agent-metrics-table tbody tr:hover {
+            background: #f8f9fa;
         }
         
-        .agent-name {
-            font-weight: 600;
+        .agent-metrics-table td {
+            padding: 10px 15px;
+            font-size: 13px;
             color: #2c3e50;
-            font-size: 14px;
         }
         
-        .agent-duration {
-            background: #3498db;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-        }
-        
-        .agent-metric-details {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
+        .agent-metrics-table .agent-name-cell {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
             gap: 8px;
         }
         
-        .metric-item {
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
+        .agent-type-indicator {
+            width: 4px;
+            height: 20px;
+            border-radius: 2px;
+            background: #3498db;
         }
         
-        .metric-label {
-            color: #7f8c8d;
+        .agent-type-indicator.cmo {
+            background: #e74c3c;
+        }
+        
+        .agent-type-indicator.specialist {
+            background: #2ecc71;
+        }
+        
+        .agent-type-indicator.visualization {
+            background: #9b59b6;
+        }
+        
+        .duration-cell {
+            font-weight: 500;
+        }
+        
+        .duration-cell.fast {
+            color: #2ecc71;
+        }
+        
+        .duration-cell.medium {
+            color: #f39c12;
+        }
+        
+        .duration-cell.slow {
+            color: #e74c3c;
         }
         
         .metric-value {
+            font-weight: 500;
+        }
+        
+        .efficiency-value {
+            color: #3498db;
             font-weight: 600;
-            color: #2c3e50;
         }
         
         /* Utility Classes */
@@ -1247,7 +1425,53 @@ def _generate_javascript() -> str:
                     highlightRelatedStages(stageId);
                 });
             });
+            
+            // Load filter preferences from localStorage
+            loadFilterPreferences();
         });
+        
+        function saveFilterPreferences() {
+            const preferences = {
+                showCMO: document.getElementById('filter-cmo').checked,
+                showSpecialists: document.getElementById('filter-specialists').checked,
+                showVisualization: document.getElementById('filter-visualization').checked,
+                minDuration: document.getElementById('duration-filter').value,
+                viewMode: document.querySelector('.view-toggle button.active').textContent.toLowerCase()
+            };
+            localStorage.setItem('traceViewerFilters', JSON.stringify(preferences));
+        }
+        
+        function loadFilterPreferences() {
+            const saved = localStorage.getItem('traceViewerFilters');
+            if (saved) {
+                try {
+                    const preferences = JSON.parse(saved);
+                    
+                    // Apply saved preferences
+                    document.getElementById('filter-cmo').checked = preferences.showCMO !== false;
+                    document.getElementById('filter-specialists').checked = preferences.showSpecialists !== false;
+                    document.getElementById('filter-visualization').checked = preferences.showVisualization !== false;
+                    document.getElementById('duration-filter').value = preferences.minDuration || '0';
+                    
+                    // Apply view mode
+                    if (preferences.viewMode) {
+                        document.querySelectorAll('.view-toggle button').forEach(btn => {
+                            btn.classList.remove('active');
+                            if (btn.textContent.toLowerCase() === preferences.viewMode) {
+                                btn.classList.add('active');
+                            }
+                        });
+                        setView(preferences.viewMode);
+                    }
+                    
+                    // Apply filters
+                    filterAgents();
+                    filterByDuration();
+                } catch (e) {
+                    console.error('Failed to load filter preferences:', e);
+                }
+            }
+        }
         
         function highlightRelatedStages(stageId) {
             // Clear existing highlights
@@ -1285,7 +1509,9 @@ def _generate_javascript() -> str:
                     document.querySelectorAll('.timeline-stage-bar[data-stage-id*="analysis"]').forEach(bar => {
                         bar.classList.remove('dimmed');
                         bar.classList.add('related');
+                        addRelationshipLabel(bar, 'receives task');
                     });
+                    addRelationshipLabel(clickedStage, 'assigns tasks');
                 } else if (stageName === 'synthesis' || stageName === 'final_synthesis') {
                     // Draw arrows from all specialists to synthesis
                     document.querySelectorAll('.timeline-stage-bar[data-stage-id*="synthesis"]').forEach(source => {
@@ -1299,8 +1525,10 @@ def _generate_javascript() -> str:
                         if (bar !== clickedStage) {
                             bar.classList.remove('dimmed');
                             bar.classList.add('related');
+                            addRelationshipLabel(bar, 'provides input');
                         }
                     });
+                    addRelationshipLabel(clickedStage, 'synthesizes findings');
                 }
             } else if (stageType.includes('specialist')) {
                 // Highlight CMO task creation
@@ -1309,6 +1537,7 @@ def _generate_javascript() -> str:
                     cmoTaskBar.classList.remove('dimmed');
                     cmoTaskBar.classList.add('related');
                     drawFlowArrow(cmoTaskBar, clickedStage, false);
+                    addRelationshipLabel(cmoTaskBar, 'task source');
                 }
                 
                 // Highlight CMO synthesis
@@ -1317,7 +1546,9 @@ def _generate_javascript() -> str:
                     cmoSynthesisBar.classList.remove('dimmed');
                     cmoSynthesisBar.classList.add('related');
                     drawFlowArrow(clickedStage, cmoSynthesisBar, true);
+                    addRelationshipLabel(cmoSynthesisBar, 'receives findings');
                 }
+                addRelationshipLabel(clickedStage, 'analyzing');
             } else if (stageType === 'visualization') {
                 // Highlight CMO synthesis as input
                 const cmoSynthesisBar = document.querySelector('[data-stage-id="cmo-synthesis"], [data-stage-id="cmo-final_synthesis"]');
@@ -1325,7 +1556,9 @@ def _generate_javascript() -> str:
                     cmoSynthesisBar.classList.remove('dimmed');
                     cmoSynthesisBar.classList.add('related');
                     drawFlowArrow(cmoSynthesisBar, clickedStage, false);
+                    addRelationshipLabel(cmoSynthesisBar, 'data source');
                 }
+                addRelationshipLabel(clickedStage, 'generating chart');
             }
             
             // Click anywhere else to reset
@@ -1336,6 +1569,7 @@ def _generate_javascript() -> str:
                             bar.classList.remove('highlighted', 'dimmed', 'related');
                         });
                         document.querySelectorAll('.flow-arrow').forEach(arrow => arrow.remove());
+                        document.querySelectorAll('.relationship-label').forEach(label => label.remove());
                         document.removeEventListener('click', resetHighlight);
                     }
                 }, { once: true });
@@ -1373,35 +1607,145 @@ def _generate_javascript() -> str:
             });
         }
         
+        function addRelationshipLabel(element, text) {
+            const label = document.createElement('div');
+            label.className = 'relationship-label';
+            label.textContent = text;
+            const rect = element.getBoundingClientRect();
+            label.style.left = rect.left + rect.width / 2 - 50 + 'px';
+            label.style.top = rect.bottom + 5 + 'px';
+            document.body.appendChild(label);
+        }
+        
         // Filter functions
         function filterAgents() {
             const showCMO = document.getElementById('filter-cmo').checked;
             const showSpecialists = document.getElementById('filter-specialists').checked;
             const showVisualization = document.getElementById('filter-visualization').checked;
             
+            // List of specialist agent types
+            const specialistTypes = ['cardiology', 'endocrinology', 'laboratory_medicine', 
+                                   'pharmacy', 'nutrition', 'preventive_medicine'];
+            
+            let visibleLanes = 0;
+            let totalLanes = 0;
+            
             // Filter timeline lanes
             document.querySelectorAll('.timeline-lane-row').forEach(row => {
                 const label = row.querySelector('.timeline-agent-label');
+                let shouldShow = false;
+                totalLanes++;
+                
+                // Check if it's CMO
                 if (label.classList.contains('cmo')) {
-                    row.style.display = showCMO ? 'flex' : 'none';
-                } else if (label.classList.contains('visualization')) {
-                    row.style.display = showVisualization ? 'flex' : 'none';
-                } else {
-                    row.style.display = showSpecialists ? 'flex' : 'none';
+                    shouldShow = showCMO;
+                } 
+                // Check if it's visualization
+                else if (label.classList.contains('visualization')) {
+                    shouldShow = showVisualization;
+                } 
+                // Check if it's any specialist type
+                else {
+                    for (const specialist of specialistTypes) {
+                        if (label.classList.contains(specialist)) {
+                            shouldShow = showSpecialists;
+                            break;
+                        }
+                    }
                 }
+                
+                row.style.display = shouldShow ? 'flex' : 'none';
+                if (shouldShow) visibleLanes++;
             });
             
             // Filter agent sections
+            let visibleSections = 0;
+            let totalSections = 0;
+            
             document.querySelectorAll('.agent-section').forEach(section => {
                 const header = section.querySelector('.agent-header');
+                const title = section.querySelector('.agent-title');
+                const titleText = title ? title.textContent.toLowerCase() : '';
+                let shouldShow = false;
+                totalSections++;
+                
+                // Check by header class first
                 if (header.classList.contains('cmo')) {
-                    section.style.display = showCMO ? 'block' : 'none';
-                } else if (header.classList.contains('visualization')) {
-                    section.style.display = showVisualization ? 'block' : 'none';
-                } else {
-                    section.style.display = showSpecialists ? 'block' : 'none';
+                    shouldShow = showCMO;
+                } 
+                // For specialists and visualization, check the title text
+                else if (titleText.includes('visualization')) {
+                    shouldShow = showVisualization;
+                } 
+                // Check if it's a specialist
+                else if (header.classList.contains('specialist') || 
+                         titleText.includes('specialist') ||
+                         specialistTypes.some(type => titleText.includes(type))) {
+                    shouldShow = showSpecialists;
                 }
+                
+                section.style.display = shouldShow ? 'block' : 'none';
+                if (shouldShow) visibleSections++;
             });
+            
+            updateFilterStatus(visibleSections, totalSections);
+            saveFilterPreferences();
+        }
+        
+        function updateFilterStatus(visible, total) {
+            const status = document.getElementById('filter-status');
+            if (visible === total) {
+                status.textContent = 'Showing all items';
+            } else {
+                status.textContent = `Showing ${visible} of ${total} agents`;
+            }
+        }
+        
+        function applyPreset(preset) {
+            const cmoCheckbox = document.getElementById('filter-cmo');
+            const specialistsCheckbox = document.getElementById('filter-specialists');
+            const visualizationCheckbox = document.getElementById('filter-visualization');
+            const durationFilter = document.getElementById('duration-filter');
+            
+            switch(preset) {
+                case 'all':
+                    cmoCheckbox.checked = true;
+                    specialistsCheckbox.checked = true;
+                    visualizationCheckbox.checked = true;
+                    durationFilter.value = '0';
+                    break;
+                case 'critical':
+                    // Show only longest running stages
+                    cmoCheckbox.checked = true;
+                    specialistsCheckbox.checked = true;
+                    visualizationCheckbox.checked = true;
+                    durationFilter.value = '10000'; // 10s+
+                    break;
+                case 'errors':
+                    // This would need error detection logic
+                    alert('Error filtering requires error detection implementation');
+                    return;
+            }
+            
+            filterAgents();
+            filterByDuration();
+        }
+        
+        function resetFilters() {
+            document.getElementById('filter-cmo').checked = true;
+            document.getElementById('filter-specialists').checked = true;
+            document.getElementById('filter-visualization').checked = true;
+            document.getElementById('duration-filter').value = '0';
+            
+            // Reset all opacity changes
+            document.querySelectorAll('.timeline-stage-bar').forEach(bar => {
+                bar.style.opacity = '1';
+            });
+            
+            filterAgents();
+            
+            // Reset zoom
+            zoomTimeline('reset');
         }
         
         function filterByDuration() {
@@ -1412,6 +1756,7 @@ def _generate_javascript() -> str:
                 const duration = parseDuration(durationText);
                 bar.style.opacity = duration >= minDuration ? '1' : '0.3';
             });
+            saveFilterPreferences();
         }
         
         function parseDuration(text) {
@@ -1450,6 +1795,138 @@ def _generate_javascript() -> str:
                 });
             }
         }
+        
+        // Zoom functionality
+        let zoomLevel = 100;
+        
+        function zoomTimeline(action) {
+            const wrapper = document.querySelector('.timeline-wrapper');
+            const levelDisplay = document.getElementById('zoom-level');
+            
+            if (action === 'in') {
+                zoomLevel = Math.min(200, zoomLevel + 25);
+            } else if (action === 'out') {
+                zoomLevel = Math.max(50, zoomLevel - 25);
+            } else if (action === 'reset') {
+                zoomLevel = 100;
+            }
+            
+            wrapper.style.transform = `scaleX(${zoomLevel / 100})`;
+            wrapper.style.transformOrigin = 'left center';
+            levelDisplay.textContent = zoomLevel + '%';
+            
+            // Adjust container width to prevent overflow
+            const container = document.querySelector('.timeline-container');
+            if (zoomLevel > 100) {
+                container.style.overflowX = 'auto';
+            } else {
+                container.style.overflowX = 'auto';
+            }
+        }
+        
+        // Table sorting functionality
+        let sortColumn = null;
+        let sortDirection = 'asc';
+        
+        function sortTable(columnIndex, columnName) {
+            const table = document.querySelector('.agent-metrics-table');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const headers = table.querySelectorAll('th');
+            
+            // Update sort direction
+            if (sortColumn === columnIndex) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortDirection = 'asc';
+                sortColumn = columnIndex;
+            }
+            
+            // Update header classes
+            headers.forEach((header, idx) => {
+                header.classList.remove('sorted-asc', 'sorted-desc');
+                if (idx === columnIndex) {
+                    header.classList.add(`sorted-${sortDirection}`);
+                }
+            });
+            
+            // Sort rows
+            rows.sort((a, b) => {
+                const aValue = getCellValue(a, columnIndex);
+                const bValue = getCellValue(b, columnIndex);
+                
+                // Numeric comparison for numeric columns
+                if (columnIndex > 0) {
+                    const aNum = parseFloat(aValue) || 0;
+                    const bNum = parseFloat(bValue) || 0;
+                    return sortDirection === 'asc' ? aNum - bNum : bNum - aNum;
+                }
+                
+                // String comparison for agent name
+                return sortDirection === 'asc' ? 
+                    aValue.localeCompare(bValue) : 
+                    bValue.localeCompare(aValue);
+            });
+            
+            // Reorder rows
+            rows.forEach(row => tbody.appendChild(row));
+        }
+        
+        function getCellValue(row, columnIndex) {
+            const cell = row.cells[columnIndex];
+            // Extract numeric value from duration cells (e.g., "2m 15s" -> 135)
+            if (columnIndex === 1) {
+                const text = cell.textContent;
+                let seconds = 0;
+                const minMatch = text.match(/(\d+)\s*m/);
+                const secMatch = text.match(/(\d+(?:\.\d+)?)\s*s/);
+                if (minMatch) seconds += parseInt(minMatch[1]) * 60;
+                if (secMatch) seconds += parseFloat(secMatch[1]);
+                return seconds;
+            }
+            // For other cells, try to extract numeric value
+            const text = cell.textContent.trim();
+            const numMatch = text.match(/[\d,]+(?:\.\d+)?/);
+            return numMatch ? numMatch[0].replace(/,/g, '') : text;
+        }
+        
+        function scrollToAgent(agentType) {
+            // Find the corresponding agent section
+            const sections = document.querySelectorAll('.agent-section');
+            let targetSection = null;
+            
+            sections.forEach(section => {
+                const title = section.querySelector('.agent-title');
+                if (title) {
+                    const titleText = title.textContent.toLowerCase();
+                    if (agentType === 'cmo' && titleText.includes('chief medical officer')) {
+                        targetSection = section;
+                    } else if (titleText.includes(agentType.replace('_', ' '))) {
+                        targetSection = section;
+                    }
+                }
+            });
+            
+            if (targetSection) {
+                // Scroll to the section
+                targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                // Flash the section header to draw attention
+                const header = targetSection.querySelector('.agent-header');
+                if (header) {
+                    header.style.animation = 'flash 0.5s ease 3';
+                    setTimeout(() => {
+                        header.style.animation = '';
+                    }, 1500);
+                }
+                
+                // Expand the section if collapsed
+                const content = targetSection.querySelector('.agent-content');
+                if (content && !content.classList.contains('show')) {
+                    header.click();
+                }
+            }
+        }
     """
 
 
@@ -1484,9 +1961,21 @@ def _generate_filter_panel() -> str:
             </select>
         </div>
         
+        <div class="filter-group">
+            <span class="filter-label">Presets:</span>
+            <button class="filter-preset" onclick="applyPreset('all')">All</button>
+            <button class="filter-preset" onclick="applyPreset('critical')">Critical Path</button>
+            <button class="filter-preset" onclick="applyPreset('errors')">Errors Only</button>
+            <button class="filter-preset reset" onclick="resetFilters()">↺ Reset</button>
+        </div>
+        
         <div class="view-toggle">
             <button class="active" onclick="setView('detailed')">Detailed</button>
             <button onclick="setView('simplified')">Simplified</button>
+        </div>
+        
+        <div class="filter-status" id="filter-status">
+            Showing all items
         </div>
     </div>
     """
@@ -1543,6 +2032,18 @@ def _generate_summary_cards(sections: List[AgentSection], summary: Dict[str, Any
     # Sort by duration to show slowest agents
     agent_metrics.sort(key=lambda x: x['duration'], reverse=True)
     
+    # Determine performance classes
+    total_duration_ms = summary.get('total_duration_ms', 0)
+    duration_class = "performance-good" if total_duration_ms < 30000 else "performance-warning" if total_duration_ms < 120000 else "performance-critical"
+    
+    # Token efficiency
+    token_efficiency = summary['total_tokens'] / summary['total_llm_calls'] if summary['total_llm_calls'] > 0 else 0
+    token_class = "performance-good" if token_efficiency < 5000 else "performance-warning" if token_efficiency < 10000 else "performance-critical"
+    
+    # Cost performance
+    total_cost = estimate_api_cost(summary.get('total_tokens', 0))
+    cost_class = "performance-good" if total_cost < 0.10 else "performance-warning" if total_cost < 0.50 else "performance-critical"
+    
     return f"""
     <div class="summary-section">
         <h3 style="margin-bottom: 20px; color: #2c3e50;">Execution Summary</h3>
@@ -1568,75 +2069,80 @@ def _generate_summary_cards(sections: List[AgentSection], summary: Dict[str, Any
                 <div class="value">{summary['total_tool_calls']}</div>
                 <div class="label">Tool Calls</div>
             </div>
-            <div class="summary-card">
+            <div class="summary-card {token_class}">
                 <div class="icon">🎯</div>
                 <div class="value">{format_token_count(summary['total_tokens'])}</div>
                 <div class="label">Tokens Used</div>
             </div>
-            <div class="summary-card">
+            <div class="summary-card {cost_class}">
                 <div class="icon">💰</div>
-                <div class="value">{format_cost(estimate_api_cost(summary['total_tokens']))}</div>
+                <div class="value">{format_cost(total_cost)}</div>
                 <div class="label">Est. Cost</div>
             </div>
         </div>
         
-        <h4 style="margin: 30px 0 15px 0; color: #2c3e50;">Agent Performance</h4>
-        <div class="agent-metrics">
-            {_generate_agent_metric_cards(agent_metrics)}
-        </div>
+        <h4 style="margin: 30px 0 15px 0; color: #2c3e50;">Agent Performance Comparison</h4>
+        {_generate_agent_metrics_table(agent_metrics)}
     </div>
     """
 
 
-def _generate_agent_metric_cards(metrics: List[Dict[str, Any]]) -> str:
-    """Generate individual agent metric cards with enhanced metrics"""
-    cards = []
+def _generate_agent_metrics_table(metrics: List[Dict[str, Any]]) -> str:
+    """Generate agent metrics comparison table"""
+    # Sort by duration by default
+    metrics.sort(key=lambda x: x['duration'], reverse=True)
     
-    for metric in metrics[:5]:  # Show top 5 agents by duration
+    table_rows = []
+    for metric in metrics:
         agent_class = "cmo" if metric['type'] == "cmo" else "specialist" if "specialist" in metric['type'].lower() else "visualization"
         
         # Calculate efficiency metrics
         tokens_per_sec = (metric['tokens'] / (metric['duration'] / 1000)) if metric['duration'] > 0 else 0
         avg_tokens_per_call = (metric['tokens'] / metric['llm_calls']) if metric['llm_calls'] > 0 else 0
         
-        cards.append(f"""
-        <div class="agent-metric-card {agent_class}">
-            <div class="agent-metric-header">
-                <span class="agent-name">{metric['name']}</span>
-                <span class="agent-duration">{format_duration(metric['duration'])}</span>
-            </div>
-            <div class="agent-metric-details">
-                <div class="metric-item">
-                    <span class="metric-label">Stages:</span>
-                    <span class="metric-value">{metric['stages']}</span>
+        # Determine duration class for color coding
+        duration_ms = metric['duration']
+        duration_class = "fast" if duration_ms < 30000 else "medium" if duration_ms < 120000 else "slow"
+        
+        table_rows.append(f"""
+        <tr>
+            <td>
+                <div class="agent-name-cell">
+                    <div class="agent-type-indicator {agent_class}"></div>
+                    {metric['name']}
                 </div>
-                <div class="metric-item">
-                    <span class="metric-label">LLM Calls:</span>
-                    <span class="metric-value">{metric['llm_calls']}</span>
-                </div>
-                <div class="metric-item">
-                    <span class="metric-label">Tool Calls:</span>
-                    <span class="metric-value">{metric['tool_calls']}</span>
-                </div>
-                <div class="metric-item">
-                    <span class="metric-label">Avg Response:</span>
-                    <span class="metric-value">{format_duration(metric['avg_response'])}</span>
-                </div>
-            </div>
-            <div class="agent-metric-efficiency">
-                <div class="efficiency-item">
-                    <span class="efficiency-label">Speed:</span>
-                    <span class="efficiency-value">{tokens_per_sec:.0f} tok/s</span>
-                </div>
-                <div class="efficiency-item">
-                    <span class="efficiency-label">Efficiency:</span>
-                    <span class="efficiency-value">{avg_tokens_per_call:.0f} tok/call</span>
-                </div>
-            </div>
-        </div>
+            </td>
+            <td class="duration-cell {duration_class}">{format_duration(metric['duration'])}</td>
+            <td class="metric-value">{metric['stages']}</td>
+            <td class="metric-value">{metric['llm_calls']}</td>
+            <td class="metric-value">{metric['tool_calls']}</td>
+            <td class="metric-value">{format_token_count(metric['tokens'])}</td>
+            <td class="metric-value">{format_duration(metric['avg_response'])}</td>
+            <td class="efficiency-value">{tokens_per_sec:.0f}</td>
+            <td class="efficiency-value">{avg_tokens_per_call:.0f}</td>
+        </tr>
         """)
     
-    return "".join(cards)
+    return f"""
+    <table class="agent-metrics-table">
+        <thead>
+            <tr>
+                <th class="sortable" onclick="sortTable(0, 'agent')">Agent</th>
+                <th class="sortable sorted-desc" onclick="sortTable(1, 'duration')">Duration</th>
+                <th class="sortable" onclick="sortTable(2, 'stages')">Stages</th>
+                <th class="sortable" onclick="sortTable(3, 'llm_calls')">LLM Calls</th>
+                <th class="sortable" onclick="sortTable(4, 'tool_calls')">Tool Calls</th>
+                <th class="sortable" onclick="sortTable(5, 'tokens')">Tokens</th>
+                <th class="sortable" onclick="sortTable(6, 'avg_response')">Avg Response</th>
+                <th class="sortable" onclick="sortTable(7, 'speed')">Speed (tok/s)</th>
+                <th class="sortable" onclick="sortTable(8, 'efficiency')">Efficiency (tok/call)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {"".join(table_rows)}
+        </tbody>
+    </table>
+    """
 
 
 def _generate_timeline(sections: List[AgentSection]) -> str:
@@ -1666,6 +2172,11 @@ def _generate_timeline(sections: List[AgentSection]) -> str:
     # Sort by start time to find min/max
     all_stages.sort(key=lambda x: x['start_time'])
     
+    # Calculate average duration for anomaly detection
+    durations = [s['duration_ms'] for s in all_stages if s['duration_ms'] > 0]
+    avg_duration = sum(durations) / len(durations) if durations else 0
+    anomaly_threshold = avg_duration * 3  # 3x average is considered anomalous
+    
     # Calculate timeline bounds
     try:
         from datetime import datetime
@@ -1691,8 +2202,15 @@ def _generate_timeline(sections: List[AgentSection]) -> str:
         # Fallback to simple ordering
         return _generate_simple_timeline(sections)
     
-    # Group stages by agent for lanes
+    # Group stages by agent for lanes and assign execution order
     agent_lanes = {}
+    execution_order = 1
+    stages_by_time = sorted(all_stages, key=lambda x: x['start_time'])
+    
+    for stage in stages_by_time:
+        stage['global_execution_order'] = execution_order
+        execution_order += 1
+    
     for stage in all_stages:
         agent_key = stage['agent_type']
         if agent_key not in agent_lanes:
@@ -1742,13 +2260,17 @@ def _generate_timeline(sections: List[AgentSection]) -> str:
                 hover_info = _create_stage_hover_info(stage, display_name)
                 
                 # Determine stage status (completed stages have end_time)
-                status_class = "success" if stage['stage_info'].end_time else ""
+                status_class = "success" if stage['stage_info'].end_time else "running"
+                
+                # Check for anomaly (unusually long duration)
+                anomaly_class = "anomaly" if stage['duration_ms'] > anomaly_threshold and stage['duration_ms'] > 30000 else ""
                 
                 stages_html.append(f"""
-                <div class="timeline-stage-bar cmo {status_class}" 
+                <div class="timeline-stage-bar cmo {status_class} {anomaly_class}" 
                      style="left: {left_percent:.1f}%; width: {width_percent:.1f}%;"
                      title="{hover_info}"
                      data-stage-id="cmo-{stage['stage_name']}">
+                    <div class="execution-order">{stage['global_execution_order']}</div>
                     <div class="stage-bar-content">
                         <div class="stage-bar-name">{display_name}</div>
                         <div class="stage-bar-time">{format_duration(stage['duration_ms'])}</div>
@@ -1763,7 +2285,7 @@ def _generate_timeline(sections: List[AgentSection]) -> str:
             
             timeline_html.append(f"""
             <div class="timeline-lane-row">
-                <div class="timeline-agent-label cmo">CMO - Planning</div>
+                <div class="timeline-agent-label cmo" onclick="scrollToAgent('cmo')">CMO - Planning</div>
                 <div class="timeline-track">
                     {"".join(stages_html)}
                 </div>
@@ -1797,13 +2319,17 @@ def _generate_timeline(sections: List[AgentSection]) -> str:
             hover_info = _create_stage_hover_info(stage, display_name)
             
             # Determine stage status
-            status_class = "success" if stage['stage_info'].end_time else ""
+            status_class = "success" if stage['stage_info'].end_time else "running"
+            
+            # Check for anomaly
+            anomaly_class = "anomaly" if stage['duration_ms'] > anomaly_threshold and stage['duration_ms'] > 30000 else ""
             
             stages_html.append(f"""
-            <div class="timeline-stage-bar {specialist_type} {status_class}" 
+            <div class="timeline-stage-bar {specialist_type} {status_class} {anomaly_class}" 
                  style="left: {left_percent:.1f}%; width: {width_percent:.1f}%;"
                  title="{hover_info}"
                  data-stage-id="{specialist_type}-{stage['stage_name']}">
+                <div class="execution-order">{stage['global_execution_order']}</div>
                 <div class="stage-bar-content">
                     <div class="stage-bar-name">{display_name}</div>
                     <div class="stage-bar-time">{format_duration(stage['duration_ms'])}</div>
@@ -1818,7 +2344,7 @@ def _generate_timeline(sections: List[AgentSection]) -> str:
         
         timeline_html.append(f"""
         <div class="timeline-lane-row">
-            <div class="timeline-agent-label {specialist_type}">{lane['name']}</div>
+            <div class="timeline-agent-label {specialist_type}" onclick="scrollToAgent('{specialist_type}')">{lane['name']}</div>
             <div class="timeline-track">
                 {"".join(stages_html)}
             </div>
@@ -1848,13 +2374,14 @@ def _generate_timeline(sections: List[AgentSection]) -> str:
             hover_info = _create_stage_hover_info(stage, display_name)
             
             # Determine stage status
-            status_class = "success" if stage['stage_info'].end_time else ""
+            status_class = "success" if stage['stage_info'].end_time else "running"
             
             stages_html.append(f"""
             <div class="timeline-stage-bar cmo {status_class}" 
                  style="left: {left_percent:.1f}%; width: {width_percent:.1f}%;"
                  title="{hover_info}"
                  data-stage-id="cmo-{stage['stage_name']}">
+                <div class="execution-order">{stage['global_execution_order']}</div>
                 <div class="stage-bar-content">
                     <div class="stage-bar-name">{display_name}</div>
                     <div class="stage-bar-time">{format_duration(stage['duration_ms'])}</div>
@@ -1869,7 +2396,7 @@ def _generate_timeline(sections: List[AgentSection]) -> str:
         
         timeline_html.append(f"""
         <div class="timeline-lane-row">
-            <div class="timeline-agent-label cmo">CMO - Synthesis</div>
+            <div class="timeline-agent-label cmo" onclick="scrollToAgent('cmo')">CMO - Synthesis</div>
             <div class="timeline-track">
                 {"".join(stages_html)}
             </div>
@@ -1897,13 +2424,14 @@ def _generate_timeline(sections: List[AgentSection]) -> str:
             hover_info = _create_stage_hover_info(stage, display_name)
             
             # Determine stage status
-            status_class = "success" if stage['stage_info'].end_time else ""
+            status_class = "success" if stage['stage_info'].end_time else "running"
             
             stages_html.append(f"""
             <div class="timeline-stage-bar visualization {status_class}" 
                  style="left: {left_percent:.1f}%; width: {width_percent:.1f}%;"
                  title="{hover_info}"
                  data-stage-id="visualization-{stage['stage_name']}">
+                <div class="execution-order">{stage['global_execution_order']}</div>
                 <div class="stage-bar-content">
                     <div class="stage-bar-name">{display_name}</div>
                     <div class="stage-bar-time">{format_duration(stage['duration_ms'])}</div>
@@ -1918,7 +2446,7 @@ def _generate_timeline(sections: List[AgentSection]) -> str:
         
         timeline_html.append(f"""
         <div class="timeline-lane-row">
-            <div class="timeline-agent-label visualization">{lane['name']}</div>
+            <div class="timeline-agent-label visualization" onclick="scrollToAgent('visualization')">{lane['name']}</div>
             <div class="timeline-track">
                 {"".join(stages_html)}
             </div>
@@ -1928,37 +2456,39 @@ def _generate_timeline(sections: List[AgentSection]) -> str:
     # Add time axis
     time_markers = _generate_time_axis(min_time, max_time, timeline_width)
     
+    # Calculate performance summary
+    total_time = (max_time - min_time).total_seconds() if all_stages else 0
+    
+    # Calculate time saved by parallel execution
+    sequential_time = sum(s['duration_ms'] / 1000 for s in all_stages)  # Total if run sequentially
+    time_saved = sequential_time - total_time if sequential_time > total_time else 0
+    savings_percent = (time_saved / sequential_time * 100) if sequential_time > 0 else 0
+    
+    # Count parallel operations
+    parallel_stages = len([s for s in all_stages if any(
+        other['start_time'] <= s['start_time'] <= other.get('end_time', other['start_time']) 
+        for other in all_stages if other != s
+    )])
+    
     return f"""
     <div class="timeline-section">
         <div class="timeline-header">
-            <h2>📊 Execution Timeline</h2>
-            <span style="font-size: 13px; color: #7f8c8d;">
-                Showing actual execution times and durations (click stages to see relationships)
-            </span>
+            <div>
+                <h2>📊 Execution Timeline</h2>
+                <span style="font-size: 13px; color: #7f8c8d;">
+                    Total: {int(total_time)}s | Sequential: {int(sequential_time)}s | 
+                    <span style="color: #2ecc71; font-weight: 600;">Saved: {int(time_saved)}s ({savings_percent:.0f}%)</span> | 
+                    {parallel_stages} parallel operations
+                </span>
+            </div>
+            <div class="zoom-controls">
+                <button onclick="zoomTimeline('out')">−</button>
+                <span class="zoom-level" id="zoom-level">100%</span>
+                <button onclick="zoomTimeline('in')">+</button>
+                <button onclick="zoomTimeline('reset')">Reset</button>
+            </div>
         </div>
         <div class="timeline-container">
-            <div class="timeline-legend">
-                <div class="legend-item">
-                    <div class="legend-color cmo"></div>
-                    <span>CMO (Orchestrator)</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color specialist"></div>
-                    <span>Medical Specialists</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color visualization"></div>
-                    <span>Visualization Agent</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color flow"></div>
-                    <span>Task Flow</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color critical"></div>
-                    <span>Critical Path</span>
-                </div>
-            </div>
             <div class="timeline-wrapper">
                 {time_markers}
                 <div class="timeline-lanes">
@@ -2068,6 +2598,37 @@ def _generate_simple_timeline(sections: List[AgentSection]) -> str:
         </div>
         <div class="timeline-container">
             {"".join(timeline_html)}
+        </div>
+    </div>
+    """
+
+
+def _generate_agent_analysis_section(sections: List[AgentSection]) -> str:
+    """Generate the complete agent analysis section with header and content"""
+    return f"""
+    <div class="timeline-section" style="margin-bottom: 20px;">
+        <div class="timeline-header">
+            <h2>📋 Agent Analysis Details</h2>
+            <span style="font-size: 13px; color: #7f8c8d;">
+                Detailed execution breakdown by agent with hierarchical event trees
+            </span>
+        </div>
+        <div class="agent-details-container" style="margin-top: 20px;">
+            {_generate_agent_sections(sections)}
+        </div>
+    </div>
+    """
+
+
+def _generate_agent_analysis_header() -> str:
+    """Generate header for agent analysis details section"""
+    return """
+    <div class="timeline-section" style="margin-bottom: 20px;">
+        <div class="timeline-header">
+            <h2>📋 Agent Analysis Details</h2>
+            <span style="font-size: 13px; color: #7f8c8d;">
+                Detailed execution breakdown by agent with hierarchical event trees
+            </span>
         </div>
     </div>
     """

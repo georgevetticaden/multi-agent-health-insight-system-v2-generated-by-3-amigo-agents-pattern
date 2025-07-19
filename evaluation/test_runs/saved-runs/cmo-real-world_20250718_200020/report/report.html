@@ -1,0 +1,2807 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CMO Agent Eval Report</title>
+  <style>
+    /* Health Insight App Styling - Light Theme */
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f9fafb;
+      --bg-tertiary: #f3f4f6;
+      --accent-primary: #3b82f6;
+      --accent-secondary: #8b5cf6;
+      --accent-success: #10b981;
+      --accent-warning: #f59e0b;
+      --accent-danger: #ef4444;
+      --text-primary: #111827;
+      --text-secondary: #374151;
+      --text-tertiary: #6b7280;
+      --border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg-primary);
+      min-height: 100vh;
+      color: var(--text-secondary);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+    }
+
+    /* Container with subtle light gradient background */
+    .main-container {
+      background: linear-gradient(135deg, #ffffff 0%, #f9fafb 50%, #f3f4f6 100%);
+      min-height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .main-container::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.05) 0%, transparent 70%);
+      animation: pulse 20s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1) rotate(0deg); }
+      50% { transform: scale(1.1) rotate(180deg); }
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      padding: 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* Header styling matching Health Insight */
+    .header {
+      background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    .header h1 {
+      margin: 0 0 1rem 0;
+      color: var(--text-primary);
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Card styling */
+    .card {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Status badges */
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-success {
+      background: rgba(16, 185, 129, 0.2);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .badge-danger {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .badge-warning {
+      background: rgba(245, 158, 11, 0.2);
+      color: #f59e0b;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      background: var(--bg-tertiary);
+      padding: 0.75rem;
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-primary);
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    td {
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    tr:hover {
+      background: rgba(0, 0, 0, 0.02);
+    }
+
+    /* Buttons and links */
+    a {
+      color: var(--accent-primary);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    a:hover {
+      color: var(--accent-secondary);
+    }
+
+    /* Collapsible sections */
+    .collapsible {
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.3s ease;
+    }
+
+    .collapsible:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .collapsible-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem;
+    }
+
+    .collapsible-arrow {
+      transition: transform 0.3s ease;
+      font-size: 1.2rem;
+      color: var(--text-tertiary);
+    }
+
+    .collapsible-arrow.open {
+      transform: rotate(180deg);
+    }
+
+    .collapsible-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .collapsible-content.open {
+      max-height: 3000px;
+    }
+
+    /* Metric cards */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .metric-card {
+      background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      border: 1px solid var(--border-color);
+    }
+
+    .metric-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin: 0.5rem 0;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .metric-label {
+      color: var(--text-tertiary);
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Dimension cards */
+    .dimension-card {
+      background: var(--bg-tertiary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      border: 1px solid var(--border-color);
+    }
+
+    /* Progress bars */
+    .progress-bar {
+      background: rgba(0, 0, 0, 0.1);
+      border-radius: 9999px;
+      height: 8px;
+      overflow: hidden;
+      margin: 0.5rem 0;
+      position: relative;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 9999px;
+      transition: width 0.5s ease;
+    }
+
+    .progress-target {
+      position: absolute;
+      top: -2px;
+      bottom: -2px;
+      width: 2px;
+      background: var(--accent-primary);
+      opacity: 0.8;
+    }
+
+    /* Test case cards */
+    .test-case-card {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      margin-bottom: 2rem;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+
+    .test-case-header {
+      background: var(--bg-tertiary);
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .test-case-content {
+      padding: 1.5rem;
+    }
+
+    /* Failure analysis styling */
+    .failure-card {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), transparent);
+      border: 2px solid rgba(239, 68, 68, 0.3);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    /* Prompt improvement styling */
+    .prompt-improvement-card {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), transparent);
+      border: 2px solid rgba(139, 92, 246, 0.3);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    /* Icon styling */
+    .icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.05);
+      margin-right: 1rem;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    /* Scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--accent-primary);
+    }
+
+    /* Collapsible sections */
+    .collapsible {
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.3s ease;
+    }
+
+    .collapsible:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .collapsible-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem;
+    }
+
+    .collapsible-arrow {
+      transition: transform 0.3s ease;
+      font-size: 1.2rem;
+    }
+
+    .collapsible-arrow.open {
+      transform: rotate(180deg);
+    }
+
+    .collapsible-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .collapsible-content.open {
+      max-height: 3000px;
+    }
+  </style>
+</head>
+<body>
+<div class="main-container">
+<div class="container">
+
+<!-- Header -->
+<div class="header fade-in">
+  <h1>CMO Agent Eval Report</h1>
+  <p style="margin: 0; color: var(--text-tertiary);">
+    Generated on 2025-07-18T20:07:18 | <strong>CMO</strong> Agent | Real World Test Suite
+  </p>
+</div>
+
+<!-- Executive Summary -->
+<div class="card fade-in">
+  <h2 style="color: var(--text-primary); margin-top: 0; display: flex; align-items: center;">
+    <span class="icon" style="background: linear-gradient(135deg, #10b981, #059669);">🟢</span>
+    Executive Summary
+  </h2>
+  
+  <div class="metric-grid">
+    <div class="metric-card">
+      <div class="metric-label">Overall Score</div>
+      <div class="metric-value">86.0%</div>
+      <div class="badge badge-success">
+        PASS
+      </div>
+    </div>
+    
+    <div class="metric-card">
+      <div class="metric-label">Tests Evaluated</div>
+      <div class="metric-value">4</div>
+      <div style="color: var(--text-tertiary); font-size: 0.875rem;">
+        3 passed
+      </div>
+    </div>
+    
+    <div class="metric-card">
+      <div class="metric-label">Avg Response Time</div>
+      <div class="metric-value">88.9s</div>
+      <div style="color: var(--text-tertiary); font-size: 0.875rem;">
+        per test
+      </div>
+    </div>
+    
+    <div class="metric-card">
+      <div class="metric-label">Target Score</div>
+      <div class="metric-value">75%</div>
+      <div style="color: var(--text-tertiary); font-size: 0.875rem;">
+        minimum required
+      </div>
+    </div>
+  </div>
+  
+  
+  <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 1rem; margin-top: 1rem;">
+    <h4 style="color: #ef4444; margin: 0 0 0.5rem 0;">Failed Dimensions</h4>
+    <ul style="margin: 0; padding-left: 1.5rem;">
+      
+      <li style="color: var(--text-secondary);">Complexity Classification</li>
+      
+      <li style="color: var(--text-secondary);">Specialty Selection</li>
+      
+    </ul>
+  </div>
+  
+</div>
+
+<!-- Test Case Summary -->
+<div class="card fade-in">
+  <h2 style="color: var(--text-primary); margin-top: 0;">Test Case Summary</h2>
+  <div style="overflow-x: auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>Test Case ID</th>
+          <th>Status (Score)</th>
+          <th>Response Time</th>
+          <th>Failed Dimensions</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+        <tr>
+          <td style="font-weight: 600;">
+            standard_001: What's my cholesterol trend over my entire data? I want to see trends across the top 4 cholesterol metrics including Triglycerides across that time period
+          </td>
+          <td>
+            <span class="badge badge-success">
+              ✅ PASS (88.6%)
+            </span>
+          </td>
+          <td>89.6s</td>
+          <td>
+            
+              
+              <span style="color: #ef4444; font-size: 0.875rem;">Specialty Selection</span>
+              
+            
+          </td>
+        </tr>
+        
+        <tr>
+          <td style="font-weight: 600;">
+            standard_002: Show my abnormal lab results from labs this year?
+          </td>
+          <td>
+            <span class="badge badge-success">
+              ✅ PASS (91.7%)
+            </span>
+          </td>
+          <td>78.4s</td>
+          <td>
+            
+              
+              <span style="color: #ef4444; font-size: 0.875rem;">Specialty Selection</span>
+              
+            
+          </td>
+        </tr>
+        
+        <tr>
+          <td style="font-weight: 600;">
+            complex_001: Analyze cholesterol relevant medication adherence patterns over that time period and how do they correlate with these cholesterol lab results.
+          </td>
+          <td>
+            <span class="badge badge-success">
+              ✅ PASS (94.1%)
+            </span>
+          </td>
+          <td>100.5s</td>
+          <td>
+            
+              
+              <span style="color: #ef4444; font-size: 0.875rem;">Specialty Selection</span>
+              
+            
+          </td>
+        </tr>
+        
+        <tr>
+          <td style="font-weight: 600;">
+            complex_002: How has my HbA1c level changed since I started taking metformin, has my dosage been adjusted over time based on my lab results, and is there a correlation between these changes and my weight measurements during the same period?
+          </td>
+          <td>
+            <span class="badge badge-danger">
+              ❌ FAIL (69.6%)
+            </span>
+          </td>
+          <td>87.0s</td>
+          <td>
+            
+              
+              <span style="color: #ef4444; font-size: 0.875rem;">Complexity Classification, </span>
+              
+              <span style="color: #ef4444; font-size: 0.875rem;">Specialty Selection</span>
+              
+            
+          </td>
+        </tr>
+        
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Dimension Performance -->
+<div class="card fade-in">
+  <h2 style="color: var(--text-primary); margin-top: 0;">Performance by Dimension</h2>
+  <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+    This section shows the average performance across all test cases for each evaluation dimension. 
+    Each dimension has a target score that must be met. The evaluation methods used are:
+    🔢 Deterministic (rule-based), 🤖 LLM Judge (AI evaluation), or 🔀 Hybrid (combination).
+  </p>
+  
+  
+  <div class="dimension-card collapsible" onclick="toggleDimensionSection(this)">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+      <h4 style="margin: 0; color: var(--text-primary);">
+        
+        <span class="dimension-section-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+        
+        🔢 Complexity Classification
+      </h4>
+      <span class="badge badge-danger">
+        75.0% / 90.0%
+      </span>
+    </div>
+    
+    <div class="progress-bar">
+      <div class="progress-fill" style="width: 75.0%; background: var(--accent-danger);"></div>
+      <div class="progress-target" style="left: 90.0%;"></div>
+    </div>
+    
+    <p style="margin: 0.5rem 0 0 0; color: var(--text-tertiary); font-size: 0.875rem;">
+      Accuracy in classifying query complexity (SIMPLE/STANDARD/COMPLEX/COMPREHENSIVE) • Method: Deterministic
+    </p>
+    
+    
+    <div class="macro-analysis-content" style="display: none; margin-top: 1rem; padding: 1rem; background: var(--bg-tertiary); border-radius: 8px;">
+      <h5 style="color: var(--accent-primary); margin: 0 0 1rem 0;">📊 Pattern Analysis Across All Tests</h5>
+      
+      <!-- Systemic Root Cause -->
+      <div style="margin-bottom: 1rem;">
+        <h6 style="color: var(--text-primary); margin: 0 0 0.5rem 0;">Systemic Root Cause:</h6>
+        <p style="margin: 0; color: var(--text-secondary);"></p>
+      </div>
+      
+      <!-- Common Patterns -->
+      
+      
+      <!-- Contributing Factors -->
+      
+      
+      <!-- Expected Improvement -->
+      
+    </div>
+    
+  </div>
+  
+  <div class="dimension-card collapsible" onclick="toggleDimensionSection(this)">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+      <h4 style="margin: 0; color: var(--text-primary);">
+        
+        <span class="dimension-section-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+        
+        🔀 Specialty Selection
+      </h4>
+      <span class="badge badge-danger">
+        72.0% / 85.0%
+      </span>
+    </div>
+    
+    <div class="progress-bar">
+      <div class="progress-fill" style="width: 72.00000000000001%; background: var(--accent-danger);"></div>
+      <div class="progress-target" style="left: 85.0%;"></div>
+    </div>
+    
+    <p style="margin: 0.5rem 0 0 0; color: var(--text-tertiary); font-size: 0.875rem;">
+      Precision in selecting appropriate medical specialists • Method: Hybrid
+    </p>
+    
+    
+    <div class="macro-analysis-content" style="display: none; margin-top: 1rem; padding: 1rem; background: var(--bg-tertiary); border-radius: 8px;">
+      <h5 style="color: var(--accent-primary); margin: 0 0 1rem 0;">📊 Pattern Analysis Across All Tests</h5>
+      
+      <!-- Systemic Root Cause -->
+      <div style="margin-bottom: 1rem;">
+        <h6 style="color: var(--text-primary); margin: 0 0 0.5rem 0;">Systemic Root Cause:</h6>
+        <p style="margin: 0; color: var(--text-secondary);"></p>
+      </div>
+      
+      <!-- Common Patterns -->
+      
+      
+      <!-- Contributing Factors -->
+      
+      
+      <!-- Expected Improvement -->
+      
+    </div>
+    
+  </div>
+  
+  <div class="dimension-card " >
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+      <h4 style="margin: 0; color: var(--text-primary);">
+        
+        🔀 Analysis Quality
+      </h4>
+      <span class="badge badge-success">
+        92.0% / 80.0%
+      </span>
+    </div>
+    
+    <div class="progress-bar">
+      <div class="progress-fill" style="width: 92.03125000000001%; background: var(--accent-success);"></div>
+      <div class="progress-target" style="left: 80.0%;"></div>
+    </div>
+    
+    <p style="margin: 0.5rem 0 0 0; color: var(--text-tertiary); font-size: 0.875rem;">
+      Comprehensiveness and quality of medical analysis orchestration • Method: Hybrid
+    </p>
+    
+    
+  </div>
+  
+  <div class="dimension-card " >
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+      <h4 style="margin: 0; color: var(--text-primary);">
+        
+        🔢 Tool Usage
+      </h4>
+      <span class="badge badge-success">
+        100.0% / 90.0%
+      </span>
+    </div>
+    
+    <div class="progress-bar">
+      <div class="progress-fill" style="width: 100.0%; background: var(--accent-success);"></div>
+      <div class="progress-target" style="left: 90.0%;"></div>
+    </div>
+    
+    <p style="margin: 0.5rem 0 0 0; color: var(--text-tertiary); font-size: 0.875rem;">
+      Effectiveness of health data tool usage • Method: Deterministic
+    </p>
+    
+    
+  </div>
+  
+  <div class="dimension-card " >
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+      <h4 style="margin: 0; color: var(--text-primary);">
+        
+        🔢 Response Structure
+      </h4>
+      <span class="badge badge-success">
+        100.0% / 95.0%
+      </span>
+    </div>
+    
+    <div class="progress-bar">
+      <div class="progress-fill" style="width: 100.0%; background: var(--accent-success);"></div>
+      <div class="progress-target" style="left: 95.0%;"></div>
+    </div>
+    
+    <p style="margin: 0.5rem 0 0 0; color: var(--text-tertiary); font-size: 0.875rem;">
+      Compliance with expected XML response format • Method: Deterministic
+    </p>
+    
+    
+  </div>
+  
+</div>
+
+<!-- Individual Test Cases -->
+<h2 style="color: var(--text-primary); margin: 2rem 0 1rem 0;">Individual Test Case Results</h2>
+
+
+<div class="test-case-card fade-in">
+  <div class="test-case-header">
+    <div style="display: flex; justify-content: space-between; align-items: start;">
+      <div>
+        <h3 style="margin: 0; color: var(--text-primary);">Test Case: standard_001</h3>
+        <p style="margin: 0.5rem 0 0 0; color: var(--text-tertiary);">What's my cholesterol trend over my entire data? I want to see trends across the top 4 cholesterol metrics including Triglycerides across that time period</p>
+        
+        <p style="margin: 0.25rem 0 0 0; display: flex; gap: 1rem;">
+          <a href="../traces/2025-07-18/07d5b2e5-2f98-4c63-8681-fe1ee639a7a0.html" 
+             target="_blank" 
+             style="color: var(--accent-primary); text-decoration: none; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+            📅 Timeline View
+            <span style="font-size: 0.75rem;">↗</span>
+          </a>
+          <a href="../traces/2025-07-18/07d5b2e5-2f98-4c63-8681-fe1ee639a7a0.hierarchical.html" 
+             target="_blank" 
+             style="color: var(--accent-secondary); text-decoration: none; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+            🌳 Hierarchical View
+            <span style="font-size: 0.75rem;">↗</span>
+          </a>
+        </p>
+        
+      </div>
+      <span class="badge badge-danger">
+        
+      </span>
+    </div>
+  </div>
+  
+  <div class="test-case-content">
+    <!-- Collapsible Health Query Response -->
+    <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 1rem; overflow: hidden;">
+      <div class="collapsible collapsible-header" onclick="toggleSection(this)">
+        <strong style="color: var(--accent-primary);">Health Query Response/Analysis</strong>
+        <span class="collapsible-arrow">▼</span>
+      </div>
+      <div class="collapsible-content">
+        <div style="padding: 1rem; background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.875rem; line-height: 1.6;">
+          <pre style="white-space: pre-wrap; margin: 0; font-family: inherit;">To comprehensively analyze the patient's cholesterol trends over their full data history, I recommend:
+
+Data Points:
+- Focus on total cholesterol, LDL cholesterol, HDL cholesterol, and triglycerides as the key metrics
+- Examine numeric lab values for each metric at all available timepoints 
+- Note the date of each test to map values over time
+
+Correlations:
+- Investigate relationships between the 4 cholesterol metrics
+- Assess if values tend to rise or fall in tandem or move independently 
+- Explore if there are consistent ratios between total and LDL/HDL cholesterol
+
+Health Concerns:  
+- Identify if/when values enter unhealthy ranges per medical guidelines
+- Note any significant spikes or dips that could indicate cardiovascular issues
+- Determine if an overall worsening trend emerges for any metric
+
+Timeframes:
+- Analyze the full date range from oldest (2013) to most recent (2025)
+- Group by year to assess annual averages and changes
+- Consider more granular monthly breakdowns if key inflection points are seen
+
+Focus Areas:
+- Emphasize visual representations of levels over time via line graphs
+- Statistically analyze metrics like percent change, min/max/average
+- Identify the most important takeaways to highlight for the patient
+
+Priorities:
+- Ensuring all relevant data is captured and included in the analysis
+- Providing clear, understandable trend information and visualizations
+- Surfacing any potential areas of medical concern regarding cardiovascular health
+- Delivering an actionable summary to guide the patient's health decisions</pre>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Dimension Evaluation Summary -->
+    <h4 style="color: var(--text-primary); margin-top: 0;">Dimension Evaluation</h4>
+    <div style="overflow-x: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Dimension</th>
+            <th>Method</th>
+            <th>Expected</th>
+            <th>Actual</th>
+            <th>Score</th>
+            <th>Target</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+          <tr class="collapsible" onclick="toggleDimensionRow(this)" style="cursor: pointer;">
+            <td style="font-weight: 600;">
+              
+              <span class="dimension-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+              
+              Complexity Classification
+            </td>
+            <td>🔢 Deterministic</td>
+            <td>STANDARD</td>
+            <td>standard</td>
+            <td>1.00</td>
+            <td>0.90</td>
+            <td>
+              <span class="badge badge-success">
+                ✅ PASS
+              </span>
+            </td>
+          </tr>
+          
+          <tr class="dimension-details" style="display: none;">
+            <td colspan="7" style="padding: 0;">
+              <div style="padding: 1.5rem; background: var(--bg-primary); border-top: 2px solid var(--border-color);">
+                <!-- Component Scores Section -->
+                
+                <!-- Dimension evaluation explanation -->
+                <div style="margin-bottom: 0; padding: 0.75rem; background: rgba(59, 130, 246, 0.05); border-radius: 6px;">
+                  <p style="margin: 0; color: var(--text-secondary); font-size: 0.875rem;">
+                    ℹ️ <strong>Evaluation Method:</strong> Binary evaluation: Either the complexity level matches expected or it doesn't
+                  </p>
+                </div>
+                
+                
+                <!-- Failure Analysis Section -->
+                
+              </div>
+            </td>
+          </tr>
+          
+          
+          <tr class="collapsible" onclick="toggleDimensionRow(this)" style="cursor: pointer;">
+            <td style="font-weight: 600;">
+              
+              <span class="dimension-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+              
+              Specialty Selection
+            </td>
+            <td>🔀 Hybrid</td>
+            <td>cardiology, endocrinology, laboratory_medicine</td>
+            <td>cardiology, laboratory_medicine, preventive_medicine</td>
+            <td>0.62</td>
+            <td>0.85</td>
+            <td>
+              <span class="badge badge-danger">
+                ❌ FAIL
+              </span>
+            </td>
+          </tr>
+          
+          <tr class="dimension-details" style="display: none;">
+            <td colspan="7" style="padding: 0;">
+              <div style="padding: 1.5rem; background: linear-gradient(135deg, rgba(239, 68, 68, 0.05), rgba(239, 68, 68, 0.02)); border-top: 2px solid rgba(239, 68, 68, 0.2);">
+                <!-- Component Scores Section -->
+                
+                <div style="margin-bottom: 1.5rem;">
+                  <h5 style="color: var(--accent-primary); margin: 0 0 0.75rem 0;">📊 Quality Score Components:</h5>
+                  <table style="font-size: 0.875rem; background: var(--bg-secondary); border-radius: 8px;">
+                    <thead>
+                      <tr>
+                        <th style="padding: 0.75rem;">Component</th>
+                        <th style="padding: 0.75rem;">Method</th>
+                        <th style="padding: 0.75rem;">Weight</th>
+                        <th style="padding: 0.75rem;">Raw Score<br/><span style="font-weight: normal; font-size: 0.75rem;">(0-1)</span></th>
+                        <th style="padding: 0.75rem;">Weighted<br/><span style="font-weight: normal; font-size: 0.75rem;">(Score × Weight)</span></th>
+                        <th style="padding: 0.75rem;">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Specialist Precision</td>
+                        <td style="padding: 0.75rem;">🔢 Deterministic</td>
+                        <td style="padding: 0.75rem;">0.60</td>
+                        <td style="padding: 0.75rem; color: var(--accent-danger);">0.50</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.300</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Selected specialists match expected set</td>
+                      </tr>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Specialist Rationale</td>
+                        <td style="padding: 0.75rem;">🤖 Llm Judge</td>
+                        <td style="padding: 0.75rem;">0.40</td>
+                        <td style="padding: 0.75rem; color: var(--accent-warning);">0.80</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.320</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Clear reasoning for specialist choices</td>
+                      </tr>
+                      
+                    </tbody>
+                  </table>
+                </div>
+                
+                
+                <!-- Failure Analysis Section -->
+                
+                <div style="border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+                  <!-- LLM Judge Analysis Container - More integrated design -->
+                  <div style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.03)); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 8px; padding: 1.5rem;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                      <h4 style="color: var(--accent-danger); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 1.2rem;">🔍</span>
+                        LLM Judge Analysis
+                      </h4>
+                      
+                      <span class="badge badge-danger">
+                        Priority: HIGH
+                      </span>
+                      
+                    </div>
+                  
+                  <div style="display: grid; gap: 1rem;">
+                    
+                    <div>
+                      <h5 style="color: var(--accent-danger); margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>📄</span> Associated Prompt Files
+                      </h5>
+                      <ul style="margin: 0; padding-left: 1.5rem;">
+                        
+                        <li style="color: var(--text-secondary);">3_assign_specialist_tasks.txt</li>
+                        
+                      </ul>
+                    </div>
+                    
+                    
+                    
+                    <div>
+                      <h5 style="color: var(--accent-danger); margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>🔍</span> Root Cause Analysis
+                      </h5>
+                      <p style="margin: 0; color: var(--text-secondary); background: var(--bg-secondary); padding: 0.75rem; border-radius: 6px; border-left: 4px solid var(--accent-danger);">
+                        The prompt lacks explicit rules and examples for selecting the proper specialists when the query involves lab test results, especially for metrics like cholesterol that span multiple specialties.
+                      </p>
+                    </div>
+                    
+                    
+                    
+                    <div>
+                      <h5 style="color: var(--accent-primary); margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>💡</span> Recommended Improvements
+                      </h5>
+                      <ul style="margin: 0; padding-left: 1.5rem;">
+                        
+                        <li style="color: var(--text-secondary); margin-bottom: 0.25rem;">ADD to Selection Rules: 'ALWAYS include laboratory_medicine when query mentions: test results, blood work, lab values, or specific test names (A1C, glucose, cholesterol, etc.)'</li>
+                        
+                        <li style="color: var(--text-secondary); margin-bottom: 0.25rem;">ADD EXAMPLE: 'Query: What's my cholesterol trend over time?' → Select: [cardiology, endocrinology, laboratory_medicine]</li>
+                        
+                        <li style="color: var(--text-secondary); margin-bottom: 0.25rem;">ADD keywords for endocrinology: ['cholesterol', 'triglycerides', 'metabolic']</li>
+                        
+                      </ul>
+                    </div>
+                    
+                    
+                  </div>
+                  </div>
+                </div>
+                
+              </div>
+            </td>
+          </tr>
+          
+          
+          <tr class="collapsible" onclick="toggleDimensionRow(this)" style="cursor: pointer;">
+            <td style="font-weight: 600;">
+              
+              <span class="dimension-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+              
+              Analysis Quality
+            </td>
+            <td>🔀 Hybrid</td>
+            <td>≥0.80</td>
+            <td>0.93</td>
+            <td>0.93</td>
+            <td>0.80</td>
+            <td>
+              <span class="badge badge-success">
+                ✅ PASS
+              </span>
+            </td>
+          </tr>
+          
+          <tr class="dimension-details" style="display: none;">
+            <td colspan="7" style="padding: 0;">
+              <div style="padding: 1.5rem; background: var(--bg-primary); border-top: 2px solid var(--border-color);">
+                <!-- Component Scores Section -->
+                
+                <div style="margin-bottom: 0;">
+                  <h5 style="color: var(--accent-primary); margin: 0 0 0.75rem 0;">📊 Quality Score Components:</h5>
+                  <table style="font-size: 0.875rem; background: var(--bg-secondary); border-radius: 8px;">
+                    <thead>
+                      <tr>
+                        <th style="padding: 0.75rem;">Component</th>
+                        <th style="padding: 0.75rem;">Method</th>
+                        <th style="padding: 0.75rem;">Weight</th>
+                        <th style="padding: 0.75rem;">Raw Score<br/><span style="font-weight: normal; font-size: 0.75rem;">(0-1)</span></th>
+                        <th style="padding: 0.75rem;">Weighted<br/><span style="font-weight: normal; font-size: 0.75rem;">(Score × Weight)</span></th>
+                        <th style="padding: 0.75rem;">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Data Gathering</td>
+                        <td style="padding: 0.75rem;">🔢 Deterministic</td>
+                        <td style="padding: 0.75rem;">0.20</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">1.00</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.200</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Appropriate tool calls to gather health data</td>
+                      </tr>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Context Awareness</td>
+                        <td style="padding: 0.75rem;">🤖 Llm Judge</td>
+                        <td style="padding: 0.75rem;">0.15</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">0.90</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.135</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Consideration of temporal context and patient history</td>
+                      </tr>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Comprehensive Approach</td>
+                        <td style="padding: 0.75rem;">🤖 Llm Judge</td>
+                        <td style="padding: 0.75rem;">0.25</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">0.90</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.225</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Coverage of all relevant medical concepts</td>
+                      </tr>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Concern Identification</td>
+                        <td style="padding: 0.75rem;">🤖 Llm Judge</td>
+                        <td style="padding: 0.75rem;">0.20</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">0.90</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.180</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Identification of health concerns and risks</td>
+                      </tr>
+                      
+                    </tbody>
+                  </table>
+                </div>
+                
+                
+                <!-- Failure Analysis Section -->
+                
+              </div>
+            </td>
+          </tr>
+          
+          
+          <tr class="collapsible" onclick="toggleDimensionRow(this)" style="cursor: pointer;">
+            <td style="font-weight: 600;">
+              
+              <span class="dimension-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+              
+              Tool Usage
+            </td>
+            <td>🔢 Deterministic</td>
+            <td>Effective</td>
+            <td>1 calls</td>
+            <td>1.00</td>
+            <td>0.90</td>
+            <td>
+              <span class="badge badge-success">
+                ✅ PASS
+              </span>
+            </td>
+          </tr>
+          
+          <tr class="dimension-details" style="display: none;">
+            <td colspan="7" style="padding: 0;">
+              <div style="padding: 1.5rem; background: var(--bg-primary); border-top: 2px solid var(--border-color);">
+                <!-- Component Scores Section -->
+                
+                <div style="margin-bottom: 0;">
+                  <h5 style="color: var(--accent-primary); margin: 0 0 0.75rem 0;">📊 Quality Score Components:</h5>
+                  <table style="font-size: 0.875rem; background: var(--bg-secondary); border-radius: 8px;">
+                    <thead>
+                      <tr>
+                        <th style="padding: 0.75rem;">Component</th>
+                        <th style="padding: 0.75rem;">Method</th>
+                        <th style="padding: 0.75rem;">Weight</th>
+                        <th style="padding: 0.75rem;">Raw Score<br/><span style="font-weight: normal; font-size: 0.75rem;">(0-1)</span></th>
+                        <th style="padding: 0.75rem;">Weighted<br/><span style="font-weight: normal; font-size: 0.75rem;">(Score × Weight)</span></th>
+                        <th style="padding: 0.75rem;">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Tool Success Rate</td>
+                        <td style="padding: 0.75rem;">🔢 Deterministic</td>
+                        <td style="padding: 0.75rem;">0.50</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">1.00</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.500</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Percentage of successful tool calls</td>
+                      </tr>
+                      
+                    </tbody>
+                  </table>
+                </div>
+                
+                
+                <!-- Failure Analysis Section -->
+                
+              </div>
+            </td>
+          </tr>
+          
+          
+          <tr class="collapsible" onclick="toggleDimensionRow(this)" style="cursor: pointer;">
+            <td style="font-weight: 600;">
+              
+              <span class="dimension-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+              
+              Response Structure
+            </td>
+            <td>🔢 Deterministic</td>
+            <td>Valid XML</td>
+            <td>Valid</td>
+            <td>1.00</td>
+            <td>0.95</td>
+            <td>
+              <span class="badge badge-success">
+                ✅ PASS
+              </span>
+            </td>
+          </tr>
+          
+          <tr class="dimension-details" style="display: none;">
+            <td colspan="7" style="padding: 0;">
+              <div style="padding: 1.5rem; background: var(--bg-primary); border-top: 2px solid var(--border-color);">
+                <!-- Component Scores Section -->
+                
+                <div style="margin-bottom: 0;">
+                  <h5 style="color: var(--accent-primary); margin: 0 0 0.75rem 0;">📊 Quality Score Components:</h5>
+                  <table style="font-size: 0.875rem; background: var(--bg-secondary); border-radius: 8px;">
+                    <thead>
+                      <tr>
+                        <th style="padding: 0.75rem;">Component</th>
+                        <th style="padding: 0.75rem;">Method</th>
+                        <th style="padding: 0.75rem;">Weight</th>
+                        <th style="padding: 0.75rem;">Raw Score<br/><span style="font-weight: normal; font-size: 0.75rem;">(0-1)</span></th>
+                        <th style="padding: 0.75rem;">Weighted<br/><span style="font-weight: normal; font-size: 0.75rem;">(Score × Weight)</span></th>
+                        <th style="padding: 0.75rem;">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Xml Validity</td>
+                        <td style="padding: 0.75rem;">🔢 Deterministic</td>
+                        <td style="padding: 0.75rem;">0.70</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">1.00</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.700</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Valid XML structure in responses</td>
+                      </tr>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Required Fields</td>
+                        <td style="padding: 0.75rem;">🔢 Deterministic</td>
+                        <td style="padding: 0.75rem;">0.30</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">1.00</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.300</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Presence of all required XML fields</td>
+                      </tr>
+                      
+                    </tbody>
+                  </table>
+                </div>
+                
+                
+                <!-- Failure Analysis Section -->
+                
+              </div>
+            </td>
+          </tr>
+          
+          
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="test-case-card fade-in">
+  <div class="test-case-header">
+    <div style="display: flex; justify-content: space-between; align-items: start;">
+      <div>
+        <h3 style="margin: 0; color: var(--text-primary);">Test Case: standard_002</h3>
+        <p style="margin: 0.5rem 0 0 0; color: var(--text-tertiary);">Show my abnormal lab results from labs this year?</p>
+        
+        <p style="margin: 0.25rem 0 0 0; display: flex; gap: 1rem;">
+          <a href="../traces/2025-07-18/65a59f70-9da2-4ccf-bd70-3c5e0afcd8ad.html" 
+             target="_blank" 
+             style="color: var(--accent-primary); text-decoration: none; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+            📅 Timeline View
+            <span style="font-size: 0.75rem;">↗</span>
+          </a>
+          <a href="../traces/2025-07-18/65a59f70-9da2-4ccf-bd70-3c5e0afcd8ad.hierarchical.html" 
+             target="_blank" 
+             style="color: var(--accent-secondary); text-decoration: none; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+            🌳 Hierarchical View
+            <span style="font-size: 0.75rem;">↗</span>
+          </a>
+        </p>
+        
+      </div>
+      <span class="badge badge-danger">
+        
+      </span>
+    </div>
+  </div>
+  
+  <div class="test-case-content">
+    <!-- Collapsible Health Query Response -->
+    <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 1rem; overflow: hidden;">
+      <div class="collapsible collapsible-header" onclick="toggleSection(this)">
+        <strong style="color: var(--accent-primary);">Health Query Response/Analysis</strong>
+        <span class="collapsible-arrow">▼</span>
+      </div>
+      <div class="collapsible-content">
+        <div style="padding: 1rem; background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.875rem; line-height: 1.6;">
+          <pre style="white-space: pre-wrap; margin: 0; font-family: inherit;">To analyze this patient's abnormal lab results from 2023, we should focus on:
+
+Data points:
+- Specific tests with abnormal results (AST, BUN, glucose, HbA1c, CO2)
+- Numeric values of abnormal results and how far outside reference range
+- Dates of abnormal results to identify any temporal patterns
+
+Correlations: 
+- Investigate potential relationships between abnormal liver enzymes (AST), kidney function (BUN), and blood sugar control (glucose, HbA1c)
+- Look for any results that tend to be abnormal at the same time, which could indicate an underlying condition
+
+Health concerns:
+- Persistently elevated liver enzymes raise concern for liver disease or damage
+- High BUN could signal kidney dysfunction or dehydration
+- Abnormal glucose and HbA1c are indicative of diabetes or prediabetes
+- Slightly elevated CO2 on two occasions warrants monitoring for acid-base imbalance
+
+Timeframes:
+- Analyze all abnormal results from 2023 to capture full year to date
+- Pay attention to most recent 3-6 months to assess current status
+- Note any significant changes from early 2023 to now
+
+Focus areas:
+- Liver: Determine severity and trend of AST elevations
+- Kidney: Assess degree of BUN abnormalities and look for upward trend
+- Diabetes: Evaluate current glucose control and risk based on HbA1c
+- Explore these systems together to identify any unifying diagnosis
+
+Priorities:
+1. Liver and kidney function as most frequent and persistent abnormalities
+2. Diabetic status given long-term health implications if uncontrolled 
+3. Acid-base balance as more minor issue currently but could reflect systemic process
+
+In summary, a focused analysis of the abnormal liver, kidney, and glucose results over time will be key to identifying the patient's main health problems and assessing severity. Correlations between these systems should be explored to uncover any underlying conditions. The analysis should emphasize the most recent results while still considering the full 2023 timeframe for a comprehensive assessment.</pre>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Dimension Evaluation Summary -->
+    <h4 style="color: var(--text-primary); margin-top: 0;">Dimension Evaluation</h4>
+    <div style="overflow-x: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Dimension</th>
+            <th>Method</th>
+            <th>Expected</th>
+            <th>Actual</th>
+            <th>Score</th>
+            <th>Target</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+          <tr class="collapsible" onclick="toggleDimensionRow(this)" style="cursor: pointer;">
+            <td style="font-weight: 600;">
+              
+              <span class="dimension-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+              
+              Complexity Classification
+            </td>
+            <td>🔢 Deterministic</td>
+            <td>STANDARD</td>
+            <td>standard</td>
+            <td>1.00</td>
+            <td>0.90</td>
+            <td>
+              <span class="badge badge-success">
+                ✅ PASS
+              </span>
+            </td>
+          </tr>
+          
+          <tr class="dimension-details" style="display: none;">
+            <td colspan="7" style="padding: 0;">
+              <div style="padding: 1.5rem; background: var(--bg-primary); border-top: 2px solid var(--border-color);">
+                <!-- Component Scores Section -->
+                
+                <!-- Dimension evaluation explanation -->
+                <div style="margin-bottom: 0; padding: 0.75rem; background: rgba(59, 130, 246, 0.05); border-radius: 6px;">
+                  <p style="margin: 0; color: var(--text-secondary); font-size: 0.875rem;">
+                    ℹ️ <strong>Evaluation Method:</strong> Binary evaluation: Either the complexity level matches expected or it doesn't
+                  </p>
+                </div>
+                
+                
+                <!-- Failure Analysis Section -->
+                
+              </div>
+            </td>
+          </tr>
+          
+          
+          <tr class="collapsible" onclick="toggleDimensionRow(this)" style="cursor: pointer;">
+            <td style="font-weight: 600;">
+              
+              <span class="dimension-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+              
+              Specialty Selection
+            </td>
+            <td>🔀 Hybrid</td>
+            <td>endocrinology, laboratory_medicine, preventive_medicine</td>
+            <td>endocrinology, laboratory_medicine</td>
+            <td>0.76</td>
+            <td>0.85</td>
+            <td>
+              <span class="badge badge-danger">
+                ❌ FAIL
+              </span>
+            </td>
+          </tr>
+          
+          <tr class="dimension-details" style="display: none;">
+            <td colspan="7" style="padding: 0;">
+              <div style="padding: 1.5rem; background: linear-gradient(135deg, rgba(239, 68, 68, 0.05), rgba(239, 68, 68, 0.02)); border-top: 2px solid rgba(239, 68, 68, 0.2);">
+                <!-- Component Scores Section -->
+                
+                <div style="margin-bottom: 1.5rem;">
+                  <h5 style="color: var(--accent-primary); margin: 0 0 0.75rem 0;">📊 Quality Score Components:</h5>
+                  <table style="font-size: 0.875rem; background: var(--bg-secondary); border-radius: 8px;">
+                    <thead>
+                      <tr>
+                        <th style="padding: 0.75rem;">Component</th>
+                        <th style="padding: 0.75rem;">Method</th>
+                        <th style="padding: 0.75rem;">Weight</th>
+                        <th style="padding: 0.75rem;">Raw Score<br/><span style="font-weight: normal; font-size: 0.75rem;">(0-1)</span></th>
+                        <th style="padding: 0.75rem;">Weighted<br/><span style="font-weight: normal; font-size: 0.75rem;">(Score × Weight)</span></th>
+                        <th style="padding: 0.75rem;">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Specialist Precision</td>
+                        <td style="padding: 0.75rem;">🔢 Deterministic</td>
+                        <td style="padding: 0.75rem;">0.60</td>
+                        <td style="padding: 0.75rem; color: var(--accent-danger);">0.67</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.400</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Selected specialists match expected set</td>
+                      </tr>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Specialist Rationale</td>
+                        <td style="padding: 0.75rem;">🤖 Llm Judge</td>
+                        <td style="padding: 0.75rem;">0.40</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">0.90</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.360</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Clear reasoning for specialist choices</td>
+                      </tr>
+                      
+                    </tbody>
+                  </table>
+                </div>
+                
+                
+                <!-- Failure Analysis Section -->
+                
+                <div style="border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+                  <!-- LLM Judge Analysis Container - More integrated design -->
+                  <div style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.03)); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 8px; padding: 1.5rem;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                      <h4 style="color: var(--accent-danger); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 1.2rem;">🔍</span>
+                        LLM Judge Analysis
+                      </h4>
+                      
+                      <span class="badge badge-danger">
+                        Priority: HIGH
+                      </span>
+                      
+                    </div>
+                  
+                  <div style="display: grid; gap: 1rem;">
+                    
+                    <div>
+                      <h5 style="color: var(--accent-danger); margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>📄</span> Associated Prompt Files
+                      </h5>
+                      <ul style="margin: 0; padding-left: 1.5rem;">
+                        
+                        <li style="color: var(--text-secondary);">3_assign_specialist_tasks.txt</li>
+                        
+                      </ul>
+                    </div>
+                    
+                    
+                    
+                    <div>
+                      <h5 style="color: var(--accent-danger); margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>🔍</span> Root Cause Analysis
+                      </h5>
+                      <p style="margin: 0; color: var(--text-secondary); background: var(--bg-secondary); padding: 0.75rem; border-radius: 6px; border-left: 4px solid var(--accent-danger);">
+                        The specialist selection failed to include preventive_medicine for a query about abnormal lab results, which is a critical gap. Preventive medicine specialists should be involved when assessing risk factors and screening needs based on abnormal diagnostic findings.
+                      </p>
+                    </div>
+                    
+                    
+                    
+                    <div>
+                      <h5 style="color: var(--accent-primary); margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>💡</span> Recommended Improvements
+                      </h5>
+                      <ul style="margin: 0; padding-left: 1.5rem;">
+                        
+                        <li style="color: var(--text-secondary); margin-bottom: 0.25rem;">ADD to Selection Rules: 'ALWAYS include preventive_medicine when the query involves abnormal lab results, diagnostic findings, or mentions screening'</li>
+                        
+                        <li style="color: var(--text-secondary); margin-bottom: 0.25rem;">ADD EXAMPLE: 'Query: Why was my liver enzyme test abnormal?' → Select: [laboratory_medicine, preventive_medicine]</li>
+                        
+                        <li style="color: var(--text-secondary); margin-bottom: 0.25rem;">ADD keywords for preventive_medicine: ['abnormal', 'elevated', 'screening', 'diagnostic']</li>
+                        
+                      </ul>
+                    </div>
+                    
+                    
+                  </div>
+                  </div>
+                </div>
+                
+              </div>
+            </td>
+          </tr>
+          
+          
+          <tr class="collapsible" onclick="toggleDimensionRow(this)" style="cursor: pointer;">
+            <td style="font-weight: 600;">
+              
+              <span class="dimension-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+              
+              Analysis Quality
+            </td>
+            <td>🔀 Hybrid</td>
+            <td>≥0.80</td>
+            <td>0.91</td>
+            <td>0.91</td>
+            <td>0.80</td>
+            <td>
+              <span class="badge badge-success">
+                ✅ PASS
+              </span>
+            </td>
+          </tr>
+          
+          <tr class="dimension-details" style="display: none;">
+            <td colspan="7" style="padding: 0;">
+              <div style="padding: 1.5rem; background: var(--bg-primary); border-top: 2px solid var(--border-color);">
+                <!-- Component Scores Section -->
+                
+                <div style="margin-bottom: 0;">
+                  <h5 style="color: var(--accent-primary); margin: 0 0 0.75rem 0;">📊 Quality Score Components:</h5>
+                  <table style="font-size: 0.875rem; background: var(--bg-secondary); border-radius: 8px;">
+                    <thead>
+                      <tr>
+                        <th style="padding: 0.75rem;">Component</th>
+                        <th style="padding: 0.75rem;">Method</th>
+                        <th style="padding: 0.75rem;">Weight</th>
+                        <th style="padding: 0.75rem;">Raw Score<br/><span style="font-weight: normal; font-size: 0.75rem;">(0-1)</span></th>
+                        <th style="padding: 0.75rem;">Weighted<br/><span style="font-weight: normal; font-size: 0.75rem;">(Score × Weight)</span></th>
+                        <th style="padding: 0.75rem;">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Data Gathering</td>
+                        <td style="padding: 0.75rem;">🔢 Deterministic</td>
+                        <td style="padding: 0.75rem;">0.20</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">1.00</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.200</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Appropriate tool calls to gather health data</td>
+                      </tr>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Context Awareness</td>
+                        <td style="padding: 0.75rem;">🤖 Llm Judge</td>
+                        <td style="padding: 0.75rem;">0.15</td>
+                        <td style="padding: 0.75rem; color: var(--accent-warning);">0.80</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.120</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Consideration of temporal context and patient history</td>
+                      </tr>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Comprehensive Approach</td>
+                        <td style="padding: 0.75rem;">🤖 Llm Judge</td>
+                        <td style="padding: 0.75rem;">0.25</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">0.90</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.225</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Coverage of all relevant medical concepts</td>
+                      </tr>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Concern Identification</td>
+                        <td style="padding: 0.75rem;">🤖 Llm Judge</td>
+                        <td style="padding: 0.75rem;">0.20</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">0.90</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.180</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Identification of health concerns and risks</td>
+                      </tr>
+                      
+                    </tbody>
+                  </table>
+                </div>
+                
+                
+                <!-- Failure Analysis Section -->
+                
+              </div>
+            </td>
+          </tr>
+          
+          
+          <tr class="collapsible" onclick="toggleDimensionRow(this)" style="cursor: pointer;">
+            <td style="font-weight: 600;">
+              
+              <span class="dimension-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+              
+              Tool Usage
+            </td>
+            <td>🔢 Deterministic</td>
+            <td>Effective</td>
+            <td>1 calls</td>
+            <td>1.00</td>
+            <td>0.90</td>
+            <td>
+              <span class="badge badge-success">
+                ✅ PASS
+              </span>
+            </td>
+          </tr>
+          
+          <tr class="dimension-details" style="display: none;">
+            <td colspan="7" style="padding: 0;">
+              <div style="padding: 1.5rem; background: var(--bg-primary); border-top: 2px solid var(--border-color);">
+                <!-- Component Scores Section -->
+                
+                <div style="margin-bottom: 0;">
+                  <h5 style="color: var(--accent-primary); margin: 0 0 0.75rem 0;">📊 Quality Score Components:</h5>
+                  <table style="font-size: 0.875rem; background: var(--bg-secondary); border-radius: 8px;">
+                    <thead>
+                      <tr>
+                        <th style="padding: 0.75rem;">Component</th>
+                        <th style="padding: 0.75rem;">Method</th>
+                        <th style="padding: 0.75rem;">Weight</th>
+                        <th style="padding: 0.75rem;">Raw Score<br/><span style="font-weight: normal; font-size: 0.75rem;">(0-1)</span></th>
+                        <th style="padding: 0.75rem;">Weighted<br/><span style="font-weight: normal; font-size: 0.75rem;">(Score × Weight)</span></th>
+                        <th style="padding: 0.75rem;">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Tool Success Rate</td>
+                        <td style="padding: 0.75rem;">🔢 Deterministic</td>
+                        <td style="padding: 0.75rem;">0.50</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">1.00</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.500</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Percentage of successful tool calls</td>
+                      </tr>
+                      
+                    </tbody>
+                  </table>
+                </div>
+                
+                
+                <!-- Failure Analysis Section -->
+                
+              </div>
+            </td>
+          </tr>
+          
+          
+          <tr class="collapsible" onclick="toggleDimensionRow(this)" style="cursor: pointer;">
+            <td style="font-weight: 600;">
+              
+              <span class="dimension-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+              
+              Response Structure
+            </td>
+            <td>🔢 Deterministic</td>
+            <td>Valid XML</td>
+            <td>Valid</td>
+            <td>1.00</td>
+            <td>0.95</td>
+            <td>
+              <span class="badge badge-success">
+                ✅ PASS
+              </span>
+            </td>
+          </tr>
+          
+          <tr class="dimension-details" style="display: none;">
+            <td colspan="7" style="padding: 0;">
+              <div style="padding: 1.5rem; background: var(--bg-primary); border-top: 2px solid var(--border-color);">
+                <!-- Component Scores Section -->
+                
+                <div style="margin-bottom: 0;">
+                  <h5 style="color: var(--accent-primary); margin: 0 0 0.75rem 0;">📊 Quality Score Components:</h5>
+                  <table style="font-size: 0.875rem; background: var(--bg-secondary); border-radius: 8px;">
+                    <thead>
+                      <tr>
+                        <th style="padding: 0.75rem;">Component</th>
+                        <th style="padding: 0.75rem;">Method</th>
+                        <th style="padding: 0.75rem;">Weight</th>
+                        <th style="padding: 0.75rem;">Raw Score<br/><span style="font-weight: normal; font-size: 0.75rem;">(0-1)</span></th>
+                        <th style="padding: 0.75rem;">Weighted<br/><span style="font-weight: normal; font-size: 0.75rem;">(Score × Weight)</span></th>
+                        <th style="padding: 0.75rem;">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Xml Validity</td>
+                        <td style="padding: 0.75rem;">🔢 Deterministic</td>
+                        <td style="padding: 0.75rem;">0.70</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">1.00</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.700</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Valid XML structure in responses</td>
+                      </tr>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Required Fields</td>
+                        <td style="padding: 0.75rem;">🔢 Deterministic</td>
+                        <td style="padding: 0.75rem;">0.30</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">1.00</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.300</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Presence of all required XML fields</td>
+                      </tr>
+                      
+                    </tbody>
+                  </table>
+                </div>
+                
+                
+                <!-- Failure Analysis Section -->
+                
+              </div>
+            </td>
+          </tr>
+          
+          
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="test-case-card fade-in">
+  <div class="test-case-header">
+    <div style="display: flex; justify-content: space-between; align-items: start;">
+      <div>
+        <h3 style="margin: 0; color: var(--text-primary);">Test Case: complex_001</h3>
+        <p style="margin: 0.5rem 0 0 0; color: var(--text-tertiary);">Analyze cholesterol relevant medication adherence patterns over that time period and how do they correlate with these cholesterol lab results.</p>
+        
+        <p style="margin: 0.25rem 0 0 0; display: flex; gap: 1rem;">
+          <a href="../traces/2025-07-18/a399f2fd-1d21-47e3-8969-ef4698c93918.html" 
+             target="_blank" 
+             style="color: var(--accent-primary); text-decoration: none; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+            📅 Timeline View
+            <span style="font-size: 0.75rem;">↗</span>
+          </a>
+          <a href="../traces/2025-07-18/a399f2fd-1d21-47e3-8969-ef4698c93918.hierarchical.html" 
+             target="_blank" 
+             style="color: var(--accent-secondary); text-decoration: none; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+            🌳 Hierarchical View
+            <span style="font-size: 0.75rem;">↗</span>
+          </a>
+        </p>
+        
+      </div>
+      <span class="badge badge-danger">
+        
+      </span>
+    </div>
+  </div>
+  
+  <div class="test-case-content">
+    <!-- Collapsible Health Query Response -->
+    <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 1rem; overflow: hidden;">
+      <div class="collapsible collapsible-header" onclick="toggleSection(this)">
+        <strong style="color: var(--accent-primary);">Health Query Response/Analysis</strong>
+        <span class="collapsible-arrow">▼</span>
+      </div>
+      <div class="collapsible-content">
+        <div style="padding: 1rem; background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.875rem; line-height: 1.6;">
+          <pre style="white-space: pre-wrap; margin: 0; font-family: inherit;">To analyze the correlation between cholesterol medication adherence and lab results, I recommend the following approach:
+
+Key data points to investigate:
+- Cholesterol lab values over time, especially LDL, HDL and total cholesterol 
+- Cholesterol medication prescriptions and refills to assess adherence
+- Medication possession ratio (days supply of medication / days between refills)
+- Changes in medication dosage or drug prescribed
+- Periods of time not covered by an active cholesterol medication prescription
+
+Correlations to explore:
+- Impact of starting, stopping, or changing cholesterol medications on lab values
+- Relationship between medication adherence percentage and cholesterol levels
+- Lag time between changes in adherence and changes in lab results  
+
+Health concerns to address:
+- Periods of elevated LDL or total cholesterol
+- Low HDL levels
+- Medication side effects impacting adherence
+- Cardiovascular disease risk based on cholesterol levels
+
+Timeframes:
+- Analyze full 12-year data set to identify long-term trends
+- Focus on 3-month windows around medication changes to assess acute impacts
+- Compare year-over-year metrics to normalize for any seasonal effects
+
+Analysis focus areas:
+- Effectiveness of different cholesterol medications and doses on lab results
+- Identifying any consistent adherence issues and potential root causes
+- Assessing if cholesterol is being adequately controlled and identifying unmet treatment needs
+
+Prioritize analysis of LDL and total cholesterol, as these are primary treatment targets. Secondarily, analyze HDL levels and the total cholesterol/HDL ratio to more fully assess cardiovascular risk. Medication adherence analysis is critical to contextualize lab results.</pre>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Dimension Evaluation Summary -->
+    <h4 style="color: var(--text-primary); margin-top: 0;">Dimension Evaluation</h4>
+    <div style="overflow-x: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Dimension</th>
+            <th>Method</th>
+            <th>Expected</th>
+            <th>Actual</th>
+            <th>Score</th>
+            <th>Target</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+          <tr class="collapsible" onclick="toggleDimensionRow(this)" style="cursor: pointer;">
+            <td style="font-weight: 600;">
+              
+              <span class="dimension-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+              
+              Complexity Classification
+            </td>
+            <td>🔢 Deterministic</td>
+            <td>COMPLEX</td>
+            <td>complex</td>
+            <td>1.00</td>
+            <td>0.90</td>
+            <td>
+              <span class="badge badge-success">
+                ✅ PASS
+              </span>
+            </td>
+          </tr>
+          
+          <tr class="dimension-details" style="display: none;">
+            <td colspan="7" style="padding: 0;">
+              <div style="padding: 1.5rem; background: var(--bg-primary); border-top: 2px solid var(--border-color);">
+                <!-- Component Scores Section -->
+                
+                <!-- Dimension evaluation explanation -->
+                <div style="margin-bottom: 0; padding: 0.75rem; background: rgba(59, 130, 246, 0.05); border-radius: 6px;">
+                  <p style="margin: 0; color: var(--text-secondary); font-size: 0.875rem;">
+                    ℹ️ <strong>Evaluation Method:</strong> Binary evaluation: Either the complexity level matches expected or it doesn't
+                  </p>
+                </div>
+                
+                
+                <!-- Failure Analysis Section -->
+                
+              </div>
+            </td>
+          </tr>
+          
+          
+          <tr class="collapsible" onclick="toggleDimensionRow(this)" style="cursor: pointer;">
+            <td style="font-weight: 600;">
+              
+              <span class="dimension-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+              
+              Specialty Selection
+            </td>
+            <td>🔀 Hybrid</td>
+            <td>cardiology, endocrinology, laboratory_medicine, pharmacy</td>
+            <td>cardiology, endocrinology, laboratory_medicine, pharmacy, preventive_medicine</td>
+            <td>0.84</td>
+            <td>0.85</td>
+            <td>
+              <span class="badge badge-danger">
+                ❌ FAIL
+              </span>
+            </td>
+          </tr>
+          
+          <tr class="dimension-details" style="display: none;">
+            <td colspan="7" style="padding: 0;">
+              <div style="padding: 1.5rem; background: linear-gradient(135deg, rgba(239, 68, 68, 0.05), rgba(239, 68, 68, 0.02)); border-top: 2px solid rgba(239, 68, 68, 0.2);">
+                <!-- Component Scores Section -->
+                
+                <div style="margin-bottom: 1.5rem;">
+                  <h5 style="color: var(--accent-primary); margin: 0 0 0.75rem 0;">📊 Quality Score Components:</h5>
+                  <table style="font-size: 0.875rem; background: var(--bg-secondary); border-radius: 8px;">
+                    <thead>
+                      <tr>
+                        <th style="padding: 0.75rem;">Component</th>
+                        <th style="padding: 0.75rem;">Method</th>
+                        <th style="padding: 0.75rem;">Weight</th>
+                        <th style="padding: 0.75rem;">Raw Score<br/><span style="font-weight: normal; font-size: 0.75rem;">(0-1)</span></th>
+                        <th style="padding: 0.75rem;">Weighted<br/><span style="font-weight: normal; font-size: 0.75rem;">(Score × Weight)</span></th>
+                        <th style="padding: 0.75rem;">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Specialist Precision</td>
+                        <td style="padding: 0.75rem;">🔢 Deterministic</td>
+                        <td style="padding: 0.75rem;">0.60</td>
+                        <td style="padding: 0.75rem; color: var(--accent-warning);">0.80</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.480</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Selected specialists match expected set</td>
+                      </tr>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Specialist Rationale</td>
+                        <td style="padding: 0.75rem;">🤖 Llm Judge</td>
+                        <td style="padding: 0.75rem;">0.40</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">0.90</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.360</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Clear reasoning for specialist choices</td>
+                      </tr>
+                      
+                    </tbody>
+                  </table>
+                </div>
+                
+                
+                <!-- Failure Analysis Section -->
+                
+                <div style="border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+                  <!-- LLM Judge Analysis Container - More integrated design -->
+                  <div style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.03)); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 8px; padding: 1.5rem;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                      <h4 style="color: var(--accent-danger); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 1.2rem;">🔍</span>
+                        LLM Judge Analysis
+                      </h4>
+                      
+                      <span class="badge badge-danger">
+                        Priority: HIGH
+                      </span>
+                      
+                    </div>
+                  
+                  <div style="display: grid; gap: 1rem;">
+                    
+                    <div>
+                      <h5 style="color: var(--accent-danger); margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>📄</span> Associated Prompt Files
+                      </h5>
+                      <ul style="margin: 0; padding-left: 1.5rem;">
+                        
+                        <li style="color: var(--text-secondary);">3_assign_specialist_tasks.txt</li>
+                        
+                      </ul>
+                    </div>
+                    
+                    
+                    
+                    <div>
+                      <h5 style="color: var(--accent-danger); margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>🔍</span> Root Cause Analysis
+                      </h5>
+                      <p style="margin: 0; color: var(--text-secondary); background: var(--bg-secondary); padding: 0.75rem; border-radius: 6px; border-left: 4px solid var(--accent-danger);">
+                        The specialist selection failed because there were no explicit rules or keyword mappings for lab-related queries. The query mentioned 'cholesterol lab results' but laboratory_medicine was not automatically included.
+                      </p>
+                    </div>
+                    
+                    
+                    
+                    <div>
+                      <h5 style="color: var(--accent-primary); margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>💡</span> Recommended Improvements
+                      </h5>
+                      <ul style="margin: 0; padding-left: 1.5rem;">
+                        
+                        <li style="color: var(--text-secondary); margin-bottom: 0.25rem;">ADD to Selection Rules: 'ALWAYS include laboratory_medicine when query mentions: test results, blood work, lab values, or specific test names (A1C, glucose, cholesterol, etc.)'</li>
+                        
+                        <li style="color: var(--text-secondary); margin-bottom: 0.25rem;">ADD EXAMPLE: 'Query: Analyze my cholesterol lab results and medication adherence patterns → Select: [cardiology, laboratory_medicine, pharmacy]'</li>
+                        
+                        <li style="color: var(--text-secondary); margin-bottom: 0.25rem;">ADD keywords for endocrinology: ['cholesterol', 'lipids', 'statins']</li>
+                        
+                      </ul>
+                    </div>
+                    
+                    
+                  </div>
+                  </div>
+                </div>
+                
+              </div>
+            </td>
+          </tr>
+          
+          
+          <tr class="collapsible" onclick="toggleDimensionRow(this)" style="cursor: pointer;">
+            <td style="font-weight: 600;">
+              
+              <span class="dimension-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+              
+              Analysis Quality
+            </td>
+            <td>🔀 Hybrid</td>
+            <td>≥0.80</td>
+            <td>0.93</td>
+            <td>0.93</td>
+            <td>0.80</td>
+            <td>
+              <span class="badge badge-success">
+                ✅ PASS
+              </span>
+            </td>
+          </tr>
+          
+          <tr class="dimension-details" style="display: none;">
+            <td colspan="7" style="padding: 0;">
+              <div style="padding: 1.5rem; background: var(--bg-primary); border-top: 2px solid var(--border-color);">
+                <!-- Component Scores Section -->
+                
+                <div style="margin-bottom: 0;">
+                  <h5 style="color: var(--accent-primary); margin: 0 0 0.75rem 0;">📊 Quality Score Components:</h5>
+                  <table style="font-size: 0.875rem; background: var(--bg-secondary); border-radius: 8px;">
+                    <thead>
+                      <tr>
+                        <th style="padding: 0.75rem;">Component</th>
+                        <th style="padding: 0.75rem;">Method</th>
+                        <th style="padding: 0.75rem;">Weight</th>
+                        <th style="padding: 0.75rem;">Raw Score<br/><span style="font-weight: normal; font-size: 0.75rem;">(0-1)</span></th>
+                        <th style="padding: 0.75rem;">Weighted<br/><span style="font-weight: normal; font-size: 0.75rem;">(Score × Weight)</span></th>
+                        <th style="padding: 0.75rem;">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Data Gathering</td>
+                        <td style="padding: 0.75rem;">🔢 Deterministic</td>
+                        <td style="padding: 0.75rem;">0.20</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">1.00</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.200</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Appropriate tool calls to gather health data</td>
+                      </tr>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Context Awareness</td>
+                        <td style="padding: 0.75rem;">🤖 Llm Judge</td>
+                        <td style="padding: 0.75rem;">0.15</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">0.90</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.135</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Consideration of temporal context and patient history</td>
+                      </tr>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Comprehensive Approach</td>
+                        <td style="padding: 0.75rem;">🤖 Llm Judge</td>
+                        <td style="padding: 0.75rem;">0.25</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">0.90</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.225</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Coverage of all relevant medical concepts</td>
+                      </tr>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Concern Identification</td>
+                        <td style="padding: 0.75rem;">🤖 Llm Judge</td>
+                        <td style="padding: 0.75rem;">0.20</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">0.90</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.180</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Identification of health concerns and risks</td>
+                      </tr>
+                      
+                    </tbody>
+                  </table>
+                </div>
+                
+                
+                <!-- Failure Analysis Section -->
+                
+              </div>
+            </td>
+          </tr>
+          
+          
+          <tr class="collapsible" onclick="toggleDimensionRow(this)" style="cursor: pointer;">
+            <td style="font-weight: 600;">
+              
+              <span class="dimension-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+              
+              Tool Usage
+            </td>
+            <td>🔢 Deterministic</td>
+            <td>Effective</td>
+            <td>1 calls</td>
+            <td>1.00</td>
+            <td>0.90</td>
+            <td>
+              <span class="badge badge-success">
+                ✅ PASS
+              </span>
+            </td>
+          </tr>
+          
+          <tr class="dimension-details" style="display: none;">
+            <td colspan="7" style="padding: 0;">
+              <div style="padding: 1.5rem; background: var(--bg-primary); border-top: 2px solid var(--border-color);">
+                <!-- Component Scores Section -->
+                
+                <div style="margin-bottom: 0;">
+                  <h5 style="color: var(--accent-primary); margin: 0 0 0.75rem 0;">📊 Quality Score Components:</h5>
+                  <table style="font-size: 0.875rem; background: var(--bg-secondary); border-radius: 8px;">
+                    <thead>
+                      <tr>
+                        <th style="padding: 0.75rem;">Component</th>
+                        <th style="padding: 0.75rem;">Method</th>
+                        <th style="padding: 0.75rem;">Weight</th>
+                        <th style="padding: 0.75rem;">Raw Score<br/><span style="font-weight: normal; font-size: 0.75rem;">(0-1)</span></th>
+                        <th style="padding: 0.75rem;">Weighted<br/><span style="font-weight: normal; font-size: 0.75rem;">(Score × Weight)</span></th>
+                        <th style="padding: 0.75rem;">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Tool Success Rate</td>
+                        <td style="padding: 0.75rem;">🔢 Deterministic</td>
+                        <td style="padding: 0.75rem;">0.50</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">1.00</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.500</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Percentage of successful tool calls</td>
+                      </tr>
+                      
+                    </tbody>
+                  </table>
+                </div>
+                
+                
+                <!-- Failure Analysis Section -->
+                
+              </div>
+            </td>
+          </tr>
+          
+          
+          <tr class="collapsible" onclick="toggleDimensionRow(this)" style="cursor: pointer;">
+            <td style="font-weight: 600;">
+              
+              <span class="dimension-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+              
+              Response Structure
+            </td>
+            <td>🔢 Deterministic</td>
+            <td>Valid XML</td>
+            <td>Valid</td>
+            <td>1.00</td>
+            <td>0.95</td>
+            <td>
+              <span class="badge badge-success">
+                ✅ PASS
+              </span>
+            </td>
+          </tr>
+          
+          <tr class="dimension-details" style="display: none;">
+            <td colspan="7" style="padding: 0;">
+              <div style="padding: 1.5rem; background: var(--bg-primary); border-top: 2px solid var(--border-color);">
+                <!-- Component Scores Section -->
+                
+                <div style="margin-bottom: 0;">
+                  <h5 style="color: var(--accent-primary); margin: 0 0 0.75rem 0;">📊 Quality Score Components:</h5>
+                  <table style="font-size: 0.875rem; background: var(--bg-secondary); border-radius: 8px;">
+                    <thead>
+                      <tr>
+                        <th style="padding: 0.75rem;">Component</th>
+                        <th style="padding: 0.75rem;">Method</th>
+                        <th style="padding: 0.75rem;">Weight</th>
+                        <th style="padding: 0.75rem;">Raw Score<br/><span style="font-weight: normal; font-size: 0.75rem;">(0-1)</span></th>
+                        <th style="padding: 0.75rem;">Weighted<br/><span style="font-weight: normal; font-size: 0.75rem;">(Score × Weight)</span></th>
+                        <th style="padding: 0.75rem;">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Xml Validity</td>
+                        <td style="padding: 0.75rem;">🔢 Deterministic</td>
+                        <td style="padding: 0.75rem;">0.70</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">1.00</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.700</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Valid XML structure in responses</td>
+                      </tr>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Required Fields</td>
+                        <td style="padding: 0.75rem;">🔢 Deterministic</td>
+                        <td style="padding: 0.75rem;">0.30</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">1.00</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.300</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Presence of all required XML fields</td>
+                      </tr>
+                      
+                    </tbody>
+                  </table>
+                </div>
+                
+                
+                <!-- Failure Analysis Section -->
+                
+              </div>
+            </td>
+          </tr>
+          
+          
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="test-case-card fade-in">
+  <div class="test-case-header">
+    <div style="display: flex; justify-content: space-between; align-items: start;">
+      <div>
+        <h3 style="margin: 0; color: var(--text-primary);">Test Case: complex_002</h3>
+        <p style="margin: 0.5rem 0 0 0; color: var(--text-tertiary);">How has my HbA1c level changed since I started taking metformin, has my dosage been adjusted over time based on my lab results, and is there a correlation between these changes and my weight measurements during the same period?</p>
+        
+        <p style="margin: 0.25rem 0 0 0; display: flex; gap: 1rem;">
+          <a href="../traces/2025-07-18/bffd63b8-3701-48c3-b976-ad67e2655ac3.html" 
+             target="_blank" 
+             style="color: var(--accent-primary); text-decoration: none; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+            📅 Timeline View
+            <span style="font-size: 0.75rem;">↗</span>
+          </a>
+          <a href="../traces/2025-07-18/bffd63b8-3701-48c3-b976-ad67e2655ac3.hierarchical.html" 
+             target="_blank" 
+             style="color: var(--accent-secondary); text-decoration: none; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+            🌳 Hierarchical View
+            <span style="font-size: 0.75rem;">↗</span>
+          </a>
+        </p>
+        
+      </div>
+      <span class="badge badge-danger">
+        
+      </span>
+    </div>
+  </div>
+  
+  <div class="test-case-content">
+    <!-- Collapsible Health Query Response -->
+    <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 1rem; overflow: hidden;">
+      <div class="collapsible collapsible-header" onclick="toggleSection(this)">
+        <strong style="color: var(--accent-primary);">Health Query Response/Analysis</strong>
+        <span class="collapsible-arrow">▼</span>
+      </div>
+      <div class="collapsible-content">
+        <div style="padding: 1rem; background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.875rem; line-height: 1.6;">
+          <pre style="white-space: pre-wrap; margin: 0; font-family: inherit;">To address the patient's question about how their HbA1c, metformin dosage, and weight have changed over time and if there are any correlations:
+
+Key data points to investigate:
+- HbA1c lab values and dates 
+- Metformin prescription details (dosage, form) and dates
+- Weight measurements and dates
+
+Correlations to explore:  
+- Changes in HbA1c before and after starting metformin
+- Impact of any metformin dosage adjustments on subsequent HbA1c levels
+- Relationship between HbA1c and weight over time, especially after starting metformin
+
+Health concerns to consider:
+- Glycemic control as indicated by HbA1c being above normal range
+- Possible need for increasing metformin dosage if HbA1c remains elevated
+- Potential for weight loss as an additional benefit of metformin 
+
+Timeframes to analyze:
+- Focus on the period from June 2021 (earliest metformin prescription) to present
+- Compare pre-metformin baseline data if available to post-metformin initiation
+
+Priority and focus areas:
+- Evaluating effectiveness of current metformin dosage on glycemic control is top priority
+- Secondarily, assess for any positive impact of metformin on weight over time
+- Present data chronologically to highlight trends and inflection points
+
+In summary, a longitudinal analysis looking at HbA1c, metformin prescriptions, and weight before and after starting the medication, with an emphasis on glycemic control, will provide a comprehensive assessment to address the patient's key concerns. Reporting should focus on the effectiveness of their current treatment plan and any opportunities for optimization.</pre>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Dimension Evaluation Summary -->
+    <h4 style="color: var(--text-primary); margin-top: 0;">Dimension Evaluation</h4>
+    <div style="overflow-x: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Dimension</th>
+            <th>Method</th>
+            <th>Expected</th>
+            <th>Actual</th>
+            <th>Score</th>
+            <th>Target</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+          <tr class="collapsible" onclick="toggleDimensionRow(this)" style="cursor: pointer;">
+            <td style="font-weight: 600;">
+              
+              <span class="dimension-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+              
+              Complexity Classification
+            </td>
+            <td>🔢 Deterministic</td>
+            <td>COMPLEX</td>
+            <td>standard</td>
+            <td>0.00</td>
+            <td>0.90</td>
+            <td>
+              <span class="badge badge-danger">
+                ❌ FAIL
+              </span>
+            </td>
+          </tr>
+          
+          <tr class="dimension-details" style="display: none;">
+            <td colspan="7" style="padding: 0;">
+              <div style="padding: 1.5rem; background: linear-gradient(135deg, rgba(239, 68, 68, 0.05), rgba(239, 68, 68, 0.02)); border-top: 2px solid rgba(239, 68, 68, 0.2);">
+                <!-- Component Scores Section -->
+                
+                <!-- Dimension evaluation explanation -->
+                <div style="margin-bottom: 1.5rem; padding: 0.75rem; background: rgba(59, 130, 246, 0.05); border-radius: 6px;">
+                  <p style="margin: 0; color: var(--text-secondary); font-size: 0.875rem;">
+                    ℹ️ <strong>Evaluation Method:</strong> Binary evaluation: Either the complexity level matches expected or it doesn't
+                  </p>
+                </div>
+                
+                
+                <!-- Failure Analysis Section -->
+                
+                <div style="border-top: none; padding-top: 0;">
+                  <!-- LLM Judge Analysis Container - More integrated design -->
+                  <div style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.03)); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 8px; padding: 1.5rem;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                      <h4 style="color: var(--accent-danger); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 1.2rem;">🔍</span>
+                        LLM Judge Analysis
+                      </h4>
+                      
+                      <span class="badge badge-danger">
+                        Priority: HIGH
+                      </span>
+                      
+                    </div>
+                  
+                  <div style="display: grid; gap: 1rem;">
+                    
+                    <div>
+                      <h5 style="color: var(--accent-danger); margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>📄</span> Associated Prompt Files
+                      </h5>
+                      <ul style="margin: 0; padding-left: 1.5rem;">
+                        
+                        <li style="color: var(--text-secondary);">1_gather_data_assess_complexity.txt</li>
+                        
+                      </ul>
+                    </div>
+                    
+                    
+                    
+                    <div>
+                      <h5 style="color: var(--accent-danger); margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>🔍</span> Root Cause Analysis
+                      </h5>
+                      <p style="margin: 0; color: var(--text-secondary); background: var(--bg-secondary); padding: 0.75rem; border-radius: 6px; border-left: 4px solid var(--accent-danger);">
+                        The prompt lacks clear guidance on how to classify queries involving analysis of trends and correlations across multiple data types over time periods, leading to this complex query being misclassified as standard.
+                      </p>
+                    </div>
+                    
+                    
+                    
+                    <div>
+                      <h5 style="color: var(--accent-primary); margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>💡</span> Recommended Improvements
+                      </h5>
+                      <ul style="margin: 0; padding-left: 1.5rem;">
+                        
+                        <li style="color: var(--text-secondary); margin-bottom: 0.25rem;">MODIFY RULE: Change to 'Queries involving trend analysis across a single data type (e.g. HbA1c levels over time) or basic correlations between 2 closely related metrics (e.g. medication dosage and lab values)'</li>
+                        
+                        <li style="color: var(--text-secondary); margin-bottom: 0.25rem;">ADD EXAMPLE: 'How has my HbA1c level changed since I started taking metformin, has my dosage been adjusted over time based on my lab results, and is there a correlation between these changes and my weight measurements during the same period?' → COMPLEX because it requires longitudinal analysis of multiple changing variables and their interrelationships.</li>
+                        
+                        <li style="color: var(--text-secondary); margin-bottom: 0.25rem;">ADD BOUNDARY CLARIFICATION: 'COMPLEX queries involve longitudinal analysis exploring relationships between multiple changing data streams over time periods, while STANDARD is limited to single variable trends or simple two-variable correlations.'</li>
+                        
+                        <li style="color: var(--text-secondary); margin-bottom: 0.25rem;">ADD KEYWORD GUIDANCE: Complex queries may contain phrases like 'changes over time', 'correlation between', 'interrelationship of', 'longitudinal analysis', 'multi-variable', 'investigate relationships between'</li>
+                        
+                      </ul>
+                    </div>
+                    
+                    
+                  </div>
+                  </div>
+                </div>
+                
+              </div>
+            </td>
+          </tr>
+          
+          
+          <tr class="collapsible" onclick="toggleDimensionRow(this)" style="cursor: pointer;">
+            <td style="font-weight: 600;">
+              
+              <span class="dimension-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+              
+              Specialty Selection
+            </td>
+            <td>🔀 Hybrid</td>
+            <td>endocrinology, nutrition, pharmacy</td>
+            <td>endocrinology, laboratory_medicine, nutrition</td>
+            <td>0.66</td>
+            <td>0.85</td>
+            <td>
+              <span class="badge badge-danger">
+                ❌ FAIL
+              </span>
+            </td>
+          </tr>
+          
+          <tr class="dimension-details" style="display: none;">
+            <td colspan="7" style="padding: 0;">
+              <div style="padding: 1.5rem; background: linear-gradient(135deg, rgba(239, 68, 68, 0.05), rgba(239, 68, 68, 0.02)); border-top: 2px solid rgba(239, 68, 68, 0.2);">
+                <!-- Component Scores Section -->
+                
+                <div style="margin-bottom: 1.5rem;">
+                  <h5 style="color: var(--accent-primary); margin: 0 0 0.75rem 0;">📊 Quality Score Components:</h5>
+                  <table style="font-size: 0.875rem; background: var(--bg-secondary); border-radius: 8px;">
+                    <thead>
+                      <tr>
+                        <th style="padding: 0.75rem;">Component</th>
+                        <th style="padding: 0.75rem;">Method</th>
+                        <th style="padding: 0.75rem;">Weight</th>
+                        <th style="padding: 0.75rem;">Raw Score<br/><span style="font-weight: normal; font-size: 0.75rem;">(0-1)</span></th>
+                        <th style="padding: 0.75rem;">Weighted<br/><span style="font-weight: normal; font-size: 0.75rem;">(Score × Weight)</span></th>
+                        <th style="padding: 0.75rem;">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Specialist Precision</td>
+                        <td style="padding: 0.75rem;">🔢 Deterministic</td>
+                        <td style="padding: 0.75rem;">0.60</td>
+                        <td style="padding: 0.75rem; color: var(--accent-danger);">0.50</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.300</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Selected specialists match expected set</td>
+                      </tr>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Specialist Rationale</td>
+                        <td style="padding: 0.75rem;">🤖 Llm Judge</td>
+                        <td style="padding: 0.75rem;">0.40</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">0.90</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.360</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Clear reasoning for specialist choices</td>
+                      </tr>
+                      
+                    </tbody>
+                  </table>
+                </div>
+                
+                
+                <!-- Failure Analysis Section -->
+                
+                <div style="border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+                  <!-- LLM Judge Analysis Container - More integrated design -->
+                  <div style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.03)); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 8px; padding: 1.5rem;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                      <h4 style="color: var(--accent-danger); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 1.2rem;">🔍</span>
+                        LLM Judge Analysis
+                      </h4>
+                      
+                      <span class="badge badge-danger">
+                        Priority: HIGH
+                      </span>
+                      
+                    </div>
+                  
+                  <div style="display: grid; gap: 1rem;">
+                    
+                    <div>
+                      <h5 style="color: var(--accent-danger); margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>📄</span> Associated Prompt Files
+                      </h5>
+                      <ul style="margin: 0; padding-left: 1.5rem;">
+                        
+                        <li style="color: var(--text-secondary);">3_assign_specialist_tasks.txt</li>
+                        
+                      </ul>
+                    </div>
+                    
+                    
+                    
+                    <div>
+                      <h5 style="color: var(--accent-danger); margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>🔍</span> Root Cause Analysis
+                      </h5>
+                      <p style="margin: 0; color: var(--text-secondary); background: var(--bg-secondary); padding: 0.75rem; border-radius: 6px; border-left: 4px solid var(--accent-danger);">
+                        The specialist selection failed because the prompt lacked explicit rules and examples for lab-related queries, which caused the pharmacy specialist to be missed despite the query mentioning metformin dosage changes.
+                      </p>
+                    </div>
+                    
+                    
+                    
+                    <div>
+                      <h5 style="color: var(--accent-primary); margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>💡</span> Recommended Improvements
+                      </h5>
+                      <ul style="margin: 0; padding-left: 1.5rem;">
+                        
+                        <li style="color: var(--text-secondary); margin-bottom: 0.25rem;">ADD to Selection Rules: 'ALWAYS include pharmacy when query mentions: medication names, dosages, adjustments, adherence, interactions'</li>
+                        
+                        <li style="color: var(--text-secondary); margin-bottom: 0.25rem;">ADD EXAMPLE: 'Query: How has my HbA1c changed since starting metformin? → Select: [endocrinology, laboratory_medicine, pharmacy]'</li>
+                        
+                        <li style="color: var(--text-secondary); margin-bottom: 0.25rem;">ADD keywords for pharmacy: ['metformin', 'medication', 'dosage', 'prescription']</li>
+                        
+                      </ul>
+                    </div>
+                    
+                    
+                  </div>
+                  </div>
+                </div>
+                
+              </div>
+            </td>
+          </tr>
+          
+          
+          <tr class="collapsible" onclick="toggleDimensionRow(this)" style="cursor: pointer;">
+            <td style="font-weight: 600;">
+              
+              <span class="dimension-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+              
+              Analysis Quality
+            </td>
+            <td>🔀 Hybrid</td>
+            <td>≥0.80</td>
+            <td>0.93</td>
+            <td>0.93</td>
+            <td>0.80</td>
+            <td>
+              <span class="badge badge-success">
+                ✅ PASS
+              </span>
+            </td>
+          </tr>
+          
+          <tr class="dimension-details" style="display: none;">
+            <td colspan="7" style="padding: 0;">
+              <div style="padding: 1.5rem; background: var(--bg-primary); border-top: 2px solid var(--border-color);">
+                <!-- Component Scores Section -->
+                
+                <div style="margin-bottom: 0;">
+                  <h5 style="color: var(--accent-primary); margin: 0 0 0.75rem 0;">📊 Quality Score Components:</h5>
+                  <table style="font-size: 0.875rem; background: var(--bg-secondary); border-radius: 8px;">
+                    <thead>
+                      <tr>
+                        <th style="padding: 0.75rem;">Component</th>
+                        <th style="padding: 0.75rem;">Method</th>
+                        <th style="padding: 0.75rem;">Weight</th>
+                        <th style="padding: 0.75rem;">Raw Score<br/><span style="font-weight: normal; font-size: 0.75rem;">(0-1)</span></th>
+                        <th style="padding: 0.75rem;">Weighted<br/><span style="font-weight: normal; font-size: 0.75rem;">(Score × Weight)</span></th>
+                        <th style="padding: 0.75rem;">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Data Gathering</td>
+                        <td style="padding: 0.75rem;">🔢 Deterministic</td>
+                        <td style="padding: 0.75rem;">0.20</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">1.00</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.200</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Appropriate tool calls to gather health data</td>
+                      </tr>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Context Awareness</td>
+                        <td style="padding: 0.75rem;">🤖 Llm Judge</td>
+                        <td style="padding: 0.75rem;">0.15</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">0.90</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.135</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Consideration of temporal context and patient history</td>
+                      </tr>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Comprehensive Approach</td>
+                        <td style="padding: 0.75rem;">🤖 Llm Judge</td>
+                        <td style="padding: 0.75rem;">0.25</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">0.90</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.225</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Coverage of all relevant medical concepts</td>
+                      </tr>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Concern Identification</td>
+                        <td style="padding: 0.75rem;">🤖 Llm Judge</td>
+                        <td style="padding: 0.75rem;">0.20</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">0.90</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.180</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Identification of health concerns and risks</td>
+                      </tr>
+                      
+                    </tbody>
+                  </table>
+                </div>
+                
+                
+                <!-- Failure Analysis Section -->
+                
+              </div>
+            </td>
+          </tr>
+          
+          
+          <tr class="collapsible" onclick="toggleDimensionRow(this)" style="cursor: pointer;">
+            <td style="font-weight: 600;">
+              
+              <span class="dimension-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+              
+              Tool Usage
+            </td>
+            <td>🔢 Deterministic</td>
+            <td>Effective</td>
+            <td>1 calls</td>
+            <td>1.00</td>
+            <td>0.90</td>
+            <td>
+              <span class="badge badge-success">
+                ✅ PASS
+              </span>
+            </td>
+          </tr>
+          
+          <tr class="dimension-details" style="display: none;">
+            <td colspan="7" style="padding: 0;">
+              <div style="padding: 1.5rem; background: var(--bg-primary); border-top: 2px solid var(--border-color);">
+                <!-- Component Scores Section -->
+                
+                <div style="margin-bottom: 0;">
+                  <h5 style="color: var(--accent-primary); margin: 0 0 0.75rem 0;">📊 Quality Score Components:</h5>
+                  <table style="font-size: 0.875rem; background: var(--bg-secondary); border-radius: 8px;">
+                    <thead>
+                      <tr>
+                        <th style="padding: 0.75rem;">Component</th>
+                        <th style="padding: 0.75rem;">Method</th>
+                        <th style="padding: 0.75rem;">Weight</th>
+                        <th style="padding: 0.75rem;">Raw Score<br/><span style="font-weight: normal; font-size: 0.75rem;">(0-1)</span></th>
+                        <th style="padding: 0.75rem;">Weighted<br/><span style="font-weight: normal; font-size: 0.75rem;">(Score × Weight)</span></th>
+                        <th style="padding: 0.75rem;">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Tool Success Rate</td>
+                        <td style="padding: 0.75rem;">🔢 Deterministic</td>
+                        <td style="padding: 0.75rem;">0.50</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">1.00</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.500</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Percentage of successful tool calls</td>
+                      </tr>
+                      
+                    </tbody>
+                  </table>
+                </div>
+                
+                
+                <!-- Failure Analysis Section -->
+                
+              </div>
+            </td>
+          </tr>
+          
+          
+          <tr class="collapsible" onclick="toggleDimensionRow(this)" style="cursor: pointer;">
+            <td style="font-weight: 600;">
+              
+              <span class="dimension-arrow" style="display: inline-block; width: 20px; transition: transform 0.3s ease;">▶</span>
+              
+              Response Structure
+            </td>
+            <td>🔢 Deterministic</td>
+            <td>Valid XML</td>
+            <td>Valid</td>
+            <td>1.00</td>
+            <td>0.95</td>
+            <td>
+              <span class="badge badge-success">
+                ✅ PASS
+              </span>
+            </td>
+          </tr>
+          
+          <tr class="dimension-details" style="display: none;">
+            <td colspan="7" style="padding: 0;">
+              <div style="padding: 1.5rem; background: var(--bg-primary); border-top: 2px solid var(--border-color);">
+                <!-- Component Scores Section -->
+                
+                <div style="margin-bottom: 0;">
+                  <h5 style="color: var(--accent-primary); margin: 0 0 0.75rem 0;">📊 Quality Score Components:</h5>
+                  <table style="font-size: 0.875rem; background: var(--bg-secondary); border-radius: 8px;">
+                    <thead>
+                      <tr>
+                        <th style="padding: 0.75rem;">Component</th>
+                        <th style="padding: 0.75rem;">Method</th>
+                        <th style="padding: 0.75rem;">Weight</th>
+                        <th style="padding: 0.75rem;">Raw Score<br/><span style="font-weight: normal; font-size: 0.75rem;">(0-1)</span></th>
+                        <th style="padding: 0.75rem;">Weighted<br/><span style="font-weight: normal; font-size: 0.75rem;">(Score × Weight)</span></th>
+                        <th style="padding: 0.75rem;">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Xml Validity</td>
+                        <td style="padding: 0.75rem;">🔢 Deterministic</td>
+                        <td style="padding: 0.75rem;">0.70</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">1.00</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.700</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Valid XML structure in responses</td>
+                      </tr>
+                      
+                      <tr>
+                        <td style="font-weight: 600; padding: 0.75rem;">Required Fields</td>
+                        <td style="padding: 0.75rem;">🔢 Deterministic</td>
+                        <td style="padding: 0.75rem;">0.30</td>
+                        <td style="padding: 0.75rem; color: var(--accent-success);">1.00</td>
+                        <td style="color: var(--accent-primary); padding: 0.75rem;">0.300</td>
+                        <td style="color: var(--text-tertiary); padding: 0.75rem;">Presence of all required XML fields</td>
+                      </tr>
+                      
+                    </tbody>
+                  </table>
+                </div>
+                
+                
+                <!-- Failure Analysis Section -->
+                
+              </div>
+            </td>
+          </tr>
+          
+          
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+<!-- Consolidated Recommendations -->
+
+
+<!-- Visualizations -->
+<div class="card fade-in">
+  <h2 style="color: var(--text-primary); margin-top: 0;">Visualizations</h2>
+  <div style="text-align: center; padding: 2rem;">
+    <img src="./dimension_scores.png" alt="Dimension Scores" style="max-width: 100%; height: auto; border-radius: 8px;">
+  </div>
+</div>
+
+<!-- Footer -->
+<div style="text-align: center; padding: 2rem; color: var(--text-tertiary);">
+  <p>Report generated by Multi-Agent Health Insight System Evaluation Framework</p>
+  <p style="font-size: 0.875rem;">
+    <a href="https://github.com/anthropics/multi-agent-health-system" target="_blank">View on GitHub</a> |
+    <a href="./raw_results.json" target="_blank">Download Raw Data</a>
+  </p>
+</div>
+
+</div>
+</div>
+</body>
+<script>
+function toggleSection(element) {
+  const content = element.nextElementSibling;
+  const arrow = element.querySelector('.collapsible-arrow');
+  
+  content.classList.toggle('open');
+  arrow.classList.toggle('open');
+}
+
+function toggleDimensionSection(element) {
+  const macroContent = element.querySelector('.macro-analysis-content');
+  const arrow = element.querySelector('.dimension-section-arrow');
+  
+  if (macroContent) {
+    if (macroContent.style.display === 'none') {
+      macroContent.style.display = 'block';
+      arrow.style.transform = 'rotate(90deg)';
+    } else {
+      macroContent.style.display = 'none';
+      arrow.style.transform = 'rotate(0deg)';
+    }
+  }
+}
+
+function toggleDimensionRow(row) {
+  const nextRow = row.nextElementSibling;
+  const arrow = row.querySelector('.dimension-arrow');
+  
+  if (nextRow && nextRow.classList.contains('dimension-details')) {
+    if (nextRow.style.display === 'none') {
+      nextRow.style.display = 'table-row';
+      arrow.style.transform = 'rotate(90deg)';
+    } else {
+      nextRow.style.display = 'none';
+      arrow.style.transform = 'rotate(0deg)';
+    }
+  }
+}
+
+function toggleTestRow(row) {
+  const nextRow = row.nextElementSibling;
+  const arrow = row.querySelector('.test-arrow');
+  
+  if (nextRow && nextRow.classList.contains('test-details')) {
+    if (nextRow.style.display === 'none') {
+      nextRow.style.display = 'table-row';
+      arrow.style.transform = 'rotate(90deg)';
+    } else {
+      nextRow.style.display = 'none';
+      arrow.style.transform = 'rotate(0deg)';
+    }
+  }
+}
+
+// Add fade-in animation on scroll
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('fade-in');
+    }
+  });
+});
+
+document.querySelectorAll('.card, .test-case-card').forEach(el => {
+  observer.observe(el);
+});
+</script>
+</html>

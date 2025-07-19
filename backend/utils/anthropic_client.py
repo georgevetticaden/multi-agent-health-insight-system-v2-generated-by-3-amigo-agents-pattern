@@ -266,8 +266,8 @@ class AnthropicStreamingClient:
                 logger.error(f"Unexpected error: {e}")
                 raise
         
-        # Record response event
-        if response:
+        # Record response event (only for non-streaming responses)
+        if response and not stream:
             try:
                 response_text = self._extract_response_text(response)
                 tool_calls = self._extract_tool_calls(response)

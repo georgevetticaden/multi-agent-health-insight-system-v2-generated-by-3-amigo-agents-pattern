@@ -107,39 +107,25 @@ class MedicalVisualizationAgent:
             prompt_file="visualization_generation.txt"
         )
         
-        # Use standard streaming method with tracing
-        response = await self.streaming_client.create_message_with_retry_async(
+        # Use the original streaming approach that handles visualization properly
+        async for chunk in self.streaming_client.stream_visualization(
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=self.max_tokens,
-            temperature=0.0,
-            stream=True
-        )
+            context_label="Visualization Generation"
+        ):
+            yield chunk
         
-        # Process the stream and yield visualization chunks
-        full_content = ""
-        async for event in response:
-            if event.type == "content_block_delta":
-                if hasattr(event, 'delta') and hasattr(event.delta, 'text'):
-                    text = event.delta.text
-                    full_content += text
-                    
-                    # Check if this is a code block
-                    if "```" in text:
-                        yield {"type": "code_start", "content": text}
-                    else:
-                        yield {"type": "code_chunk", "content": text}
-            elif event.type == "message_stop":
-                # Add stage end marker when complete
-                if TRACING_AVAILABLE:
-                    trace_collector = get_trace_collector()
-                    if trace_collector:
-                        await trace_collector.add_event(
-                            event_type=TraceEventType.STAGE_END,
-                            agent_type="visualization",
-                            stage="visualization_generation",
-                            data={"stage": "visualization_generation", "content_length": len(full_content)}
-                        )
+        # Add stage end marker when complete
+        if TRACING_AVAILABLE:
+            trace_collector = get_trace_collector()
+            if trace_collector:
+                await trace_collector.add_event(
+                    event_type=TraceEventType.STAGE_END,
+                    agent_type="visualization",
+                    stage="visualization_generation",
+                    data={"stage": "visualization_generation"}
+                )
     
     def _extract_key_data_points(
         self, 

@@ -13,6 +13,13 @@ from enum import Enum
 from anthropic import Anthropic
 from anthropic.types import Message, ToolUseBlock, TextBlock
 
+# Import tracing components
+try:
+    from services.tracing import get_trace_collector, TraceEventType
+    TRACING_AVAILABLE = True
+except ImportError:
+    TRACING_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 
@@ -228,6 +235,28 @@ class AnthropicStreamingClient:
         
         retry_delay = self.initial_retry_delay
         code_block_started = False
+        start_time = asyncio.get_event_loop().time()
+        
+        # Record prompt event if tracing is enabled
+        prompt_event_id = None
+        if TRACING_AVAILABLE:
+            trace_collector = get_trace_collector()
+            if trace_collector:
+                prompt_data = {
+                    "prompt_file": "visualization_generation.txt",
+                    "model": model,
+                    "max_tokens": max_tokens,
+                    "messages": messages,
+                    "message_count": len(messages),
+                    "prompt_length": sum(len(msg.get('content', '')) for msg in messages)
+                }
+                
+                prompt_event_id = await trace_collector.add_event(
+                    event_type=TraceEventType.LLM_PROMPT,
+                    agent_type="visualization",
+                    stage="visualization_generation",
+                    data=prompt_data
+                )
         
         for attempt in range(self.max_retries):
             try:
@@ -317,6 +346,27 @@ class AnthropicStreamingClient:
                     "type": "text",
                     "content": "\n```"
                 }
+                
+                # Record response event if tracing is enabled
+                if TRACING_AVAILABLE and prompt_event_id:
+                    trace_collector = get_trace_collector()
+                    if trace_collector:
+                        duration_ms = (asyncio.get_event_loop().time() - start_time) * 1000
+                        response_data = {
+                            "response_text": full_code,
+                            "response_length": len(full_code),
+                            "model": model,
+                            "visualization_generated": True
+                        }
+                        
+                        await trace_collector.add_event(
+                            event_type=TraceEventType.LLM_RESPONSE,
+                            agent_type="visualization",
+                            stage="visualization_generation",
+                            data=response_data,
+                            duration_ms=duration_ms,
+                            parent_event_id=prompt_event_id
+                        )
                 
                 break  # Success, exit retry loop
                 

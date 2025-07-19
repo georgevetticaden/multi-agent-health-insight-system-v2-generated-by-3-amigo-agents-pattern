@@ -1,0 +1,1012 @@
+{
+  "results": [
+    {
+      "test_case_id": "standard_001",
+      "query": "What's my cholesterol trend over my entire data? I want to see trends across the top 4 cholesterol metrics including Triglycerides across that time period",
+      "success": true,
+      "total_response_time_ms": 89582.149,
+      "tokens_used": 491,
+      "error_message": null,
+      "trace_id": "07d5b2e5-2f98-4c63-8681-fe1ee639a7a0",
+      "expected_complexity": "STANDARD",
+      "actual_complexity": "standard",
+      "complexity_correct": true,
+      "expected_specialties": "{'laboratory_medicine', 'cardiology', 'endocrinology'}",
+      "actual_specialties": "{'preventive_medicine', 'laboratory_medicine', 'cardiology'}",
+      "response_valid": true,
+      "structure_errors": [],
+      "tool_calls_made": 1,
+      "complexity_classification_score": 1.0,
+      "specialty_selection_score": 0.6200000000000001,
+      "analysis_quality_score": 0.925,
+      "tool_usage_score": 1.0,
+      "response_structure_score": 1.0,
+      "specialty_component_breakdown": {
+        "specialist_precision": 0.5,
+        "specialist_rationale": 0.8
+      },
+      "analysis_quality_breakdown": {
+        "data_gathering": 1.0,
+        "context_awareness": 0.9,
+        "comprehensive_approach": 0.9,
+        "concern_identification": 0.9
+      },
+      "tool_component_breakdown": {
+        "tool_success_rate": 1.0
+      },
+      "response_component_breakdown": {
+        "xml_validity": 1.0,
+        "required_fields": 1.0
+      },
+      "approach_text": "To comprehensively analyze the patient's cholesterol trends over their full data history, I recommend:\n\nData Points:\n- Focus on total cholesterol, LDL cholesterol, HDL cholesterol, and triglycerides as the key metrics\n- Examine numeric lab values for each metric at all available timepoints \n- Note the date of each test to map values over time\n\nCorrelations:\n- Investigate relationships between the 4 cholesterol metrics\n- Assess if values tend to rise or fall in tandem or move independently \n- Explore if there are consistent ratios between total and LDL/HDL cholesterol\n\nHealth Concerns:  \n- Identify if/when values enter unhealthy ranges per medical guidelines\n- Note any significant spikes or dips that could indicate cardiovascular issues\n- Determine if an overall worsening trend emerges for any metric\n\nTimeframes:\n- Analyze the full date range from oldest (2013) to most recent (2025)\n- Group by year to assess annual averages and changes\n- Consider more granular monthly breakdowns if key inflection points are seen\n\nFocus Areas:\n- Emphasize visual representations of levels over time via line graphs\n- Statistically analyze metrics like percent change, min/max/average\n- Identify the most important takeaways to highlight for the patient\n\nPriorities:\n- Ensuring all relevant data is captured and included in the analysis\n- Providing clear, understandable trend information and visualizations\n- Surfacing any potential areas of medical concern regarding cardiovascular health\n- Delivering an actionable summary to guide the patient's health decisions",
+      "initial_data_gathered": {
+        "tool_calls_made": 1,
+        "data_available": true,
+        "summary": "- Cholesterol and triglyceride lab data is available from 2013 to 2025\n- Data includes total cholesterol, LDL, HDL, and triglycerides \n- Numeric values and dates are present to enable trend analysis over time\n- 92 total data points should be sufficient for identifying long-term trends",
+        "result_count": 92,
+        "query": "cholesterol triglycerides"
+      },
+      "analysis_time_ms": 49375.568,
+      "specialist_tasks": [
+        {
+          "specialist": "laboratory_medicine",
+          "objective": "Retrieve all total cholesterol, LDL, HDL, and triglyceride lab values with dates from 2013 to present to analyze full historical trends",
+          "context": "The patient has requested an analysis of their complete cholesterol data history from 2013 to 2025. Focus on retrieving the actual numeric lab values for total cholesterol, LDL, HDL, and triglycerides...",
+          "expected_output": "Comprehensive dataset of cholesterol and triglyceride lab results with values and dates covering 2013 to 2025",
+          "priority": 1,
+          "max_tool_calls": 5
+        },
+        {
+          "specialist": "cardiology",
+          "objective": "Analyze cholesterol and triglyceride trends to identify any values in unhealthy ranges or significant changes that could indicate cardiovascular risk",
+          "context": "With the full historical cholesterol dataset, assess each metric for values above recommended healthy ranges per medical guidelines. Examine the data for any significant spikes, dips, or worsening tre...",
+          "expected_output": "Summary of any high-risk cholesterol or triglyceride values and time periods of concern regarding cardiovascular health",
+          "priority": 2,
+          "max_tool_calls": 5
+        },
+        {
+          "specialist": "preventive_medicine",
+          "objective": "Provide visualizations and a patient-friendly summary of the most important cholesterol trends and takeaways to guide preventive health decisions",
+          "context": "Consolidate the key findings from the data analysis into clear visualizations like line graphs showing levels over time. Highlight the most significant trend insights and any preventive health recomme...",
+          "expected_output": "Line graph visualizations of cholesterol trends from 2013-2025 and a concise written summary of key takeaways and considerations for preventive care",
+          "priority": 3,
+          "max_tool_calls": 5
+        }
+      ],
+      "task_creation_success": true,
+      "task_creation_time_ms": 28274.363,
+      "task_creation_error": null,
+      "task_count": 3,
+      "approach_mentioned_specialties": "set()",
+      "key_data_points": [
+        "hdl_cholesterol",
+        "ldl_cholesterol",
+        "total_cholesterol",
+        "triglycerides",
+        "trends",
+        "date_range"
+      ],
+      "failure_analyses": [
+        {
+          "dimension": "specialty_selection",
+          "root_cause": "The prompt lacks explicit rules and examples for selecting the proper specialists when the query involves lab test results, especially for metrics like cholesterol that span multiple specialties.",
+          "specific_issues": [
+            "Missing endocrinology: The query mentioned cholesterol trends, which relates to endocrine/metabolic health, but there were no keyword mappings or rules to trigger inclusion of this specialist.",
+            "Unnecessary: preventive_medicine"
+          ],
+          "recommendations": [
+            "ADD to Selection Rules: 'ALWAYS include laboratory_medicine when query mentions: test results, blood work, lab values, or specific test names (A1C, glucose, cholesterol, etc.)'",
+            "ADD EXAMPLE: 'Query: What's my cholesterol trend over time?' \u2192 Select: [cardiology, endocrinology, laboratory_medicine]",
+            "ADD keywords for endocrinology: ['cholesterol', 'triglycerides', 'metabolic']"
+          ],
+          "priority": "high",
+          "prompt_file": "backend/services/agents/cmo/prompts/3_assign_specialist_tasks.txt",
+          "expected_impact": null
+        }
+      ],
+      "weighted_score": 0.8862500000000001,
+      "dimension_success_rate": 0.8,
+      "evaluation_success": true
+    },
+    {
+      "test_case_id": "standard_002",
+      "query": "Show my abnormal lab results from labs this year?",
+      "success": true,
+      "total_response_time_ms": 78390.073,
+      "tokens_used": 621,
+      "error_message": null,
+      "trace_id": "65a59f70-9da2-4ccf-bd70-3c5e0afcd8ad",
+      "expected_complexity": "STANDARD",
+      "actual_complexity": "standard",
+      "complexity_correct": true,
+      "expected_specialties": "{'preventive_medicine', 'laboratory_medicine', 'endocrinology'}",
+      "actual_specialties": "{'laboratory_medicine', 'endocrinology'}",
+      "response_valid": true,
+      "structure_errors": [],
+      "tool_calls_made": 1,
+      "complexity_classification_score": 1.0,
+      "specialty_selection_score": 0.76,
+      "analysis_quality_score": 0.9062500000000001,
+      "tool_usage_score": 1.0,
+      "response_structure_score": 1.0,
+      "specialty_component_breakdown": {
+        "specialist_precision": 0.6666666666666666,
+        "specialist_rationale": 0.9
+      },
+      "analysis_quality_breakdown": {
+        "data_gathering": 1.0,
+        "context_awareness": 0.8,
+        "comprehensive_approach": 0.9,
+        "concern_identification": 0.9
+      },
+      "tool_component_breakdown": {
+        "tool_success_rate": 1.0
+      },
+      "response_component_breakdown": {
+        "xml_validity": 1.0,
+        "required_fields": 1.0
+      },
+      "approach_text": "To analyze this patient's abnormal lab results from 2023, we should focus on:\n\nData points:\n- Specific tests with abnormal results (AST, BUN, glucose, HbA1c, CO2)\n- Numeric values of abnormal results and how far outside reference range\n- Dates of abnormal results to identify any temporal patterns\n\nCorrelations: \n- Investigate potential relationships between abnormal liver enzymes (AST), kidney function (BUN), and blood sugar control (glucose, HbA1c)\n- Look for any results that tend to be abnormal at the same time, which could indicate an underlying condition\n\nHealth concerns:\n- Persistently elevated liver enzymes raise concern for liver disease or damage\n- High BUN could signal kidney dysfunction or dehydration\n- Abnormal glucose and HbA1c are indicative of diabetes or prediabetes\n- Slightly elevated CO2 on two occasions warrants monitoring for acid-base imbalance\n\nTimeframes:\n- Analyze all abnormal results from 2023 to capture full year to date\n- Pay attention to most recent 3-6 months to assess current status\n- Note any significant changes from early 2023 to now\n\nFocus areas:\n- Liver: Determine severity and trend of AST elevations\n- Kidney: Assess degree of BUN abnormalities and look for upward trend\n- Diabetes: Evaluate current glucose control and risk based on HbA1c\n- Explore these systems together to identify any unifying diagnosis\n\nPriorities:\n1. Liver and kidney function as most frequent and persistent abnormalities\n2. Diabetic status given long-term health implications if uncontrolled \n3. Acid-base balance as more minor issue currently but could reflect systemic process\n\nIn summary, a focused analysis of the abnormal liver, kidney, and glucose results over time will be key to identifying the patient's main health problems and assessing severity. Correlations between these systems should be explored to uncover any underlying conditions. The analysis should emphasize the most recent results while still considering the full 2023 timeframe for a comprehensive assessment.",
+      "initial_data_gathered": {
+        "tool_calls_made": 1,
+        "data_available": true,
+        "summary": "The query returned 16 abnormal lab results for this patient from 2023. The data includes the test name, numeric result, reference range, and abnormal flag for each lab. \n\nKey observations:\n- Multiple abnormal AST and BUN results throughout the year, indicating potential liver/kidney issues\n- A few abnormal glucose and HbA1c results, suggesting diabetes or prediabetes\n- Labs from two different providers (Edward-Elmhurst Health and Duly Health and Care)\n\nTo fully answer the question, we'll need to analyze the specific abnormal values and look for any concerning trends over time. But the initial data pull confirms there is sufficient information available to provide a detailed response.",
+        "result_count": 16,
+        "query": "abnormal lab results from 2023"
+      },
+      "analysis_time_ms": 40296.03,
+      "specialist_tasks": [
+        {
+          "specialist": "laboratory_medicine",
+          "objective": "Analyze abnormal AST and BUN results from 2023 to assess liver and kidney function, looking for concerning trends or worsening over time.",
+          "context": "Patient has multiple abnormal AST and BUN values in 2023, indicating potential liver and kidney issues. Need to determine severity and any signs of disease progression.",
+          "expected_output": "1. Summary of all abnormal AST and BUN results from 2023 with specific values and dates\n  2. Assessment of severity of liver and kidney abnormalities \n  3. Analysis of any worsening trends in AST or BUN over the course of the year\n  4. Recommendation for additional tests if needed to further evaluate",
+          "priority": 1,
+          "max_tool_calls": 5
+        },
+        {
+          "specialist": "endocrinology",
+          "objective": "Evaluate abnormal glucose and HbA1c results from 2023 to determine diabetic status and assess current level of blood sugar control.",
+          "context": "A few high glucose and HbA1c results in 2023 are suggestive of diabetes or prediabetes. Need to determine diagnosis and if glucose levels are currently well-managed.",
+          "expected_output": "1. All glucose and HbA1c results from 2023 with specific values and dates\n  2. Determination of diabetes or prediabetes diagnosis based on results\n  3. Assessment of current blood sugar control and trends over the year\n  4. Recommendations for further diabetes screening or management",
+          "priority": 2,
+          "max_tool_calls": 5
+        },
+        {
+          "specialist": "laboratory_medicine",
+          "objective": "Investigate slightly elevated CO2 results in 2023 to determine if there is any evidence of chronic respiratory alkalosis or other acid-base imbalance.",
+          "context": "CO2 was mildly elevated on two occasions in 2023. While a minor abnormality, this could potentially reflect a systemic process and warrants a closer look.",
+          "expected_output": "1. All CO2 results from 2023 with values and dates\n  2. Analysis of degree of abnormality and any patterns\n  3. Assessment of likelihood of respiratory alkalosis or other chronic acid-base issue\n  4. Recommendations for follow-up testing of blood gases if concerns arise",
+          "priority": 3,
+          "max_tool_calls": 5
+        }
+      ],
+      "task_creation_success": true,
+      "task_creation_time_ms": 25091.521,
+      "task_creation_error": null,
+      "task_count": 3,
+      "approach_mentioned_specialties": "set()",
+      "key_data_points": [
+        "lab_results",
+        "abnormal_flags",
+        "current_year",
+        "reference_ranges"
+      ],
+      "failure_analyses": [
+        {
+          "dimension": "specialty_selection",
+          "root_cause": "The specialist selection failed to include preventive_medicine for a query about abnormal lab results, which is a critical gap. Preventive medicine specialists should be involved when assessing risk factors and screening needs based on abnormal diagnostic findings.",
+          "specific_issues": [
+            "Missing preventive_medicine: The current prompt lacks explicit rules or keyword mappings to trigger inclusion of preventive_medicine for lab result analysis queries."
+          ],
+          "recommendations": [
+            "ADD to Selection Rules: 'ALWAYS include preventive_medicine when the query involves abnormal lab results, diagnostic findings, or mentions screening'",
+            "ADD EXAMPLE: 'Query: Why was my liver enzyme test abnormal?' \u2192 Select: [laboratory_medicine, preventive_medicine]",
+            "ADD keywords for preventive_medicine: ['abnormal', 'elevated', 'screening', 'diagnostic']"
+          ],
+          "priority": "high",
+          "prompt_file": "backend/services/agents/cmo/prompts/3_assign_specialist_tasks.txt",
+          "expected_impact": null
+        }
+      ],
+      "weighted_score": 0.9165625000000001,
+      "dimension_success_rate": 0.8,
+      "evaluation_success": true
+    },
+    {
+      "test_case_id": "complex_001",
+      "query": "Analyze cholesterol relevant medication adherence patterns over that time period and how do they correlate with these cholesterol lab results.",
+      "success": true,
+      "total_response_time_ms": 100542.96100000001,
+      "tokens_used": 623,
+      "error_message": null,
+      "trace_id": "a399f2fd-1d21-47e3-8969-ef4698c93918",
+      "expected_complexity": "COMPLEX",
+      "actual_complexity": "complex",
+      "complexity_correct": true,
+      "expected_specialties": "{'laboratory_medicine', 'cardiology', 'pharmacy', 'endocrinology'}",
+      "actual_specialties": "{'laboratory_medicine', 'endocrinology', 'cardiology', 'pharmacy', 'preventive_medicine'}",
+      "response_valid": true,
+      "structure_errors": [],
+      "tool_calls_made": 1,
+      "complexity_classification_score": 1.0,
+      "specialty_selection_score": 0.8400000000000001,
+      "analysis_quality_score": 0.925,
+      "tool_usage_score": 1.0,
+      "response_structure_score": 1.0,
+      "specialty_component_breakdown": {
+        "specialist_precision": 0.8,
+        "specialist_rationale": 0.9
+      },
+      "analysis_quality_breakdown": {
+        "data_gathering": 1.0,
+        "context_awareness": 0.9,
+        "comprehensive_approach": 0.9,
+        "concern_identification": 0.9
+      },
+      "tool_component_breakdown": {
+        "tool_success_rate": 1.0
+      },
+      "response_component_breakdown": {
+        "xml_validity": 1.0,
+        "required_fields": 1.0
+      },
+      "approach_text": "To analyze the correlation between cholesterol medication adherence and lab results, I recommend the following approach:\n\nKey data points to investigate:\n- Cholesterol lab values over time, especially LDL, HDL and total cholesterol \n- Cholesterol medication prescriptions and refills to assess adherence\n- Medication possession ratio (days supply of medication / days between refills)\n- Changes in medication dosage or drug prescribed\n- Periods of time not covered by an active cholesterol medication prescription\n\nCorrelations to explore:\n- Impact of starting, stopping, or changing cholesterol medications on lab values\n- Relationship between medication adherence percentage and cholesterol levels\n- Lag time between changes in adherence and changes in lab results  \n\nHealth concerns to address:\n- Periods of elevated LDL or total cholesterol\n- Low HDL levels\n- Medication side effects impacting adherence\n- Cardiovascular disease risk based on cholesterol levels\n\nTimeframes:\n- Analyze full 12-year data set to identify long-term trends\n- Focus on 3-month windows around medication changes to assess acute impacts\n- Compare year-over-year metrics to normalize for any seasonal effects\n\nAnalysis focus areas:\n- Effectiveness of different cholesterol medications and doses on lab results\n- Identifying any consistent adherence issues and potential root causes\n- Assessing if cholesterol is being adequately controlled and identifying unmet treatment needs\n\nPrioritize analysis of LDL and total cholesterol, as these are primary treatment targets. Secondarily, analyze HDL levels and the total cholesterol/HDL ratio to more fully assess cardiovascular risk. Medication adherence analysis is critical to contextualize lab results.",
+      "initial_data_gathered": {
+        "tool_calls_made": 1,
+        "data_available": true,
+        "summary": "The initial query shows that there is a good amount of data available to analyze cholesterol medication adherence and lab results over time:\n\n- Cholesterol lab results are available from 2013 to 2025, including total cholesterol, LDL, and HDL values. This will allow tracking cholesterol levels over a 12+ year period.\n\n- Cholesterol medication records are available from 2014 to 2024, covering rosuvastatin, atorvastatin, and ezetimibe prescriptions. Dosage information is included.\n\n- Having both lab and medication data over an extended timeframe will enable analyzing correlations between medication usage/adherence and cholesterol levels.\n\n- The data comes from multiple providers, so completeness of the medication records may need to be assessed.\n\n- No major data gaps are evident, but the specific timeframe of interest was not provided in the original query.\n\nOverall, while the data looks sufficient for the requested analysis, the long timeframe and need to integrate and correlate multiple data types makes this a relatively complex request that will require a deeper analysis to fully address.",
+        "result_count": 107,
+        "query": "cholesterol medications and lab results"
+      },
+      "analysis_time_ms": 49547.841,
+      "specialist_tasks": [
+        {
+          "specialist": "laboratory_medicine",
+          "objective": "Analyze cholesterol lab values (LDL, HDL, total cholesterol) from 2013-2025 to identify trends and periods of elevated levels",
+          "context": "Cholesterol lab data is available from 2013-2025. Focus on actual lab values, not just test dates. Analyze the full 12-year period to identify long-term trends.",
+          "expected_output": "Report detailing cholesterol lab value trends, periods of elevated LDL or total cholesterol, and low HDL levels. Include specific lab values with dates.",
+          "priority": 1,
+          "max_tool_calls": 7
+        },
+        {
+          "specialist": "pharmacy",
+          "objective": "Assess cholesterol medication adherence from 2014-2024 using prescription and refill data",
+          "context": "Cholesterol medication records are available from 2014-2024, including rosuvastatin, atorvastatin, and ezetimibe. Calculate medication possession ratio and identify gaps in prescription coverage.",
+          "expected_output": "Report detailing adherence percentage for each medication, periods of low adherence, and average days between refills. Flag any gaps in prescription coverage.",
+          "priority": 2,
+          "max_tool_calls": 7
+        },
+        {
+          "specialist": "cardiology",
+          "objective": "Correlate periods of low medication adherence with cholesterol lab results to assess impact on cardiovascular health",
+          "context": "Integrate pharmacy adherence findings with lab results to identify how non-adherence impacts cholesterol levels and cardiovascular risk. Focus on 3-month windows around adherence changes.",
+          "expected_output": "Analysis of how low medication adherence correlates with changes in LDL, HDL and total cholesterol. Assess lag time between adherence changes and lab results. Identify periods of increased cardiovascular risk.",
+          "priority": 3,
+          "max_tool_calls": 7
+        },
+        {
+          "specialist": "endocrinology",
+          "objective": "Evaluate effectiveness of different cholesterol medications and doses on achieving cholesterol treatment targets",
+          "context": "Compare lab results across the different cholesterol medications prescribed to assess relative effectiveness. Analyze impact of dosage changes on cholesterol levels.",
+          "expected_output": "Report ranking cholesterol medications by effectiveness in lowering LDL and total cholesterol to goal ranges. Include analysis of optimal dosages based on lab results.",
+          "priority": 4,
+          "max_tool_calls": 7
+        },
+        {
+          "specialist": "preventive_medicine",
+          "objective": "Identify unmet treatment needs and persistent cardiovascular risk factors based on longitudinal cholesterol data",
+          "context": "Review overall 12-year cholesterol and adherence data to surface any consistent issues in cholesterol management. Assess if current treatment regimen is optimized to minimize cardiovascular risk.",
+          "expected_output": "Summary of long-term cholesterol management, highlighting any periods of persistently elevated cardiovascular risk and potential undertreatment. Recommend opportunities to optimize therapy.",
+          "priority": 5,
+          "max_tool_calls": 7
+        }
+      ],
+      "task_creation_success": true,
+      "task_creation_time_ms": 37893.318999999996,
+      "task_creation_error": null,
+      "task_count": 5,
+      "approach_mentioned_specialties": "set()",
+      "key_data_points": [
+        "statin_history",
+        "medication_switches",
+        "ldl_correlation",
+        "hdl_patterns",
+        "triglyceride_response",
+        "adherence_gaps"
+      ],
+      "failure_analyses": [
+        {
+          "dimension": "specialty_selection",
+          "root_cause": "The specialist selection failed because there were no explicit rules or keyword mappings for lab-related queries. The query mentioned 'cholesterol lab results' but laboratory_medicine was not automatically included.",
+          "specific_issues": [
+            "Unnecessary: preventive_medicine"
+          ],
+          "recommendations": [
+            "ADD to Selection Rules: 'ALWAYS include laboratory_medicine when query mentions: test results, blood work, lab values, or specific test names (A1C, glucose, cholesterol, etc.)'",
+            "ADD EXAMPLE: 'Query: Analyze my cholesterol lab results and medication adherence patterns \u2192 Select: [cardiology, laboratory_medicine, pharmacy]'",
+            "ADD keywords for endocrinology: ['cholesterol', 'lipids', 'statins']"
+          ],
+          "priority": "high",
+          "prompt_file": "backend/services/agents/cmo/prompts/3_assign_specialist_tasks.txt",
+          "expected_impact": null
+        }
+      ],
+      "weighted_score": 0.9412500000000001,
+      "dimension_success_rate": 0.8,
+      "evaluation_success": true
+    },
+    {
+      "test_case_id": "complex_002",
+      "query": "How has my HbA1c level changed since I started taking metformin, has my dosage been adjusted over time based on my lab results, and is there a correlation between these changes and my weight measurements during the same period?",
+      "success": false,
+      "total_response_time_ms": 86961.006,
+      "tokens_used": 603,
+      "error_message": null,
+      "trace_id": "bffd63b8-3701-48c3-b976-ad67e2655ac3",
+      "expected_complexity": "COMPLEX",
+      "actual_complexity": "standard",
+      "complexity_correct": false,
+      "expected_specialties": "{'nutrition', 'pharmacy', 'endocrinology'}",
+      "actual_specialties": "{'nutrition', 'laboratory_medicine', 'endocrinology'}",
+      "response_valid": true,
+      "structure_errors": [],
+      "tool_calls_made": 1,
+      "complexity_classification_score": 0.0,
+      "specialty_selection_score": 0.66,
+      "analysis_quality_score": 0.925,
+      "tool_usage_score": 1.0,
+      "response_structure_score": 1.0,
+      "specialty_component_breakdown": {
+        "specialist_precision": 0.5,
+        "specialist_rationale": 0.9
+      },
+      "analysis_quality_breakdown": {
+        "data_gathering": 1.0,
+        "context_awareness": 0.9,
+        "comprehensive_approach": 0.9,
+        "concern_identification": 0.9
+      },
+      "tool_component_breakdown": {
+        "tool_success_rate": 1.0
+      },
+      "response_component_breakdown": {
+        "xml_validity": 1.0,
+        "required_fields": 1.0
+      },
+      "approach_text": "To address the patient's question about how their HbA1c, metformin dosage, and weight have changed over time and if there are any correlations:\n\nKey data points to investigate:\n- HbA1c lab values and dates \n- Metformin prescription details (dosage, form) and dates\n- Weight measurements and dates\n\nCorrelations to explore:  \n- Changes in HbA1c before and after starting metformin\n- Impact of any metformin dosage adjustments on subsequent HbA1c levels\n- Relationship between HbA1c and weight over time, especially after starting metformin\n\nHealth concerns to consider:\n- Glycemic control as indicated by HbA1c being above normal range\n- Possible need for increasing metformin dosage if HbA1c remains elevated\n- Potential for weight loss as an additional benefit of metformin \n\nTimeframes to analyze:\n- Focus on the period from June 2021 (earliest metformin prescription) to present\n- Compare pre-metformin baseline data if available to post-metformin initiation\n\nPriority and focus areas:\n- Evaluating effectiveness of current metformin dosage on glycemic control is top priority\n- Secondarily, assess for any positive impact of metformin on weight over time\n- Present data chronologically to highlight trends and inflection points\n\nIn summary, a longitudinal analysis looking at HbA1c, metformin prescriptions, and weight before and after starting the medication, with an emphasis on glycemic control, will provide a comprehensive assessment to address the patient's key concerns. Reporting should focus on the effectiveness of their current treatment plan and any opportunities for optimization.",
+      "initial_data_gathered": {
+        "tool_calls_made": 1,
+        "data_available": true,
+        "summary": "The query returned relevant data to analyze the patient's HbA1c levels, metformin prescriptions, and weight measurements over the time period they have been taking metformin (since June 2021). \n\nKey observations:\n- HbA1c results are available at a few timepoints, showing values slightly above the normal range\n- Metformin has been consistently prescribed at a 500mg extended release dose \n- Weight measurements are available fairly frequently and show some fluctuations over time\n\nThere appears to be sufficient longitudinal data to look at trends and relationships between these variables to address the patient's question. A standard level of analysis should provide meaningful insights.",
+        "result_count": 47,
+        "query": "Retrieve HbA1c lab results, metformin prescription details including dosage changes, and weight measurements over the time period the patient has been taking metformin."
+      },
+      "analysis_time_ms": 43608.965,
+      "specialist_tasks": [
+        {
+          "specialist": "endocrinology",
+          "objective": "Evaluate the effectiveness of the patient's current metformin dosage (500mg ER) on glycemic control by analyzing HbA1c trends over time, identifying if HbA1c levels have improved since starting the medication and determining if the current dosage is sufficient.",
+          "context": "Patient has been taking metformin 500mg ER since June 2021. HbA1c levels are available at a few timepoints and are slightly above normal range. Assessing HbA1c response to metformin is the top priorit...",
+          "expected_output": "1) HbA1c values before and after starting metformin, 2) Analysis of change in HbA1c levels over time on metformin, 3) Determination if current 500mg dosage is effectively lowering HbA1c, 4) Recommendation to maintain or adjust metformin dosage",
+          "priority": 1,
+          "max_tool_calls": 5
+        },
+        {
+          "specialist": "laboratory_medicine",
+          "objective": "Retrieve all HbA1c lab values with dates to enable a comprehensive analysis of glycemic control over time, especially focusing on results before and after metformin initiation in June 2021.",
+          "context": "HbA1c is a key indicator of diabetes management. Patient is interested in how levels have changed since starting metformin. Lab results are needed to conduct this analysis and determine if current tre...",
+          "expected_output": "1) All historical HbA1c results with dates, 2) Identification of any HbA1c tests prior to June 2021 for pre-metformin baseline, 3) Confirmation there are sufficient HbA1c datapoints after starting metformin to evaluate response",
+          "priority": 2,
+          "max_tool_calls": 5
+        },
+        {
+          "specialist": "nutrition",
+          "objective": "Analyze the patient's weight measurements over time, especially in relation to starting metformin, to determine if the medication has contributed to any weight loss in addition to glycemic benefits.",
+          "context": "Metformin may promote modest weight loss as a secondary effect. Patient's weight data is available and they are interested if there is any correlation with metformin use. This is a secondary priority ...",
+          "expected_output": "1) Graph of weight over time, marking metformin start, 2) Calculation of any change in average weight pre- and post-metformin, 3) Assessment if there is a clear correlation between metformin and weight loss for this patient",
+          "priority": 3,
+          "max_tool_calls": 5
+        }
+      ],
+      "task_creation_success": true,
+      "task_creation_time_ms": 29564.431,
+      "task_creation_error": null,
+      "task_count": 3,
+      "approach_mentioned_specialties": "set()",
+      "key_data_points": [
+        "hba1c_trend",
+        "metformin_initiation",
+        "dose_adjustments",
+        "weight_correlation",
+        "glycemic_control",
+        "temporal_analysis"
+      ],
+      "failure_analyses": [
+        {
+          "dimension": "complexity_classification",
+          "root_cause": "The prompt lacks clear guidance on how to classify queries involving analysis of trends and correlations across multiple data types over time periods, leading to this complex query being misclassified as standard.",
+          "specific_issues": [],
+          "recommendations": [
+            "MODIFY RULE: Change to 'Queries involving trend analysis across a single data type (e.g. HbA1c levels over time) or basic correlations between 2 closely related metrics (e.g. medication dosage and lab values)'",
+            "ADD EXAMPLE: 'How has my HbA1c level changed since I started taking metformin, has my dosage been adjusted over time based on my lab results, and is there a correlation between these changes and my weight measurements during the same period?' \u2192 COMPLEX because it requires longitudinal analysis of multiple changing variables and their interrelationships.",
+            "ADD BOUNDARY CLARIFICATION: 'COMPLEX queries involve longitudinal analysis exploring relationships between multiple changing data streams over time periods, while STANDARD is limited to single variable trends or simple two-variable correlations.'",
+            "ADD KEYWORD GUIDANCE: Complex queries may contain phrases like 'changes over time', 'correlation between', 'interrelationship of', 'longitudinal analysis', 'multi-variable', 'investigate relationships between'"
+          ],
+          "priority": "high",
+          "prompt_file": "backend/services/agents/cmo/prompts/1_gather_data_assess_complexity.txt",
+          "expected_impact": null
+        },
+        {
+          "dimension": "specialty_selection",
+          "root_cause": "The specialist selection failed because the prompt lacked explicit rules and examples for lab-related queries, which caused the pharmacy specialist to be missed despite the query mentioning metformin dosage changes.",
+          "specific_issues": [
+            "Missing pharmacy: The query mentioned 'metformin' and asked about dosage adjustments, but there were no keyword mappings or rules to include the pharmacy specialist for medication management.",
+            "Unnecessary: laboratory_medicine"
+          ],
+          "recommendations": [
+            "ADD to Selection Rules: 'ALWAYS include pharmacy when query mentions: medication names, dosages, adjustments, adherence, interactions'",
+            "ADD EXAMPLE: 'Query: How has my HbA1c changed since starting metformin? \u2192 Select: [endocrinology, laboratory_medicine, pharmacy]'",
+            "ADD keywords for pharmacy: ['metformin', 'medication', 'dosage', 'prescription']"
+          ],
+          "priority": "high",
+          "prompt_file": "backend/services/agents/cmo/prompts/3_assign_specialist_tasks.txt",
+          "expected_impact": null
+        }
+      ],
+      "weighted_score": 0.69625,
+      "dimension_success_rate": 0.6,
+      "evaluation_success": false
+    }
+  ],
+  "aggregated": {
+    "total_tests": 4,
+    "successful_tests": 3,
+    "success_rate": 0.75,
+    "average_response_time_ms": 88869.04725,
+    "total_tokens_used": 2338,
+    "average_tokens_per_test": 584.5,
+    "failed_tests": [
+      "complex_002"
+    ],
+    "results": [
+      {
+        "test_case_id": "standard_001",
+        "query": "What's my cholesterol trend over my entire data? I want to see trends across the top 4 cholesterol metrics including Triglycerides across that time period",
+        "success": true,
+        "total_response_time_ms": 89582.149,
+        "tokens_used": 491,
+        "error_message": null,
+        "trace_id": "07d5b2e5-2f98-4c63-8681-fe1ee639a7a0",
+        "expected_complexity": "STANDARD",
+        "actual_complexity": "standard",
+        "complexity_correct": true,
+        "expected_specialties": "{'laboratory_medicine', 'cardiology', 'endocrinology'}",
+        "actual_specialties": "{'preventive_medicine', 'laboratory_medicine', 'cardiology'}",
+        "response_valid": true,
+        "structure_errors": [],
+        "tool_calls_made": 1,
+        "complexity_classification_score": 1.0,
+        "specialty_selection_score": 0.6200000000000001,
+        "analysis_quality_score": 0.925,
+        "tool_usage_score": 1.0,
+        "response_structure_score": 1.0,
+        "specialty_component_breakdown": {
+          "specialist_precision": 0.5,
+          "specialist_rationale": 0.8
+        },
+        "analysis_quality_breakdown": {
+          "data_gathering": 1.0,
+          "context_awareness": 0.9,
+          "comprehensive_approach": 0.9,
+          "concern_identification": 0.9
+        },
+        "tool_component_breakdown": {
+          "tool_success_rate": 1.0
+        },
+        "response_component_breakdown": {
+          "xml_validity": 1.0,
+          "required_fields": 1.0
+        },
+        "approach_text": "To comprehensively analyze the patient's cholesterol trends over their full data history, I recommend:\n\nData Points:\n- Focus on total cholesterol, LDL cholesterol, HDL cholesterol, and triglycerides as the key metrics\n- Examine numeric lab values for each metric at all available timepoints \n- Note the date of each test to map values over time\n\nCorrelations:\n- Investigate relationships between the 4 cholesterol metrics\n- Assess if values tend to rise or fall in tandem or move independently \n- Explore if there are consistent ratios between total and LDL/HDL cholesterol\n\nHealth Concerns:  \n- Identify if/when values enter unhealthy ranges per medical guidelines\n- Note any significant spikes or dips that could indicate cardiovascular issues\n- Determine if an overall worsening trend emerges for any metric\n\nTimeframes:\n- Analyze the full date range from oldest (2013) to most recent (2025)\n- Group by year to assess annual averages and changes\n- Consider more granular monthly breakdowns if key inflection points are seen\n\nFocus Areas:\n- Emphasize visual representations of levels over time via line graphs\n- Statistically analyze metrics like percent change, min/max/average\n- Identify the most important takeaways to highlight for the patient\n\nPriorities:\n- Ensuring all relevant data is captured and included in the analysis\n- Providing clear, understandable trend information and visualizations\n- Surfacing any potential areas of medical concern regarding cardiovascular health\n- Delivering an actionable summary to guide the patient's health decisions",
+        "initial_data_gathered": {
+          "tool_calls_made": 1,
+          "data_available": true,
+          "summary": "- Cholesterol and triglyceride lab data is available from 2013 to 2025\n- Data includes total cholesterol, LDL, HDL, and triglycerides \n- Numeric values and dates are present to enable trend analysis over time\n- 92 total data points should be sufficient for identifying long-term trends",
+          "result_count": 92,
+          "query": "cholesterol triglycerides"
+        },
+        "analysis_time_ms": 49375.568,
+        "specialist_tasks": [
+          {
+            "specialist": "laboratory_medicine",
+            "objective": "Retrieve all total cholesterol, LDL, HDL, and triglyceride lab values with dates from 2013 to present to analyze full historical trends",
+            "context": "The patient has requested an analysis of their complete cholesterol data history from 2013 to 2025. Focus on retrieving the actual numeric lab values for total cholesterol, LDL, HDL, and triglycerides...",
+            "expected_output": "Comprehensive dataset of cholesterol and triglyceride lab results with values and dates covering 2013 to 2025",
+            "priority": 1,
+            "max_tool_calls": 5
+          },
+          {
+            "specialist": "cardiology",
+            "objective": "Analyze cholesterol and triglyceride trends to identify any values in unhealthy ranges or significant changes that could indicate cardiovascular risk",
+            "context": "With the full historical cholesterol dataset, assess each metric for values above recommended healthy ranges per medical guidelines. Examine the data for any significant spikes, dips, or worsening tre...",
+            "expected_output": "Summary of any high-risk cholesterol or triglyceride values and time periods of concern regarding cardiovascular health",
+            "priority": 2,
+            "max_tool_calls": 5
+          },
+          {
+            "specialist": "preventive_medicine",
+            "objective": "Provide visualizations and a patient-friendly summary of the most important cholesterol trends and takeaways to guide preventive health decisions",
+            "context": "Consolidate the key findings from the data analysis into clear visualizations like line graphs showing levels over time. Highlight the most significant trend insights and any preventive health recomme...",
+            "expected_output": "Line graph visualizations of cholesterol trends from 2013-2025 and a concise written summary of key takeaways and considerations for preventive care",
+            "priority": 3,
+            "max_tool_calls": 5
+          }
+        ],
+        "task_creation_success": true,
+        "task_creation_time_ms": 28274.363,
+        "task_creation_error": null,
+        "task_count": 3,
+        "approach_mentioned_specialties": "set()",
+        "key_data_points": [
+          "hdl_cholesterol",
+          "ldl_cholesterol",
+          "total_cholesterol",
+          "triglycerides",
+          "trends",
+          "date_range"
+        ],
+        "failure_analyses": [
+          {
+            "dimension": "specialty_selection",
+            "root_cause": "The prompt lacks explicit rules and examples for selecting the proper specialists when the query involves lab test results, especially for metrics like cholesterol that span multiple specialties.",
+            "specific_issues": [
+              "Missing endocrinology: The query mentioned cholesterol trends, which relates to endocrine/metabolic health, but there were no keyword mappings or rules to trigger inclusion of this specialist.",
+              "Unnecessary: preventive_medicine"
+            ],
+            "recommendations": [
+              "ADD to Selection Rules: 'ALWAYS include laboratory_medicine when query mentions: test results, blood work, lab values, or specific test names (A1C, glucose, cholesterol, etc.)'",
+              "ADD EXAMPLE: 'Query: What's my cholesterol trend over time?' \u2192 Select: [cardiology, endocrinology, laboratory_medicine]",
+              "ADD keywords for endocrinology: ['cholesterol', 'triglycerides', 'metabolic']"
+            ],
+            "priority": "high",
+            "prompt_file": "backend/services/agents/cmo/prompts/3_assign_specialist_tasks.txt",
+            "expected_impact": null
+          }
+        ],
+        "weighted_score": 0.8862500000000001,
+        "dimension_success_rate": 0.8,
+        "evaluation_success": true
+      },
+      {
+        "test_case_id": "standard_002",
+        "query": "Show my abnormal lab results from labs this year?",
+        "success": true,
+        "total_response_time_ms": 78390.073,
+        "tokens_used": 621,
+        "error_message": null,
+        "trace_id": "65a59f70-9da2-4ccf-bd70-3c5e0afcd8ad",
+        "expected_complexity": "STANDARD",
+        "actual_complexity": "standard",
+        "complexity_correct": true,
+        "expected_specialties": "{'preventive_medicine', 'laboratory_medicine', 'endocrinology'}",
+        "actual_specialties": "{'laboratory_medicine', 'endocrinology'}",
+        "response_valid": true,
+        "structure_errors": [],
+        "tool_calls_made": 1,
+        "complexity_classification_score": 1.0,
+        "specialty_selection_score": 0.76,
+        "analysis_quality_score": 0.9062500000000001,
+        "tool_usage_score": 1.0,
+        "response_structure_score": 1.0,
+        "specialty_component_breakdown": {
+          "specialist_precision": 0.6666666666666666,
+          "specialist_rationale": 0.9
+        },
+        "analysis_quality_breakdown": {
+          "data_gathering": 1.0,
+          "context_awareness": 0.8,
+          "comprehensive_approach": 0.9,
+          "concern_identification": 0.9
+        },
+        "tool_component_breakdown": {
+          "tool_success_rate": 1.0
+        },
+        "response_component_breakdown": {
+          "xml_validity": 1.0,
+          "required_fields": 1.0
+        },
+        "approach_text": "To analyze this patient's abnormal lab results from 2023, we should focus on:\n\nData points:\n- Specific tests with abnormal results (AST, BUN, glucose, HbA1c, CO2)\n- Numeric values of abnormal results and how far outside reference range\n- Dates of abnormal results to identify any temporal patterns\n\nCorrelations: \n- Investigate potential relationships between abnormal liver enzymes (AST), kidney function (BUN), and blood sugar control (glucose, HbA1c)\n- Look for any results that tend to be abnormal at the same time, which could indicate an underlying condition\n\nHealth concerns:\n- Persistently elevated liver enzymes raise concern for liver disease or damage\n- High BUN could signal kidney dysfunction or dehydration\n- Abnormal glucose and HbA1c are indicative of diabetes or prediabetes\n- Slightly elevated CO2 on two occasions warrants monitoring for acid-base imbalance\n\nTimeframes:\n- Analyze all abnormal results from 2023 to capture full year to date\n- Pay attention to most recent 3-6 months to assess current status\n- Note any significant changes from early 2023 to now\n\nFocus areas:\n- Liver: Determine severity and trend of AST elevations\n- Kidney: Assess degree of BUN abnormalities and look for upward trend\n- Diabetes: Evaluate current glucose control and risk based on HbA1c\n- Explore these systems together to identify any unifying diagnosis\n\nPriorities:\n1. Liver and kidney function as most frequent and persistent abnormalities\n2. Diabetic status given long-term health implications if uncontrolled \n3. Acid-base balance as more minor issue currently but could reflect systemic process\n\nIn summary, a focused analysis of the abnormal liver, kidney, and glucose results over time will be key to identifying the patient's main health problems and assessing severity. Correlations between these systems should be explored to uncover any underlying conditions. The analysis should emphasize the most recent results while still considering the full 2023 timeframe for a comprehensive assessment.",
+        "initial_data_gathered": {
+          "tool_calls_made": 1,
+          "data_available": true,
+          "summary": "The query returned 16 abnormal lab results for this patient from 2023. The data includes the test name, numeric result, reference range, and abnormal flag for each lab. \n\nKey observations:\n- Multiple abnormal AST and BUN results throughout the year, indicating potential liver/kidney issues\n- A few abnormal glucose and HbA1c results, suggesting diabetes or prediabetes\n- Labs from two different providers (Edward-Elmhurst Health and Duly Health and Care)\n\nTo fully answer the question, we'll need to analyze the specific abnormal values and look for any concerning trends over time. But the initial data pull confirms there is sufficient information available to provide a detailed response.",
+          "result_count": 16,
+          "query": "abnormal lab results from 2023"
+        },
+        "analysis_time_ms": 40296.03,
+        "specialist_tasks": [
+          {
+            "specialist": "laboratory_medicine",
+            "objective": "Analyze abnormal AST and BUN results from 2023 to assess liver and kidney function, looking for concerning trends or worsening over time.",
+            "context": "Patient has multiple abnormal AST and BUN values in 2023, indicating potential liver and kidney issues. Need to determine severity and any signs of disease progression.",
+            "expected_output": "1. Summary of all abnormal AST and BUN results from 2023 with specific values and dates\n  2. Assessment of severity of liver and kidney abnormalities \n  3. Analysis of any worsening trends in AST or BUN over the course of the year\n  4. Recommendation for additional tests if needed to further evaluate",
+            "priority": 1,
+            "max_tool_calls": 5
+          },
+          {
+            "specialist": "endocrinology",
+            "objective": "Evaluate abnormal glucose and HbA1c results from 2023 to determine diabetic status and assess current level of blood sugar control.",
+            "context": "A few high glucose and HbA1c results in 2023 are suggestive of diabetes or prediabetes. Need to determine diagnosis and if glucose levels are currently well-managed.",
+            "expected_output": "1. All glucose and HbA1c results from 2023 with specific values and dates\n  2. Determination of diabetes or prediabetes diagnosis based on results\n  3. Assessment of current blood sugar control and trends over the year\n  4. Recommendations for further diabetes screening or management",
+            "priority": 2,
+            "max_tool_calls": 5
+          },
+          {
+            "specialist": "laboratory_medicine",
+            "objective": "Investigate slightly elevated CO2 results in 2023 to determine if there is any evidence of chronic respiratory alkalosis or other acid-base imbalance.",
+            "context": "CO2 was mildly elevated on two occasions in 2023. While a minor abnormality, this could potentially reflect a systemic process and warrants a closer look.",
+            "expected_output": "1. All CO2 results from 2023 with values and dates\n  2. Analysis of degree of abnormality and any patterns\n  3. Assessment of likelihood of respiratory alkalosis or other chronic acid-base issue\n  4. Recommendations for follow-up testing of blood gases if concerns arise",
+            "priority": 3,
+            "max_tool_calls": 5
+          }
+        ],
+        "task_creation_success": true,
+        "task_creation_time_ms": 25091.521,
+        "task_creation_error": null,
+        "task_count": 3,
+        "approach_mentioned_specialties": "set()",
+        "key_data_points": [
+          "lab_results",
+          "abnormal_flags",
+          "current_year",
+          "reference_ranges"
+        ],
+        "failure_analyses": [
+          {
+            "dimension": "specialty_selection",
+            "root_cause": "The specialist selection failed to include preventive_medicine for a query about abnormal lab results, which is a critical gap. Preventive medicine specialists should be involved when assessing risk factors and screening needs based on abnormal diagnostic findings.",
+            "specific_issues": [
+              "Missing preventive_medicine: The current prompt lacks explicit rules or keyword mappings to trigger inclusion of preventive_medicine for lab result analysis queries."
+            ],
+            "recommendations": [
+              "ADD to Selection Rules: 'ALWAYS include preventive_medicine when the query involves abnormal lab results, diagnostic findings, or mentions screening'",
+              "ADD EXAMPLE: 'Query: Why was my liver enzyme test abnormal?' \u2192 Select: [laboratory_medicine, preventive_medicine]",
+              "ADD keywords for preventive_medicine: ['abnormal', 'elevated', 'screening', 'diagnostic']"
+            ],
+            "priority": "high",
+            "prompt_file": "backend/services/agents/cmo/prompts/3_assign_specialist_tasks.txt",
+            "expected_impact": null
+          }
+        ],
+        "weighted_score": 0.9165625000000001,
+        "dimension_success_rate": 0.8,
+        "evaluation_success": true
+      },
+      {
+        "test_case_id": "complex_001",
+        "query": "Analyze cholesterol relevant medication adherence patterns over that time period and how do they correlate with these cholesterol lab results.",
+        "success": true,
+        "total_response_time_ms": 100542.96100000001,
+        "tokens_used": 623,
+        "error_message": null,
+        "trace_id": "a399f2fd-1d21-47e3-8969-ef4698c93918",
+        "expected_complexity": "COMPLEX",
+        "actual_complexity": "complex",
+        "complexity_correct": true,
+        "expected_specialties": "{'cardiology', 'laboratory_medicine', 'pharmacy', 'endocrinology'}",
+        "actual_specialties": "{'laboratory_medicine', 'endocrinology', 'cardiology', 'pharmacy', 'preventive_medicine'}",
+        "response_valid": true,
+        "structure_errors": [],
+        "tool_calls_made": 1,
+        "complexity_classification_score": 1.0,
+        "specialty_selection_score": 0.8400000000000001,
+        "analysis_quality_score": 0.925,
+        "tool_usage_score": 1.0,
+        "response_structure_score": 1.0,
+        "specialty_component_breakdown": {
+          "specialist_precision": 0.8,
+          "specialist_rationale": 0.9
+        },
+        "analysis_quality_breakdown": {
+          "data_gathering": 1.0,
+          "context_awareness": 0.9,
+          "comprehensive_approach": 0.9,
+          "concern_identification": 0.9
+        },
+        "tool_component_breakdown": {
+          "tool_success_rate": 1.0
+        },
+        "response_component_breakdown": {
+          "xml_validity": 1.0,
+          "required_fields": 1.0
+        },
+        "approach_text": "To analyze the correlation between cholesterol medication adherence and lab results, I recommend the following approach:\n\nKey data points to investigate:\n- Cholesterol lab values over time, especially LDL, HDL and total cholesterol \n- Cholesterol medication prescriptions and refills to assess adherence\n- Medication possession ratio (days supply of medication / days between refills)\n- Changes in medication dosage or drug prescribed\n- Periods of time not covered by an active cholesterol medication prescription\n\nCorrelations to explore:\n- Impact of starting, stopping, or changing cholesterol medications on lab values\n- Relationship between medication adherence percentage and cholesterol levels\n- Lag time between changes in adherence and changes in lab results  \n\nHealth concerns to address:\n- Periods of elevated LDL or total cholesterol\n- Low HDL levels\n- Medication side effects impacting adherence\n- Cardiovascular disease risk based on cholesterol levels\n\nTimeframes:\n- Analyze full 12-year data set to identify long-term trends\n- Focus on 3-month windows around medication changes to assess acute impacts\n- Compare year-over-year metrics to normalize for any seasonal effects\n\nAnalysis focus areas:\n- Effectiveness of different cholesterol medications and doses on lab results\n- Identifying any consistent adherence issues and potential root causes\n- Assessing if cholesterol is being adequately controlled and identifying unmet treatment needs\n\nPrioritize analysis of LDL and total cholesterol, as these are primary treatment targets. Secondarily, analyze HDL levels and the total cholesterol/HDL ratio to more fully assess cardiovascular risk. Medication adherence analysis is critical to contextualize lab results.",
+        "initial_data_gathered": {
+          "tool_calls_made": 1,
+          "data_available": true,
+          "summary": "The initial query shows that there is a good amount of data available to analyze cholesterol medication adherence and lab results over time:\n\n- Cholesterol lab results are available from 2013 to 2025, including total cholesterol, LDL, and HDL values. This will allow tracking cholesterol levels over a 12+ year period.\n\n- Cholesterol medication records are available from 2014 to 2024, covering rosuvastatin, atorvastatin, and ezetimibe prescriptions. Dosage information is included.\n\n- Having both lab and medication data over an extended timeframe will enable analyzing correlations between medication usage/adherence and cholesterol levels.\n\n- The data comes from multiple providers, so completeness of the medication records may need to be assessed.\n\n- No major data gaps are evident, but the specific timeframe of interest was not provided in the original query.\n\nOverall, while the data looks sufficient for the requested analysis, the long timeframe and need to integrate and correlate multiple data types makes this a relatively complex request that will require a deeper analysis to fully address.",
+          "result_count": 107,
+          "query": "cholesterol medications and lab results"
+        },
+        "analysis_time_ms": 49547.841,
+        "specialist_tasks": [
+          {
+            "specialist": "laboratory_medicine",
+            "objective": "Analyze cholesterol lab values (LDL, HDL, total cholesterol) from 2013-2025 to identify trends and periods of elevated levels",
+            "context": "Cholesterol lab data is available from 2013-2025. Focus on actual lab values, not just test dates. Analyze the full 12-year period to identify long-term trends.",
+            "expected_output": "Report detailing cholesterol lab value trends, periods of elevated LDL or total cholesterol, and low HDL levels. Include specific lab values with dates.",
+            "priority": 1,
+            "max_tool_calls": 7
+          },
+          {
+            "specialist": "pharmacy",
+            "objective": "Assess cholesterol medication adherence from 2014-2024 using prescription and refill data",
+            "context": "Cholesterol medication records are available from 2014-2024, including rosuvastatin, atorvastatin, and ezetimibe. Calculate medication possession ratio and identify gaps in prescription coverage.",
+            "expected_output": "Report detailing adherence percentage for each medication, periods of low adherence, and average days between refills. Flag any gaps in prescription coverage.",
+            "priority": 2,
+            "max_tool_calls": 7
+          },
+          {
+            "specialist": "cardiology",
+            "objective": "Correlate periods of low medication adherence with cholesterol lab results to assess impact on cardiovascular health",
+            "context": "Integrate pharmacy adherence findings with lab results to identify how non-adherence impacts cholesterol levels and cardiovascular risk. Focus on 3-month windows around adherence changes.",
+            "expected_output": "Analysis of how low medication adherence correlates with changes in LDL, HDL and total cholesterol. Assess lag time between adherence changes and lab results. Identify periods of increased cardiovascular risk.",
+            "priority": 3,
+            "max_tool_calls": 7
+          },
+          {
+            "specialist": "endocrinology",
+            "objective": "Evaluate effectiveness of different cholesterol medications and doses on achieving cholesterol treatment targets",
+            "context": "Compare lab results across the different cholesterol medications prescribed to assess relative effectiveness. Analyze impact of dosage changes on cholesterol levels.",
+            "expected_output": "Report ranking cholesterol medications by effectiveness in lowering LDL and total cholesterol to goal ranges. Include analysis of optimal dosages based on lab results.",
+            "priority": 4,
+            "max_tool_calls": 7
+          },
+          {
+            "specialist": "preventive_medicine",
+            "objective": "Identify unmet treatment needs and persistent cardiovascular risk factors based on longitudinal cholesterol data",
+            "context": "Review overall 12-year cholesterol and adherence data to surface any consistent issues in cholesterol management. Assess if current treatment regimen is optimized to minimize cardiovascular risk.",
+            "expected_output": "Summary of long-term cholesterol management, highlighting any periods of persistently elevated cardiovascular risk and potential undertreatment. Recommend opportunities to optimize therapy.",
+            "priority": 5,
+            "max_tool_calls": 7
+          }
+        ],
+        "task_creation_success": true,
+        "task_creation_time_ms": 37893.318999999996,
+        "task_creation_error": null,
+        "task_count": 5,
+        "approach_mentioned_specialties": "set()",
+        "key_data_points": [
+          "statin_history",
+          "medication_switches",
+          "ldl_correlation",
+          "hdl_patterns",
+          "triglyceride_response",
+          "adherence_gaps"
+        ],
+        "failure_analyses": [
+          {
+            "dimension": "specialty_selection",
+            "root_cause": "The specialist selection failed because there were no explicit rules or keyword mappings for lab-related queries. The query mentioned 'cholesterol lab results' but laboratory_medicine was not automatically included.",
+            "specific_issues": [
+              "Unnecessary: preventive_medicine"
+            ],
+            "recommendations": [
+              "ADD to Selection Rules: 'ALWAYS include laboratory_medicine when query mentions: test results, blood work, lab values, or specific test names (A1C, glucose, cholesterol, etc.)'",
+              "ADD EXAMPLE: 'Query: Analyze my cholesterol lab results and medication adherence patterns \u2192 Select: [cardiology, laboratory_medicine, pharmacy]'",
+              "ADD keywords for endocrinology: ['cholesterol', 'lipids', 'statins']"
+            ],
+            "priority": "high",
+            "prompt_file": "backend/services/agents/cmo/prompts/3_assign_specialist_tasks.txt",
+            "expected_impact": null
+          }
+        ],
+        "weighted_score": 0.9412500000000001,
+        "dimension_success_rate": 0.8,
+        "evaluation_success": true
+      },
+      {
+        "test_case_id": "complex_002",
+        "query": "How has my HbA1c level changed since I started taking metformin, has my dosage been adjusted over time based on my lab results, and is there a correlation between these changes and my weight measurements during the same period?",
+        "success": false,
+        "total_response_time_ms": 86961.006,
+        "tokens_used": 603,
+        "error_message": null,
+        "trace_id": "bffd63b8-3701-48c3-b976-ad67e2655ac3",
+        "expected_complexity": "COMPLEX",
+        "actual_complexity": "standard",
+        "complexity_correct": false,
+        "expected_specialties": "{'nutrition', 'pharmacy', 'endocrinology'}",
+        "actual_specialties": "{'nutrition', 'laboratory_medicine', 'endocrinology'}",
+        "response_valid": true,
+        "structure_errors": [],
+        "tool_calls_made": 1,
+        "complexity_classification_score": 0.0,
+        "specialty_selection_score": 0.66,
+        "analysis_quality_score": 0.925,
+        "tool_usage_score": 1.0,
+        "response_structure_score": 1.0,
+        "specialty_component_breakdown": {
+          "specialist_precision": 0.5,
+          "specialist_rationale": 0.9
+        },
+        "analysis_quality_breakdown": {
+          "data_gathering": 1.0,
+          "context_awareness": 0.9,
+          "comprehensive_approach": 0.9,
+          "concern_identification": 0.9
+        },
+        "tool_component_breakdown": {
+          "tool_success_rate": 1.0
+        },
+        "response_component_breakdown": {
+          "xml_validity": 1.0,
+          "required_fields": 1.0
+        },
+        "approach_text": "To address the patient's question about how their HbA1c, metformin dosage, and weight have changed over time and if there are any correlations:\n\nKey data points to investigate:\n- HbA1c lab values and dates \n- Metformin prescription details (dosage, form) and dates\n- Weight measurements and dates\n\nCorrelations to explore:  \n- Changes in HbA1c before and after starting metformin\n- Impact of any metformin dosage adjustments on subsequent HbA1c levels\n- Relationship between HbA1c and weight over time, especially after starting metformin\n\nHealth concerns to consider:\n- Glycemic control as indicated by HbA1c being above normal range\n- Possible need for increasing metformin dosage if HbA1c remains elevated\n- Potential for weight loss as an additional benefit of metformin \n\nTimeframes to analyze:\n- Focus on the period from June 2021 (earliest metformin prescription) to present\n- Compare pre-metformin baseline data if available to post-metformin initiation\n\nPriority and focus areas:\n- Evaluating effectiveness of current metformin dosage on glycemic control is top priority\n- Secondarily, assess for any positive impact of metformin on weight over time\n- Present data chronologically to highlight trends and inflection points\n\nIn summary, a longitudinal analysis looking at HbA1c, metformin prescriptions, and weight before and after starting the medication, with an emphasis on glycemic control, will provide a comprehensive assessment to address the patient's key concerns. Reporting should focus on the effectiveness of their current treatment plan and any opportunities for optimization.",
+        "initial_data_gathered": {
+          "tool_calls_made": 1,
+          "data_available": true,
+          "summary": "The query returned relevant data to analyze the patient's HbA1c levels, metformin prescriptions, and weight measurements over the time period they have been taking metformin (since June 2021). \n\nKey observations:\n- HbA1c results are available at a few timepoints, showing values slightly above the normal range\n- Metformin has been consistently prescribed at a 500mg extended release dose \n- Weight measurements are available fairly frequently and show some fluctuations over time\n\nThere appears to be sufficient longitudinal data to look at trends and relationships between these variables to address the patient's question. A standard level of analysis should provide meaningful insights.",
+          "result_count": 47,
+          "query": "Retrieve HbA1c lab results, metformin prescription details including dosage changes, and weight measurements over the time period the patient has been taking metformin."
+        },
+        "analysis_time_ms": 43608.965,
+        "specialist_tasks": [
+          {
+            "specialist": "endocrinology",
+            "objective": "Evaluate the effectiveness of the patient's current metformin dosage (500mg ER) on glycemic control by analyzing HbA1c trends over time, identifying if HbA1c levels have improved since starting the medication and determining if the current dosage is sufficient.",
+            "context": "Patient has been taking metformin 500mg ER since June 2021. HbA1c levels are available at a few timepoints and are slightly above normal range. Assessing HbA1c response to metformin is the top priorit...",
+            "expected_output": "1) HbA1c values before and after starting metformin, 2) Analysis of change in HbA1c levels over time on metformin, 3) Determination if current 500mg dosage is effectively lowering HbA1c, 4) Recommendation to maintain or adjust metformin dosage",
+            "priority": 1,
+            "max_tool_calls": 5
+          },
+          {
+            "specialist": "laboratory_medicine",
+            "objective": "Retrieve all HbA1c lab values with dates to enable a comprehensive analysis of glycemic control over time, especially focusing on results before and after metformin initiation in June 2021.",
+            "context": "HbA1c is a key indicator of diabetes management. Patient is interested in how levels have changed since starting metformin. Lab results are needed to conduct this analysis and determine if current tre...",
+            "expected_output": "1) All historical HbA1c results with dates, 2) Identification of any HbA1c tests prior to June 2021 for pre-metformin baseline, 3) Confirmation there are sufficient HbA1c datapoints after starting metformin to evaluate response",
+            "priority": 2,
+            "max_tool_calls": 5
+          },
+          {
+            "specialist": "nutrition",
+            "objective": "Analyze the patient's weight measurements over time, especially in relation to starting metformin, to determine if the medication has contributed to any weight loss in addition to glycemic benefits.",
+            "context": "Metformin may promote modest weight loss as a secondary effect. Patient's weight data is available and they are interested if there is any correlation with metformin use. This is a secondary priority ...",
+            "expected_output": "1) Graph of weight over time, marking metformin start, 2) Calculation of any change in average weight pre- and post-metformin, 3) Assessment if there is a clear correlation between metformin and weight loss for this patient",
+            "priority": 3,
+            "max_tool_calls": 5
+          }
+        ],
+        "task_creation_success": true,
+        "task_creation_time_ms": 29564.431,
+        "task_creation_error": null,
+        "task_count": 3,
+        "approach_mentioned_specialties": "set()",
+        "key_data_points": [
+          "hba1c_trend",
+          "metformin_initiation",
+          "dose_adjustments",
+          "weight_correlation",
+          "glycemic_control",
+          "temporal_analysis"
+        ],
+        "failure_analyses": [
+          {
+            "dimension": "complexity_classification",
+            "root_cause": "The prompt lacks clear guidance on how to classify queries involving analysis of trends and correlations across multiple data types over time periods, leading to this complex query being misclassified as standard.",
+            "specific_issues": [],
+            "recommendations": [
+              "MODIFY RULE: Change to 'Queries involving trend analysis across a single data type (e.g. HbA1c levels over time) or basic correlations between 2 closely related metrics (e.g. medication dosage and lab values)'",
+              "ADD EXAMPLE: 'How has my HbA1c level changed since I started taking metformin, has my dosage been adjusted over time based on my lab results, and is there a correlation between these changes and my weight measurements during the same period?' \u2192 COMPLEX because it requires longitudinal analysis of multiple changing variables and their interrelationships.",
+              "ADD BOUNDARY CLARIFICATION: 'COMPLEX queries involve longitudinal analysis exploring relationships between multiple changing data streams over time periods, while STANDARD is limited to single variable trends or simple two-variable correlations.'",
+              "ADD KEYWORD GUIDANCE: Complex queries may contain phrases like 'changes over time', 'correlation between', 'interrelationship of', 'longitudinal analysis', 'multi-variable', 'investigate relationships between'"
+            ],
+            "priority": "high",
+            "prompt_file": "backend/services/agents/cmo/prompts/1_gather_data_assess_complexity.txt",
+            "expected_impact": null
+          },
+          {
+            "dimension": "specialty_selection",
+            "root_cause": "The specialist selection failed because the prompt lacked explicit rules and examples for lab-related queries, which caused the pharmacy specialist to be missed despite the query mentioning metformin dosage changes.",
+            "specific_issues": [
+              "Missing pharmacy: The query mentioned 'metformin' and asked about dosage adjustments, but there were no keyword mappings or rules to include the pharmacy specialist for medication management.",
+              "Unnecessary: laboratory_medicine"
+            ],
+            "recommendations": [
+              "ADD to Selection Rules: 'ALWAYS include pharmacy when query mentions: medication names, dosages, adjustments, adherence, interactions'",
+              "ADD EXAMPLE: 'Query: How has my HbA1c changed since starting metformin? \u2192 Select: [endocrinology, laboratory_medicine, pharmacy]'",
+              "ADD keywords for pharmacy: ['metformin', 'medication', 'dosage', 'prescription']"
+            ],
+            "priority": "high",
+            "prompt_file": "backend/services/agents/cmo/prompts/3_assign_specialist_tasks.txt",
+            "expected_impact": null
+          }
+        ],
+        "weighted_score": 0.69625,
+        "dimension_success_rate": 0.6,
+        "evaluation_success": false
+      }
+    ]
+  },
+  "summary": {
+    "overall_success": true,
+    "weighted_score": 0.860078125,
+    "success_rate": 0.75,
+    "total_tests": 4,
+    "failed_tests": [
+      "complex_002"
+    ],
+    "performance_metrics": {
+      "avg_response_time_ms": 88869.04725,
+      "avg_tokens_per_test": 584.5
+    }
+  },
+  "overall_success": true,
+  "timestamp": "2025-07-18T20:07:18.579438",
+  "test_count": 4,
+  "agent_type": "cmo",
+  "evaluation_framework_version": "2.0",
+  "metadata_driven": true,
+  "test_type": "real-world",
+  "category": null,
+  "macro_analyses": {
+    "complexity_classification": {
+      "common_patterns": [
+        {
+          "pattern": "Lack of clear guidance on classifying queries involving analysis of trends and correlations across multiple data types over time periods",
+          "frequency": "Occurs in 1 of 1 failures",
+          "test_examples": [
+            "complex_002"
+          ],
+          "prompt_gap": "The current prompts do not provide specific examples or rules for identifying complex queries that require longitudinal analysis of interrelated variables.",
+          "severity": "HIGH"
+        }
+      ],
+      "systemic_root_cause": "The prompts lack comprehensive coverage of different query complexity levels, especially for multi-variable, longitudinal analysis scenarios.",
+      "contributing_factors": [
+        "Limited examples covering complex scenarios",
+        "Insufficient rule guidance for identifying complex multi-variable analysis"
+      ]
+    },
+    "specialty_selection": {
+      "common_patterns": [
+        {
+          "pattern": "Failure to include laboratory_medicine specialist for queries involving lab test results",
+          "frequency": "Occurs in 3 of 4 failures",
+          "test_examples": [
+            "standard_001",
+            "complex_001",
+            "complex_002"
+          ],
+          "prompt_gap": "The current prompts lack explicit rules and examples for automatically including laboratory_medicine when lab tests or results are mentioned",
+          "severity": "HIGH"
+        },
+        {
+          "pattern": "Failure to include preventive_medicine specialist for abnormal lab results",
+          "frequency": "Occurs in 1 of 4 failures",
+          "test_examples": [
+            "standard_002"
+          ],
+          "prompt_gap": "No rule for including preventive_medicine when abnormal test results are mentioned, which is critical for assessing screening needs",
+          "severity": "HIGH"
+        },
+        {
+          "pattern": "Failure to include pharmacy specialist for medication-related queries",
+          "frequency": "Occurs in 1 of 4 failures",
+          "test_examples": [
+            "complex_002"
+          ],
+          "prompt_gap": "Lack of explicit rules and examples for including pharmacy when medication names, dosages, or adherence are mentioned",
+          "severity": "HIGH"
+        }
+      ],
+      "systemic_root_cause": "The current prompts lack comprehensive rules and examples for automatically mapping query keywords/phrases to relevant specialist inclusions, especially for lab tests, medications, and abnormal findings.",
+      "contributing_factors": [
+        "Over-reliance on high-level specialist descriptions",
+        "Limited examples for complex multi-specialty scenarios"
+      ]
+    }
+  }
+}

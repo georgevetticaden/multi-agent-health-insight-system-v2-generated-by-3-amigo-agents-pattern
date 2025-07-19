@@ -130,7 +130,11 @@ backend/logs/
 backend/logs/*.log
 
 # Backend traces
-backend/traces/
+backend/traces/*/
+# But keep the saved-runs directory
+!backend/traces/saved-traces/
+!backend/traces/saved-traces/**/
+
 
 # Evaluation logs
 evaluation/logs/

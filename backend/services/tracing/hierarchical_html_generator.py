@@ -220,6 +220,31 @@ def _generate_css() -> str:
             align-items: center;
             height: 60px;
             margin-bottom: 5px;
+            position: relative;
+        }
+        
+        /* Group specialists visually */
+        .specialist-group {
+            background: rgba(46, 204, 113, 0.05);
+            border: 1px solid rgba(46, 204, 113, 0.2);
+            border-radius: 8px;
+            padding: 10px 0;
+            margin: 10px 0;
+            position: relative;
+        }
+        
+        .specialist-group::before {
+            content: 'Medical Specialists';
+            position: absolute;
+            top: -10px;
+            left: 20px;
+            background: white;
+            padding: 0 10px;
+            font-size: 11px;
+            color: #2ecc71;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
         .timeline-agent-label {
@@ -304,6 +329,8 @@ def _generate_css() -> str:
             font-size: 11px;
             display: flex;
             flex-direction: column;
+            position: relative;
+            z-index: 2;
             justify-content: center;
             height: 100%;
         }
@@ -1369,26 +1396,92 @@ def _generate_timeline(sections: List[AgentSection]) -> str:
         agent_lanes[agent_key]['stages'].append(stage)
     
     # Order lanes: CMO -> Specialists -> Visualization
-    lane_order = ['cmo'] + [k for k in agent_lanes.keys() if k not in ['cmo', 'visualization']] + ['visualization']
+    specialist_lanes = [k for k in agent_lanes.keys() if k not in ['cmo', 'visualization']]
     
     # Generate timeline HTML
     timeline_html = []
     
-    for agent_type in lane_order:
-        if agent_type not in agent_lanes:
+    # Special handling for CMO - split into two rows
+    if 'cmo' in agent_lanes:
+        cmo_lane = agent_lanes['cmo']
+        
+        # Separate CMO stages into planning and synthesis
+        planning_stages = []
+        synthesis_stages = []
+        
+        for stage in cmo_lane['stages']:
+            if 'synthesis' in stage['stage_name'].lower() or 'final_synthesis' in stage['stage_name'].lower():
+                synthesis_stages.append(stage)
+            else:
+                planning_stages.append(stage)
+        
+        # Render CMO planning row
+        if planning_stages:
+            stages_html = []
+            for stage in planning_stages:
+                # Calculate position and width
+                offset_ms = (stage['start_datetime'] - min_time).total_seconds() * 1000
+                left_percent = (offset_ms / total_duration) * 100 if total_duration > 0 else 0
+                
+                # Limit bar width to prevent excessive scrolling
+                raw_width = (stage['duration_ms'] / total_duration) * 100 if total_duration > 0 else 5
+                width_percent = min(20, max(5, raw_width))  # Min 5%, Max 20%
+                
+                # Format stage name
+                display_name = _format_stage_name(stage['stage_name'])
+                
+                # Create detailed hover info
+                hover_info = f"""{display_name}
+Duration: {format_duration(stage['duration_ms'])}
+LLM Calls: {stage['stage_info'].llm_calls}
+Tool Calls: {stage['stage_info'].tool_calls}
+Tokens: {format_token_count(stage['stage_info'].tokens_used)}"""
+                
+                stages_html.append(f"""
+                <div class="timeline-stage-bar cmo" 
+                     style="left: {left_percent:.1f}%; width: {width_percent:.1f}%;"
+                     title="{hover_info}"
+                     data-stage-id="cmo-{stage['stage_name']}">
+                    <div class="stage-bar-content">
+                        <div class="stage-bar-name">{display_name}</div>
+                        <div class="stage-bar-time">{format_duration(stage['duration_ms'])}</div>
+                    </div>
+                    <div class="stage-bar-hover">
+                        <div class="hover-metric">🔵 {stage['stage_info'].llm_calls} LLM</div>
+                        <div class="hover-metric">🔧 {stage['stage_info'].tool_calls} Tools</div>
+                        <div class="hover-metric">🎯 {format_token_count(stage['stage_info'].tokens_used)}</div>
+                    </div>
+                </div>
+                """)
+            
+            timeline_html.append(f"""
+            <div class="timeline-lane-row">
+                <div class="timeline-agent-label cmo">CMO - Planning</div>
+                <div class="timeline-track">
+                    {"".join(stages_html)}
+                </div>
+            </div>
+            """)
+    
+    # Render specialist lanes (grouped together)
+    if specialist_lanes:
+        timeline_html.append('<div class="specialist-group">')
+    
+    for specialist_type in specialist_lanes:
+        if specialist_type not in agent_lanes:
             continue
             
-        lane = agent_lanes[agent_type]
+        lane = agent_lanes[specialist_type]
         stages_html = []
         
         for stage in lane['stages']:
             # Calculate position and width
             offset_ms = (stage['start_datetime'] - min_time).total_seconds() * 1000
             left_percent = (offset_ms / total_duration) * 100 if total_duration > 0 else 0
-            width_percent = (stage['duration_ms'] / total_duration) * 100 if total_duration > 0 else 5
             
-            # Ensure minimum width for visibility
-            width_percent = max(width_percent, 5)
+            # Limit bar width to prevent excessive scrolling
+            raw_width = (stage['duration_ms'] / total_duration) * 100 if total_duration > 0 else 5
+            width_percent = min(20, max(5, raw_width))  # Min 5%, Max 20%
             
             # Format stage name
             display_name = _format_stage_name(stage['stage_name'])
@@ -1401,10 +1494,10 @@ Tool Calls: {stage['stage_info'].tool_calls}
 Tokens: {format_token_count(stage['stage_info'].tokens_used)}"""
             
             stages_html.append(f"""
-            <div class="timeline-stage-bar {agent_type}" 
+            <div class="timeline-stage-bar {specialist_type}" 
                  style="left: {left_percent:.1f}%; width: {width_percent:.1f}%;"
                  title="{hover_info}"
-                 data-stage-id="{agent_type}-{stage['stage_name']}">
+                 data-stage-id="{specialist_type}-{stage['stage_name']}">
                 <div class="stage-bar-content">
                     <div class="stage-bar-name">{display_name}</div>
                     <div class="stage-bar-time">{format_duration(stage['duration_ms'])}</div>
@@ -1419,7 +1512,109 @@ Tokens: {format_token_count(stage['stage_info'].tokens_used)}"""
         
         timeline_html.append(f"""
         <div class="timeline-lane-row">
-            <div class="timeline-agent-label {agent_type}">{lane['name']}</div>
+            <div class="timeline-agent-label {specialist_type}">{lane['name']}</div>
+            <div class="timeline-track">
+                {"".join(stages_html)}
+            </div>
+        </div>
+        """)
+    
+    # Close specialist group
+    if specialist_lanes:
+        timeline_html.append('</div>')
+    
+    # Render CMO synthesis row (after specialists)
+    if 'cmo' in agent_lanes and synthesis_stages:
+        stages_html = []
+        for stage in synthesis_stages:
+            # Calculate position and width
+            offset_ms = (stage['start_datetime'] - min_time).total_seconds() * 1000
+            left_percent = (offset_ms / total_duration) * 100 if total_duration > 0 else 0
+            
+            # Limit bar width to prevent excessive scrolling
+            raw_width = (stage['duration_ms'] / total_duration) * 100 if total_duration > 0 else 5
+            width_percent = min(20, max(5, raw_width))  # Min 5%, Max 20%
+            
+            # Format stage name
+            display_name = _format_stage_name(stage['stage_name'])
+            
+            # Create detailed hover info
+            hover_info = f"""{display_name}
+Duration: {format_duration(stage['duration_ms'])}
+LLM Calls: {stage['stage_info'].llm_calls}
+Tool Calls: {stage['stage_info'].tool_calls}
+Tokens: {format_token_count(stage['stage_info'].tokens_used)}"""
+            
+            stages_html.append(f"""
+            <div class="timeline-stage-bar cmo" 
+                 style="left: {left_percent:.1f}%; width: {width_percent:.1f}%;"
+                 title="{hover_info}"
+                 data-stage-id="cmo-{stage['stage_name']}">
+                <div class="stage-bar-content">
+                    <div class="stage-bar-name">{display_name}</div>
+                    <div class="stage-bar-time">{format_duration(stage['duration_ms'])}</div>
+                </div>
+                <div class="stage-bar-hover">
+                    <div class="hover-metric">🔵 {stage['stage_info'].llm_calls} LLM</div>
+                    <div class="hover-metric">🔧 {stage['stage_info'].tool_calls} Tools</div>
+                    <div class="hover-metric">🎯 {format_token_count(stage['stage_info'].tokens_used)}</div>
+                </div>
+            </div>
+            """)
+        
+        timeline_html.append(f"""
+        <div class="timeline-lane-row">
+            <div class="timeline-agent-label cmo">CMO - Synthesis</div>
+            <div class="timeline-track">
+                {"".join(stages_html)}
+            </div>
+        </div>
+        """)
+    
+    # Render visualization agent lane (if present)
+    if 'visualization' in agent_lanes:
+        lane = agent_lanes['visualization']
+        stages_html = []
+        
+        for stage in lane['stages']:
+            # Calculate position and width
+            offset_ms = (stage['start_datetime'] - min_time).total_seconds() * 1000
+            left_percent = (offset_ms / total_duration) * 100 if total_duration > 0 else 0
+            
+            # Limit bar width to prevent excessive scrolling
+            raw_width = (stage['duration_ms'] / total_duration) * 100 if total_duration > 0 else 5
+            width_percent = min(20, max(5, raw_width))  # Min 5%, Max 20%
+            
+            # Format stage name
+            display_name = _format_stage_name(stage['stage_name'])
+            
+            # Create detailed hover info
+            hover_info = f"""{display_name}
+Duration: {format_duration(stage['duration_ms'])}
+LLM Calls: {stage['stage_info'].llm_calls}
+Tool Calls: {stage['stage_info'].tool_calls}
+Tokens: {format_token_count(stage['stage_info'].tokens_used)}"""
+            
+            stages_html.append(f"""
+            <div class="timeline-stage-bar visualization" 
+                 style="left: {left_percent:.1f}%; width: {width_percent:.1f}%;"
+                 title="{hover_info}"
+                 data-stage-id="visualization-{stage['stage_name']}">
+                <div class="stage-bar-content">
+                    <div class="stage-bar-name">{display_name}</div>
+                    <div class="stage-bar-time">{format_duration(stage['duration_ms'])}</div>
+                </div>
+                <div class="stage-bar-hover">
+                    <div class="hover-metric">🔵 {stage['stage_info'].llm_calls} LLM</div>
+                    <div class="hover-metric">🔧 {stage['stage_info'].tool_calls} Tools</div>
+                    <div class="hover-metric">🎯 {format_token_count(stage['stage_info'].tokens_used)}</div>
+                </div>
+            </div>
+            """)
+        
+        timeline_html.append(f"""
+        <div class="timeline-lane-row">
+            <div class="timeline-agent-label visualization">{lane['name']}</div>
             <div class="timeline-track">
                 {"".join(stages_html)}
             </div>

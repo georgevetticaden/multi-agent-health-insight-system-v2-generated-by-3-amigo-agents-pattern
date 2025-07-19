@@ -10,6 +10,7 @@ from services.agents.models import QueryComplexity, SpecialistTask, MedicalSpeci
 from services.agents.cmo.cmo_prompts import CMOPrompts
 from utils.anthropic_client import AnthropicStreamingClient
 from tools.tool_registry import ToolRegistry
+from config.model_config import get_safe_max_tokens, validate_model_config
 
 # Import tracing components
 try:
@@ -46,11 +47,18 @@ class CMOAgent:
             
         self.tool_registry = tool_registry or ToolRegistry()
         self.model = model or os.getenv("CMO_MODEL", "claude-3-5-sonnet-20241022")
-        self.max_tokens_analysis = max_tokens_analysis
-        self.max_tokens_planning = max_tokens_planning
-        self.max_tokens_synthesis = max_tokens_synthesis
+        
+        # Validate model and adjust token limits
+        validate_model_config(self.model)
+        self.max_tokens_analysis = get_safe_max_tokens(self.model, max_tokens_analysis)
+        self.max_tokens_planning = get_safe_max_tokens(self.model, max_tokens_planning)
+        self.max_tokens_synthesis = get_safe_max_tokens(self.model, max_tokens_synthesis)
         self.default_max_tool_calls = default_max_tool_calls
         self.prompts = CMOPrompts()
+        
+        # Log the adjusted token limits
+        logger.info(f"CMO Agent initialized with model: {self.model}")
+        logger.info(f"Adjusted max_tokens - analysis: {self.max_tokens_analysis}, planning: {self.max_tokens_planning}, synthesis: {self.max_tokens_synthesis}")
         
         # Use the same client for streaming (traced or not)
         self.streaming_client = AnthropicStreamingClient(self.client)

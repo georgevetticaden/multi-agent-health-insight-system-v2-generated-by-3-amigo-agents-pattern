@@ -232,7 +232,7 @@ class EvaluationRunner:
             model="claude-3-opus-20240229",  # Use Opus for evaluation
             max_tokens_analysis=3000,  # Reduced for Opus limit
             max_tokens_planning=4000,   # Reduced for Opus limit (max 4096)
-            enable_tracing=True  # Enable tracing for evaluation
+            enable_tracing=True  # Enable tracing for evaluation		
         )
         return CMOEvaluator(cmo_agent, self.anthropic_client)
     

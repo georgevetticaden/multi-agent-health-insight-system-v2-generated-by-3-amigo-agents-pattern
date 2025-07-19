@@ -9,6 +9,7 @@ from services.agents.models import MedicalSpecialty, SpecialistTask, SpecialistR
 from services.agents.specialist.specialist_prompts import SpecialistPrompts
 from utils.anthropic_client import AnthropicStreamingClient
 from tools.tool_registry import ToolRegistry
+from config.model_config import get_safe_max_tokens, validate_model_config
 
 # Import tracing components
 try:
@@ -41,8 +42,15 @@ class SpecialistAgent:
             
         self.tool_registry = tool_registry or ToolRegistry()
         self.model = model or os.getenv("SPECIALIST_MODEL", "claude-3-5-sonnet-20241022")
-        self.max_tokens = max_tokens
+        
+        # Validate model and adjust token limits
+        validate_model_config(self.model)
+        self.max_tokens = get_safe_max_tokens(self.model, max_tokens)
         self.prompts = SpecialistPrompts()
+        
+        # Log the adjusted token limits
+        logger.info(f"Specialist Agent initialized with model: {self.model}")
+        logger.info(f"Adjusted max_tokens: {self.max_tokens}")
         
         # Use the same client for streaming (traced or not)
         self.streaming_client = AnthropicStreamingClient(self.client)

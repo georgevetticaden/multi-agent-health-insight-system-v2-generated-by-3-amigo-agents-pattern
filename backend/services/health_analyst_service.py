@@ -18,6 +18,7 @@ from services.agents import (
 )
 from tools.tool_registry import ToolRegistry
 from utils.anthropic_client import AnthropicStreamingClient
+from config.model_config import validate_model_config
 
 # Import tracing components
 try:
@@ -81,7 +82,14 @@ class HealthAnalystService:
         self.cmo_model = os.getenv("CMO_MODEL", self.visualization_model)
         self.specialist_model = os.getenv("SPECIALIST_MODEL", self.visualization_model)
         
-        # Token limits
+        # Validate all models on startup
+        logger.info("Validating model configurations...")
+        validate_model_config(self.visualization_model)
+        validate_model_config(self.cmo_model)
+        validate_model_config(self.specialist_model)
+        logger.info(f"Models validated - Visualization: {self.visualization_model}, CMO: {self.cmo_model}, Specialist: {self.specialist_model}")
+        
+        # Token limits (these will be adjusted by agents based on model capabilities)
         self.max_tokens_synthesis = int(os.getenv("MAX_TOKENS_SYNTHESIS", "16384"))
         self.max_tokens_cmo_analysis = int(os.getenv("MAX_TOKENS_CMO_ANALYSIS", "4000"))
         self.max_tokens_task_planning = int(os.getenv("MAX_TOKENS_TASK_PLANNING", "6000"))

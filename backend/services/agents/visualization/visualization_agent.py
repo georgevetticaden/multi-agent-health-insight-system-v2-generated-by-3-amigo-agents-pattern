@@ -18,6 +18,7 @@ from services.agents.specialist.specialist_agent import SpecialistResult
 from services.agents.visualization.prompts import VisualizationPrompts
 from utils.anthropic_client import AnthropicStreamingClient
 from utils.anthropic_streaming import StreamingMode
+from config.model_config import get_safe_max_tokens, validate_model_config
 
 # Import tracing components
 try:
@@ -47,9 +48,16 @@ class MedicalVisualizationAgent:
     ):
         self.client = anthropic_client
         self.model = model
-        self.max_tokens = max_tokens
+        
+        # Validate model and adjust token limits
+        validate_model_config(self.model)
+        self.max_tokens = get_safe_max_tokens(self.model, max_tokens)
         self.prompts = VisualizationPrompts()
         self.streaming_client = AnthropicStreamingClient(anthropic_client)
+        
+        # Log the adjusted token limits
+        logger.info(f"Visualization Agent initialized with model: {self.model}")
+        logger.info(f"Adjusted max_tokens: {self.max_tokens}")
         
     async def stream_visualization(
         self,

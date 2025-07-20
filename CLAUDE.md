@@ -564,6 +564,27 @@ async def test_new_specialist():
 - XSS protection
 - CORS configuration
 
+## Recent Updates
+
+### **Trace Viewer Improvements (Completed)**
+- Fixed text overflow issue in hierarchical trace viewer
+- Added proper text wrapping to event detail displays
+- Improved readability of long responses and data fields
+- Enhanced CSS with `white-space: pre-wrap` and `word-wrap: break-word`
+
+### **Smart Content Formatter (Completed)**
+- Implemented intelligent formatting for trace event data
+- Added specialized formatters for:
+  - LLM responses with task XML parsing and card display
+  - Tool invocations with highlighted queries
+  - Query results with tabular data display
+  - JSON data with syntax highlighting
+- Toggle between formatted and raw views for debugging
+- Automatic detection of content type for appropriate formatting
+- Enhanced visual hierarchy with task cards, priority badges, and emojis
+- Made formatted view the default display mode (raw view available via toggle)
+- Added support for non-XML task format parsing (handles both XML and plain text task formats)
+
 ## Future Enhancement Ideas
 
 ### **Near-term (Next Sprint)**

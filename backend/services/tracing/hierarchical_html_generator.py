@@ -1325,12 +1325,481 @@ def _generate_css() -> str:
             width: 2px;
             background: linear-gradient(to bottom, #3498db, #2ecc71);
         }
+        
+        /* Formatted content styles */
+        .formatted-response {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .task-card {
+            transition: box-shadow 0.3s ease;
+        }
+        
+        .task-card:hover {
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1) !important;
+        }
+        
+        .format-toggle button {
+            transition: all 0.2s ease;
+        }
+        
+        .format-toggle button:hover {
+            background: #f8f9fa !important;
+            border-color: #adb5bd !important;
+        }
+        
+        .query-results table {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .query-results th {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .data-value {
+            color: #3498db;
+            font-weight: 500;
+        }
     """
 
 
 def _generate_javascript() -> str:
     """Generate JavaScript for interactivity"""
     return """
+        // Smart content formatter
+        function formatEventData(data, container) {
+            try {
+                const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+                
+                // Check if it has response_text field that needs special formatting
+                if (parsed.response_text) {
+                    container.innerHTML = formatResponseText(parsed);
+                } else if (parsed.tool_name || parsed.tool_input) {
+                    container.innerHTML = formatToolData(parsed);
+                } else if (parsed.results && Array.isArray(parsed.results)) {
+                    container.innerHTML = formatQueryResults(parsed);
+                } else {
+                    // Default JSON formatting
+                    container.innerHTML = formatJSON(parsed);
+                }
+            } catch (e) {
+                // Fallback to raw display
+                container.innerHTML = `<pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 5px 0; font-size: 12px; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word; max-width: 100%; max-height: 500px; overflow-y: auto;">${escapeHtml(data)}</pre>`;
+            }
+        }
+        
+        function formatResponseText(data) {
+            let html = '<div class="formatted-response">';
+            
+            // Show response text with proper formatting
+            const responseText = data.response_text;
+            
+            // Check if it contains tasks (either XML format or structured format)
+            if ((responseText.includes('<tasks>') && responseText.includes('</tasks>')) || 
+                (responseText.includes('endocrinology\\n') || responseText.includes('laboratory_medicine\\n') || 
+                 responseText.includes('nutrition\\n') || responseText.includes('cardiology\\n') ||
+                 responseText.includes('pharmacy\\n') || responseText.includes('preventive_medicine\\n'))) {
+                html += formatTaskResponse(responseText);
+            } else {
+                // Regular text formatting
+                html += formatTextContent(responseText);
+            }
+            
+            // Add metadata
+            html += '<div class="response-metadata" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e9ecef;">';
+            if (data.model) {
+                html += `<span class="metadata-item"><strong>Model:</strong> ${data.model}</span>`;
+            }
+            if (data.usage) {
+                html += `<span class="metadata-item" style="margin-left: 20px;"><strong>Tokens:</strong> ${data.usage.total_tokens || 0}</span>`;
+            }
+            if (data.stop_reason) {
+                html += `<span class="metadata-item" style="margin-left: 20px;"><strong>Stop:</strong> ${data.stop_reason}</span>`;
+            }
+            html += '</div>';
+            
+            html += '</div>';
+            return html;
+        }
+        
+        function formatTaskResponse(text) {
+            let html = '<div class="task-response">';
+            
+            // Check if it's XML format
+            if (text.includes('<tasks>') && text.includes('</tasks>')) {
+                // Extract intro text
+                const introMatch = text.match(/^([\\s\\S]*?)<tasks>/);
+                if (introMatch) {
+                    html += formatTextContent(introMatch[1].trim());
+                }
+                
+                // Parse XML tasks
+                const tasksMatch = text.match(/<tasks>([\\s\\S]*?)<\\/tasks>/);
+                if (tasksMatch) {
+                    const tasksXml = tasksMatch[1];
+                    const tasks = parseTasksXML(tasksXml);
+                    
+                    html += '<div class="tasks-container" style="margin-top: 15px;">';
+                    tasks.forEach((task, index) => {
+                        html += formatTaskCard(task, index + 1);
+                    });
+                    html += '</div>';
+                }
+            } else {
+                // Try to parse the non-XML format
+                const tasks = parseNonXMLTasks(text);
+                if (tasks.length > 0) {
+                    // Extract intro text (everything before first task)
+                    const firstTaskIndex = text.search(/\\n\\n\\s*\\w+\\n\\s+\\w/);
+                    if (firstTaskIndex > 0) {
+                        html += formatTextContent(text.substring(0, firstTaskIndex).trim());
+                    }
+                    
+                    html += '<div class="tasks-container" style="margin-top: 15px;">';
+                    tasks.forEach((task, index) => {
+                        html += formatTaskCard(task, index + 1);
+                    });
+                    html += '</div>';
+                } else {
+                    // Fallback to regular text formatting
+                    html += formatTextContent(text);
+                }
+            }
+            
+            html += '</div>';
+            return html;
+        }
+        
+        function parseNonXMLTasks(text) {
+            const tasks = [];
+            
+            // This format has tasks separated by double newlines
+            // Each task starts with specialist name on its own line
+            // followed by content lines that are indented
+            const taskBlocks = text.split(/\\n\\n\\n+/);
+            
+            taskBlocks.forEach(block => {
+                block = block.trim();
+                if (!block) return;
+                
+                // Check if this looks like a task block
+                const lines = block.split('\\n');
+                if (lines.length < 2) return;
+                
+                // First line might be the specialist name
+                const firstLine = lines[0].trim();
+                const specialistNames = ['endocrinology', 'laboratory_medicine', 'nutrition', 'cardiology', 'pharmacy', 'preventive_medicine'];
+                
+                if (specialistNames.includes(firstLine.toLowerCase())) {
+                    // This is a task block
+                    const task = {
+                        specialist: firstLine.toLowerCase(),
+                        objective: '',
+                        context: '',
+                        expected_output: '',
+                        priority: '',
+                        tool_queries: []
+                    };
+                    
+                    // Parse the rest of the lines
+                    let currentSection = 'objective';
+                    let sectionContent = [];
+                    
+                    for (let i = 1; i < lines.length; i++) {
+                        const line = lines[i];
+                        const trimmed = line.trim();
+                        
+                        // Check if this is a priority number on its own line
+                        if (trimmed.match(/^\\d+$/) && i < lines.length - 3) {
+                            task.priority = trimmed;
+                            continue;
+                        }
+                        
+                        // Detect section based on content position
+                        if (i === 1 || (i === 2 && !task.objective)) {
+                            // First content line is objective
+                            task.objective = trimmed;
+                        } else if (i === 2 || (i === 3 && task.priority)) {
+                            // Second content line is context
+                            task.context = trimmed;
+                        } else if (trimmed.startsWith('-') && !task.expected_output) {
+                            // Lines starting with - before expected output are part of expected output
+                            if (!task.expected_output && sectionContent.length > 0) {
+                                task.expected_output = sectionContent.join(' ').trim();
+                                sectionContent = [];
+                            }
+                            task.expected_output += (task.expected_output ? '\\n' : '') + trimmed;
+                        } else if (trimmed.startsWith('-')) {
+                            // Tool queries
+                            task.tool_queries.push(trimmed.substring(1).trim().replace(/^["']|["']$/g, ''));
+                        } else if (trimmed && !task.expected_output) {
+                            // This might be expected output
+                            sectionContent.push(trimmed);
+                        }
+                    }
+                    
+                    // Finalize expected output if needed
+                    if (!task.expected_output && sectionContent.length > 0) {
+                        task.expected_output = sectionContent.join(' ').trim();
+                    }
+                    
+                    // Clean up expected output - remove list markers at the start
+                    if (task.expected_output) {
+                        task.expected_output = task.expected_output.replace(/^\\s*-\\s*/, '');
+                    }
+                    
+                    tasks.push(task);
+                }
+            });
+            
+            return tasks;
+        }
+        
+        function parseTasksXML(xml) {
+            const tasks = [];
+            const taskMatches = xml.matchAll(/<task>([\\s\\S]*?)<\\/task>/g);
+            
+            for (const match of taskMatches) {
+                const taskContent = match[1];
+                const task = {
+                    specialist: extractXMLValue(taskContent, 'specialist'),
+                    objective: extractXMLValue(taskContent, 'objective'),
+                    context: extractXMLValue(taskContent, 'context'),
+                    expected_output: extractXMLValue(taskContent, 'expected_output'),
+                    priority: extractXMLValue(taskContent, 'priority'),
+                    tool_queries: extractToolQueries(taskContent)
+                };
+                tasks.push(task);
+            }
+            
+            return tasks;
+        }
+        
+        function extractXMLValue(xml, tag) {
+            const match = xml.match(new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`));
+            return match ? match[1].trim() : '';
+        }
+        
+        function extractToolQueries(xml) {
+            const queriesMatch = xml.match(/<tool_queries>([\\s\\S]*?)<\\/tool_queries>/);
+            if (!queriesMatch) return [];
+            
+            const queries = [];
+            const lines = queriesMatch[1].split('\\n');
+            lines.forEach(line => {
+                const cleaned = line.trim();
+                if (cleaned.startsWith('-')) {
+                    queries.push(cleaned.substring(1).trim().replace(/^["']|["']$/g, ''));
+                }
+            });
+            
+            return queries;
+        }
+        
+        function formatTaskCard(task, number) {
+            const priorityColors = {
+                '1': '#e74c3c',
+                '2': '#f39c12',
+                '3': '#3498db'
+            };
+            
+            const specialistEmojis = {
+                'endocrinology': '🔬',
+                'nutrition': '🥗',
+                'laboratory_medicine': '🧪',
+                'cardiology': '❤️',
+                'pharmacy': '💊',
+                'preventive_medicine': '🛡️'
+            };
+            
+            const emoji = specialistEmojis[task.specialist] || '👨‍⚕️';
+            const priorityColor = priorityColors[task.priority] || '#95a5a6';
+            
+            let html = `
+                <div class="task-card" style="border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #f8f9fa;">
+                    <div class="task-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h4 style="margin: 0; color: #2c3e50; font-size: 16px;">
+                            ${emoji} Task ${number}: ${capitalizeFirst(task.specialist)}
+                        </h4>
+                        <span class="priority-badge" style="background: ${priorityColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">
+                            Priority ${task.priority}
+                        </span>
+                    </div>
+                    
+                    <div class="task-content">
+                        <div class="task-field" style="margin-bottom: 10px;">
+                            <strong style="color: #7f8c8d;">Objective:</strong>
+                            <div style="margin-left: 10px; color: #2c3e50;">${task.objective}</div>
+                        </div>
+                        
+                        <div class="task-field" style="margin-bottom: 10px;">
+                            <strong style="color: #7f8c8d;">Context:</strong>
+                            <div style="margin-left: 10px; color: #34495e; font-size: 13px;">${task.context}</div>
+                        </div>
+                        
+                        <div class="task-field" style="margin-bottom: 10px;">
+                            <strong style="color: #7f8c8d;">Expected Output:</strong>
+                            <div style="margin-left: 10px; color: #27ae60; font-size: 13px;">${task.expected_output}</div>
+                        </div>
+            `;
+            
+            if (task.tool_queries && task.tool_queries.length > 0) {
+                html += `
+                        <div class="task-field">
+                            <strong style="color: #7f8c8d;">Tool Queries:</strong>
+                            <ul style="margin: 5px 0 0 20px; padding-left: 20px;">
+                `;
+                task.tool_queries.forEach(query => {
+                    html += `<li style="color: #3498db; font-size: 13px; font-family: monospace;">${escapeHtml(query)}</li>`;
+                });
+                html += `
+                            </ul>
+                        </div>
+                `;
+            }
+            
+            html += `
+                    </div>
+                </div>
+            `;
+            
+            return html;
+        }
+        
+        function formatTextContent(text) {
+            // Convert newlines to proper formatting
+            let formatted = escapeHtml(text);
+            
+            // Convert double newlines to paragraphs
+            const paragraphs = formatted.split('\\n\\n');
+            let html = '';
+            
+            paragraphs.forEach(para => {
+                if (para.trim()) {
+                    // Check if it's a list
+                    if (para.includes('\\n-') || para.includes('\\n•') || para.includes('\\n*')) {
+                        html += formatList(para);
+                    } else {
+                        html += `<p style="margin: 10px 0;">${para.replace(/\\n/g, '<br>')}</p>`;
+                    }
+                }
+            });
+            
+            return html;
+        }
+        
+        function formatList(text) {
+            const lines = text.split('\\n');
+            let html = '<ul style="margin: 10px 0;">';
+            let inList = false;
+            
+            lines.forEach(line => {
+                const trimmed = line.trim();
+                if (trimmed.startsWith('-') || trimmed.startsWith('•') || trimmed.startsWith('*')) {
+                    inList = true;
+                    html += `<li>${trimmed.substring(1).trim()}</li>`;
+                } else if (inList && trimmed) {
+                    // Continuation of previous list item
+                    html = html.replace(/<\\/li>$/, ' ' + trimmed + '</li>');
+                }
+            });
+            
+            html += '</ul>';
+            return html;
+        }
+        
+        function formatToolData(data) {
+            let html = '<div class="tool-data">';
+            
+            html += `<h4 style="margin: 0 0 10px 0; color: #2c3e50;">🔧 ${data.tool_name || 'Tool Invocation'}</h4>`;
+            
+            if (data.tool_input) {
+                html += '<div class="tool-input" style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin-top: 10px;">';
+                html += '<strong>Input:</strong>';
+                
+                if (data.tool_input.query) {
+                    html += `<div style="margin-top: 5px; color: #3498db; font-family: monospace;">${escapeHtml(data.tool_input.query)}</div>`;
+                } else {
+                    html += formatJSON(data.tool_input);
+                }
+                
+                html += '</div>';
+            }
+            
+            html += '</div>';
+            return html;
+        }
+        
+        function formatQueryResults(data) {
+            let html = '<div class="query-results">';
+            
+            if (data.query) {
+                html += `<div class="query-text" style="margin-bottom: 10px;"><strong>Query:</strong> <span style="color: #3498db; font-family: monospace;">${escapeHtml(data.query)}</span></div>`;
+            }
+            
+            if (data.interpretation) {
+                html += `<div class="interpretation" style="margin-bottom: 10px; padding: 10px; background: #e8f4fd; border-radius: 4px;"><strong>Interpretation:</strong><br>${escapeHtml(data.interpretation)}</div>`;
+            }
+            
+            if (data.results && data.results.length > 0) {
+                html += `<div class="results-summary" style="margin-bottom: 10px;"><strong>Results:</strong> ${data.results.length} records found</div>`;
+                
+                // Show first few results in a table
+                html += '<div style="overflow-x: auto;"><table style="width: 100%; border-collapse: collapse; font-size: 12px;">';
+                
+                // Headers
+                const headers = Object.keys(data.results[0]);
+                html += '<thead><tr style="background: #f8f9fa;">';
+                headers.forEach(header => {
+                    html += `<th style="padding: 8px; border: 1px solid #dee2e6; text-align: left;">${header}</th>`;
+                });
+                html += '</tr></thead>';
+                
+                // Rows (first 5)
+                html += '<tbody>';
+                data.results.slice(0, 5).forEach((row, index) => {
+                    html += `<tr style="background: ${index % 2 === 0 ? 'white' : '#f8f9fa'};">`;
+                    headers.forEach(header => {
+                        const value = row[header];
+                        html += `<td style="padding: 8px; border: 1px solid #dee2e6;">${value !== null ? escapeHtml(String(value)) : '<em>null</em>'}</td>`;
+                    });
+                    html += '</tr>';
+                });
+                html += '</tbody>';
+                html += '</table></div>';
+                
+                if (data.results.length > 5) {
+                    html += `<div style="margin-top: 10px; color: #7f8c8d; font-style: italic;">... and ${data.results.length - 5} more records</div>`;
+                }
+            }
+            
+            html += '</div>';
+            return html;
+        }
+        
+        function formatJSON(obj) {
+            const json = JSON.stringify(obj, null, 2);
+            const highlighted = json
+                .replace(/"([^"]+)":/g, '<span style="color: #a333c8;">"$1"</span>:')
+                .replace(/: "([^"]*)"/g, ': <span style="color: #0d7e20;">"$1"</span>')
+                .replace(/: (\\d+)/g, ': <span style="color: #1a71bd;">$1</span>')
+                .replace(/: (true|false)/g, ': <span style="color: #d73502;">$1</span>')
+                .replace(/: null/g, ': <span style="color: #7f8c8d;">null</span>');
+            
+            return `<pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 5px 0; font-size: 12px; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word; max-width: 100%; max-height: 500px; overflow-y: auto;">${highlighted}</pre>`;
+        }
+        
+        function capitalizeFirst(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
         function toggleAgent(agentId) {
             const header = document.getElementById(agentId + '-header');
             const content = document.getElementById(agentId + '-content');
@@ -1365,6 +1834,29 @@ def _generate_javascript() -> str:
                 btn.innerHTML = '▼ Hide Details';
             } else {
                 btn.innerHTML = '▶ Show Details';
+            }
+        }
+        
+        function toggleFormatting(eventId) {
+            const formattedDiv = document.getElementById('formatted-' + eventId);
+            const rawDiv = document.getElementById('raw-' + eventId);
+            const toggleBtn = document.getElementById('format-toggle-' + eventId);
+            
+            if (rawDiv.style.display === 'none') {
+                // Show raw view
+                formattedDiv.style.display = 'none';
+                rawDiv.style.display = 'block';
+                toggleBtn.textContent = '📄 View Formatted';
+            } else {
+                // Show formatted view
+                if (!formattedDiv.innerHTML) {
+                    // First time - format the content
+                    const content = JSON.parse(formattedDiv.dataset.content);
+                    formatEventData(content, formattedDiv);
+                }
+                formattedDiv.style.display = 'block';
+                rawDiv.style.display = 'none';
+                toggleBtn.textContent = '📝 View Raw';
             }
         }
         
@@ -2890,12 +3382,12 @@ def _generate_event_details(event: TraceEvent) -> str:
         return f"""
         <div style="margin-top: 10px;">
             <strong>Current Prompt:</strong>
-            <pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 5px 0; font-size: 12px;">
+            <pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 5px 0; font-size: 12px; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word; max-width: 100%; max-height: 500px; overflow-y: auto;">
 {components['current_prompt']}</pre>
             
-            {f'<strong>System Prompt:</strong><pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 5px 0; font-size: 12px;">{system_prompt}</pre>' if system_prompt else ''}
+            {f'<strong>System Prompt:</strong><pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 5px 0; font-size: 12px; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word; max-width: 100%; max-height: 500px; overflow-y: auto;">{system_prompt}</pre>' if system_prompt else ''}
             
-            {f'<details><summary><strong>Conversation History ({components["history_size"]} messages)</strong></summary><pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 5px 0; font-size: 12px;">{json.dumps(components["conversation_history"], indent=2)}</pre></details>' if components['history_size'] > 0 else ''}
+            {f'<details><summary><strong>Conversation History ({components["history_size"]} messages)</strong></summary><pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 5px 0; font-size: 12px; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word; max-width: 100%; max-height: 500px; overflow-y: auto;">{json.dumps(components["conversation_history"], indent=2)}</pre></details>' if components['history_size'] > 0 else ''}
         </div>
         """
         
@@ -2906,18 +3398,55 @@ def _generate_event_details(event: TraceEvent) -> str:
         full_output = metadata.get('tool_output', result_data)
         
         return f"""
-        <div style="margin-top: 10px;">
-            <strong>Full Results:</strong>
-            <pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 5px 0; font-size: 12px; max-height: 300px; overflow-y: auto;">
+        <div style="margin-top: 10px;" id="event-{event.event_id}-details-content">
+            <div class="format-toggle" style="margin-bottom: 10px;">
+                <button onclick="toggleFormatting('{event.event_id}')" style="padding: 4px 8px; border: 1px solid #dee2e6; border-radius: 4px; background: white; cursor: pointer; font-size: 12px;">
+                    <span id="format-toggle-{event.event_id}">📝 View Raw</span>
+                </button>
+            </div>
+            <div id="formatted-{event.event_id}"></div>
+            <div id="raw-{event.event_id}" style="display: none;">
+                <pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 5px 0; font-size: 12px; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word; max-width: 100%; max-height: 300px; overflow-y: auto;">
 {json.dumps(full_output, indent=2)}</pre>
+            </div>
+            <script>
+                document.getElementById('formatted-{event.event_id}').dataset.content = {json.dumps(json.dumps(full_output))};
+                // Initialize formatted view on load
+                window.addEventListener('DOMContentLoaded', function() {{
+                    const formattedDiv = document.getElementById('formatted-{event.event_id}');
+                    if (formattedDiv && !formattedDiv.innerHTML) {{
+                        const content = JSON.parse(formattedDiv.dataset.content);
+                        formatEventData(content, formattedDiv);
+                    }}
+                }});
+            </script>
         </div>
         """
         
     else:
-        # Default detailed view
+        # Default detailed view with formatting option
         return f"""
-        <div style="margin-top: 10px;">
-            <pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 5px 0; font-size: 12px;">
+        <div style="margin-top: 10px;" id="event-{event.event_id}-details-content">
+            <div class="format-toggle" style="margin-bottom: 10px;">
+                <button onclick="toggleFormatting('{event.event_id}')" style="padding: 4px 8px; border: 1px solid #dee2e6; border-radius: 4px; background: white; cursor: pointer; font-size: 12px;">
+                    <span id="format-toggle-{event.event_id}">📝 View Raw</span>
+                </button>
+            </div>
+            <div id="formatted-{event.event_id}"></div>
+            <div id="raw-{event.event_id}" style="display: none;">
+                <pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 5px 0; font-size: 12px; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word; max-width: 100%; max-height: 500px; overflow-y: auto;">
 {json.dumps(data, indent=2)}</pre>
+            </div>
+            <script>
+                document.getElementById('formatted-{event.event_id}').dataset.content = {json.dumps(json.dumps(data))};
+                // Initialize formatted view on load
+                window.addEventListener('DOMContentLoaded', function() {{
+                    const formattedDiv = document.getElementById('formatted-{event.event_id}');
+                    if (formattedDiv && !formattedDiv.innerHTML) {{
+                        const content = JSON.parse(formattedDiv.dataset.content);
+                        formatEventData(content, formattedDiv);
+                    }}
+                }});
+            </script>
         </div>
         """

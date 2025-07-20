@@ -162,9 +162,9 @@ class CMOTestCases:
             ),
             TestCase(
                 id="complex_002",
-                query="How has my HbA1c level changed since I started taking metformin, has my dosage been adjusted over time based on my lab results, and is there a correlation between these changes and my weight measurements during the same period?",
+                query="How has my HbA1c level changed since I started taking metformin, has my dosage been adjusted over time based on my lab results, and is there a correlation between these changes and my weight measurements during the same period (standard)?",
                 expected_complexity="COMPLEX",
-                expected_specialties={"endocrinology", "pharmacy", "nutrition"},
+                expected_specialties={"endocrinology", "laboratory_medicine", "preventative_medicine" "pharmacy", "nutrition"},
                 key_data_points=["hba1c_trend", "metformin_initiation", "dose_adjustments", "weight_correlation", "glycemic_control", "temporal_analysis"],
                 description="Three-way correlation analysis: medication, lab results, and weight",
                 category="diabetes",

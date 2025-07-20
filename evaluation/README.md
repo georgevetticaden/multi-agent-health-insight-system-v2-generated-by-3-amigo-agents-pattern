@@ -387,6 +387,13 @@ python -m evaluation.cli.run_evaluation --agent specialist --specialty cardiolog
 
 # Real-world test cases
 python -m evaluation.cli.run_evaluation --agent cmo --test real-world
+
+# Run specific test cases by ID
+python -m evaluation.cli.run_evaluation --agent cmo --test real-world --test-ids complex_002
+python -m evaluation.cli.run_evaluation --agent cmo --test real-world --test-ids simple_001,complex_002,standard_003
+
+# Run tests by category
+python -m evaluation.cli.run_evaluation --agent cmo --test real-world --category complexity_classification
 ```
 
 ### Trace Collection During Evaluation
@@ -406,23 +413,30 @@ ENABLE_TRACING=false python -m evaluation.cli.run_evaluation --agent cmo --test 
 | Parameter | Description | Values | Example |
 |-----------|-------------|---------|----------|
 | `--agent` | Agent type to evaluate | cmo, specialist | `--agent specialist` |
-| `--test` | Type of evaluation | comprehensive, real-world, example | `--test comprehensive` |
-| `--specialty` | Specialist type | cardiology, endocrinology, etc. | `--specialty cardiology` |
+| `--test` | Type of evaluation | comprehensive, real-world, example, etc. | `--test comprehensive` |
+| `--specialty` | Specialist type (for specialist agent) | cardiology, endocrinology, etc. | `--specialty cardiology` |
+| `--category` | Test category filter | Category name from test cases | `--category complexity_classification` |
+| `--test-ids` | Specific test IDs to run | Comma-separated test IDs | `--test-ids complex_002,simple_001` |
 | `--concurrent` | Max parallel tests | Integer (default: 5) | `--concurrent 10` |
+| `--output` | Output file for results | File path (default: stdout) | `--output results.json` |
 
 ### Agent-Specific Test Types
+
+**Important**: When using `--test-ids` to run specific tests, you must also specify the correct `--test` type that contains those test IDs. For example, if `complex_002` is in the real-world test suite, you must use `--test real-world`.
 
 **CMO Agent:**
 - `example`: Single example test
 - `complexity`: Complexity classification focused tests
 - `specialty`: Specialist selection focused tests
 - `comprehensive`: Full test suite
-- `real-world`: Production-based tests
+- `real-world`: Production-based tests (contains IDs like simple_001, complex_002, etc.)
+- `edge-cases`: Edge case scenarios
 
 **Specialist Agent:**
 - `example`: Single test case (use with `--specialty`)
 - `comprehensive`: All specialist tests
 - `real-world`: Real-world based tests
+- `edge-cases`: Edge case scenarios for specialists
 
 ## Understanding Reports
 

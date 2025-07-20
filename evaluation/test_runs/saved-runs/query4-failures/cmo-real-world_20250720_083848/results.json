@@ -1,0 +1,329 @@
+{
+  "results": [
+    {
+      "test_case_id": "complex_002",
+      "query": "How has my HbA1c level changed since I started taking metformin, has my dosage been adjusted over time based on my lab results, and is there a correlation between these changes and my weight measurements during the same period (standard)?",
+      "success": false,
+      "total_response_time_ms": 90698.90100000001,
+      "tokens_used": 610,
+      "error_message": null,
+      "trace_id": "a815e166-ee04-47c4-9ff2-f31e8e06db8e",
+      "expected_complexity": "COMPLEX",
+      "actual_complexity": "standard",
+      "complexity_correct": false,
+      "expected_specialties": "{'nutrition', 'laboratory_medicine', 'preventative_medicinepharmacy', 'endocrinology'}",
+      "actual_specialties": "{'nutrition', 'laboratory_medicine', 'endocrinology'}",
+      "response_valid": true,
+      "structure_errors": [],
+      "tool_calls_made": 1,
+      "complexity_classification_score": 0.0,
+      "specialty_selection_score": 0.81,
+      "analysis_quality_score": 0.925,
+      "tool_usage_score": 1.0,
+      "response_structure_score": 1.0,
+      "specialty_component_breakdown": {
+        "specialist_precision": 0.75,
+        "specialist_rationale": 0.9
+      },
+      "analysis_quality_breakdown": {
+        "data_gathering": 1.0,
+        "context_awareness": 0.9,
+        "comprehensive_approach": 0.9,
+        "concern_identification": 0.9
+      },
+      "tool_component_breakdown": {
+        "tool_success_rate": 1.0
+      },
+      "response_component_breakdown": {
+        "xml_validity": 1.0,
+        "required_fields": 1.0
+      },
+      "approach_text": "To address the patient's question about how their HbA1c, metformin dosage, and weight have changed over time and whether there are any correlations, I recommend the following analytical approach:\n\nKey data points to investigate:\n- HbA1c values and dates to establish a timeline of glycemic control \n- Metformin dosages and dates to track medication adjustments\n- Weight measurements and dates to monitor weight changes\n- Align all data points by date to allow direct comparisons\n\nCorrelations to explore:\n- Changes in HbA1c compared to metformin dosage adjustments (i.e. did increasing the dose improve HbA1c)\n- Relationship between HbA1c and weight (i.e. did periods of better glycemic control correlate with weight loss)\n- Impact of metformin dose on weight (i.e. did higher doses lead to more weight loss)\n\nHealth concerns to address:  \n- Glycemic control and whether HbA1c has improved over time with treatment\n- Appropriate titration of metformin dosage based on HbA1c response\n- Weight management as a key factor in diabetes treatment\n\nTimeframes to consider:\n- Focus analysis on the period from when metformin was started to present\n- Break down analysis into 6-12 month intervals to assess shorter-term changes\n- Look at overall trends across the full time period of metformin treatment\n\nAreas of focus:\n- Improving glycemic control as measured by HbA1c \n- Optimizing metformin dosage \n- Supporting weight loss efforts\n\nPriorities:\n1. Establish timeline of key data points (HbA1c, metformin dose, weight)  \n2. Analyze HbA1c response to metformin initiation and dose changes\n3. Determine any correlations between variables\n4. Identify any concerning trends needing intervention\n5. Summarize overall status of diabetes management",
+      "initial_data_gathered": {
+        "tool_calls_made": 1,
+        "data_available": true,
+        "summary": "The initial data overview shows:\n- HbA1c test results are available, with values, units, reference ranges, and abnormal flags. There are a few data points over the past 5 years.\n- Metformin prescription records exist, showing the medication name, dosage, frequency, and status at various dates. \n- Weight measurements are captured frequently, with values and units.\n- The data spans the requested 5 year period from 2020-2025.\n- With HbA1c, metformin, and weight data all available over a multi-year period, it should be possible to analyze trends and look for correlations between these variables to address the patient's question. Some additional querying and analysis will be needed.",
+        "result_count": 52,
+        "query": "Provide an overview of available data related to the patient's HbA1c levels, metformin medication history, and weight measurements over the past 5 years"
+      },
+      "analysis_time_ms": 48106.553,
+      "specialist_tasks": [
+        {
+          "specialist": "endocrinology",
+          "objective": "Analyze HbA1c trends over time in response to metformin treatment, identifying if glycemic control has improved and whether dosage adjustments correlate with changes in HbA1c values.",
+          "context": "Patient has been taking metformin for diabetes management and wants to understand how HbA1c has responded to treatment and dosage changes over a 5 year period from 2020-2025. Initial data shows HbA1c ...",
+          "expected_output": "Summary of HbA1c trends, analysis of how values have changed in response to starting metformin and subsequent dosage adjustments. Identification of any time periods where glycemic control was suboptimal and if it improved with titration of metformin.",
+          "priority": 1,
+          "max_tool_calls": 5
+        },
+        {
+          "specialist": "laboratory_medicine",
+          "objective": "Retrieve all HbA1c lab results from 2020-2025, including test values, units, and reference ranges. Align HbA1c values with metformin dosage at each test timepoint to enable analysis of medication response.",
+          "context": "Comprehensive HbA1c lab data is needed to analyze glycemic trends and response to metformin treatment. Initial data summary shows HbA1c results are available over a 5 year period with values, units, a...",
+          "expected_output": "Complete, chronological dataset of HbA1c lab results from 2020-2025 with test values, units, and reference ranges. Integration of metformin dosages aligned with each HbA1c timepoint.",
+          "priority": 2,
+          "max_tool_calls": 5
+        },
+        {
+          "specialist": "nutrition",
+          "objective": "Analyze patient's weight measurements over the 5 year period from 2020-2025, looking for any correlations between HbA1c values, metformin dosages, and weight changes.",
+          "context": "Weight management is an important factor in diabetes treatment. Patient has asked about relationships between HbA1c, metformin, and weight. Initial data shows frequent weight measurements are availabl...",
+          "expected_output": "Summary of patient's weight trends over the 5 year period, highlighting any significant changes. Analysis of potential correlations between weight and HbA1c values or metformin dosages, such as if periods of improved glycemic control or higher metformin doses were associated with weight loss.",
+          "priority": 3,
+          "max_tool_calls": 5
+        }
+      ],
+      "task_creation_success": true,
+      "task_creation_time_ms": 29501.392,
+      "task_creation_error": null,
+      "task_count": 3,
+      "approach_mentioned_specialties": "set()",
+      "key_data_points": [
+        "hba1c_trend",
+        "metformin_initiation",
+        "dose_adjustments",
+        "weight_correlation",
+        "glycemic_control",
+        "temporal_analysis"
+      ],
+      "failure_analyses": [
+        {
+          "dimension": "complexity_classification",
+          "root_cause": "The prompt does not provide clear enough guidance on what constitutes a COMPLEX query versus a STANDARD query, leading to misclassification in cases involving multiple related data points and potential correlations.",
+          "specific_issues": [],
+          "recommendations": [
+            "MODIFY RULE: Change 'Trend analysis, 2-3 related metrics, moderate complexity' to 'Queries involving up to 2 related clinical metrics over time'",
+            "ADD EXAMPLE: 'How have my HbA1c levels, metformin dosage, and weight changed over time and do they correlate?' \u2192 COMPLEX because it requires analyzing 3 interconnected clinical areas",
+            "CLARIFY: Change 'Multi-system analysis' to 'Analysis spanning 3+ distinct clinical areas or body systems'"
+          ],
+          "priority": "high",
+          "prompt_file": "backend/services/agents/cmo/prompts/1_gather_data_assess_complexity.txt",
+          "expected_impact": null
+        },
+        {
+          "dimension": "specialty_selection",
+          "root_cause": "The pharmacy and preventive_medicine specialists were incorrectly excluded from the selection, even though the query mentioned metformin dosage adjustments and correlations with weight changes over time, which are relevant to their domains.",
+          "specific_issues": [
+            "Missing pharmacy: No explicit rules or keyword mappings for detecting medication dosage/adjustment mentions",
+            "Missing preventive_medicine: Lack of guidance around detecting weight/risk factor correlations"
+          ],
+          "recommendations": [
+            "ADD to Selection Rules: 'ALWAYS include pharmacy when query mentions: medication names, dosages, dosage adjustments, or medication adherence'",
+            "ADD to Selection Rules: 'ALWAYS include preventive_medicine when query asks about correlations between lab values/medications and risk factors like weight'",
+            "ADD EXAMPLE: 'Query: How has my HbA1c level changed since starting metformin and how does that correlate with my weight?' \u2192 Select: [endocrinology, laboratory_medicine, pharmacy, preventive_medicine, nutrition]'",
+            "ADD keywords for pharmacy: ['medication', 'drug', 'dosage', 'dose', 'prescription']"
+          ],
+          "priority": "high",
+          "prompt_file": "backend/services/agents/cmo/prompts/3_assign_specialist_tasks.txt",
+          "expected_impact": null
+        }
+      ],
+      "weighted_score": 0.73375,
+      "dimension_success_rate": 0.6,
+      "evaluation_success": false
+    }
+  ],
+  "aggregated": {
+    "total_tests": 1,
+    "successful_tests": 0,
+    "success_rate": 0.0,
+    "average_response_time_ms": 90698.90100000001,
+    "total_tokens_used": 610,
+    "average_tokens_per_test": 610.0,
+    "failed_tests": [
+      "complex_002"
+    ],
+    "results": [
+      {
+        "test_case_id": "complex_002",
+        "query": "How has my HbA1c level changed since I started taking metformin, has my dosage been adjusted over time based on my lab results, and is there a correlation between these changes and my weight measurements during the same period (standard)?",
+        "success": false,
+        "total_response_time_ms": 90698.90100000001,
+        "tokens_used": 610,
+        "error_message": null,
+        "trace_id": "a815e166-ee04-47c4-9ff2-f31e8e06db8e",
+        "expected_complexity": "COMPLEX",
+        "actual_complexity": "standard",
+        "complexity_correct": false,
+        "expected_specialties": "{'nutrition', 'laboratory_medicine', 'preventative_medicinepharmacy', 'endocrinology'}",
+        "actual_specialties": "{'nutrition', 'laboratory_medicine', 'endocrinology'}",
+        "response_valid": true,
+        "structure_errors": [],
+        "tool_calls_made": 1,
+        "complexity_classification_score": 0.0,
+        "specialty_selection_score": 0.81,
+        "analysis_quality_score": 0.925,
+        "tool_usage_score": 1.0,
+        "response_structure_score": 1.0,
+        "specialty_component_breakdown": {
+          "specialist_precision": 0.75,
+          "specialist_rationale": 0.9
+        },
+        "analysis_quality_breakdown": {
+          "data_gathering": 1.0,
+          "context_awareness": 0.9,
+          "comprehensive_approach": 0.9,
+          "concern_identification": 0.9
+        },
+        "tool_component_breakdown": {
+          "tool_success_rate": 1.0
+        },
+        "response_component_breakdown": {
+          "xml_validity": 1.0,
+          "required_fields": 1.0
+        },
+        "approach_text": "To address the patient's question about how their HbA1c, metformin dosage, and weight have changed over time and whether there are any correlations, I recommend the following analytical approach:\n\nKey data points to investigate:\n- HbA1c values and dates to establish a timeline of glycemic control \n- Metformin dosages and dates to track medication adjustments\n- Weight measurements and dates to monitor weight changes\n- Align all data points by date to allow direct comparisons\n\nCorrelations to explore:\n- Changes in HbA1c compared to metformin dosage adjustments (i.e. did increasing the dose improve HbA1c)\n- Relationship between HbA1c and weight (i.e. did periods of better glycemic control correlate with weight loss)\n- Impact of metformin dose on weight (i.e. did higher doses lead to more weight loss)\n\nHealth concerns to address:  \n- Glycemic control and whether HbA1c has improved over time with treatment\n- Appropriate titration of metformin dosage based on HbA1c response\n- Weight management as a key factor in diabetes treatment\n\nTimeframes to consider:\n- Focus analysis on the period from when metformin was started to present\n- Break down analysis into 6-12 month intervals to assess shorter-term changes\n- Look at overall trends across the full time period of metformin treatment\n\nAreas of focus:\n- Improving glycemic control as measured by HbA1c \n- Optimizing metformin dosage \n- Supporting weight loss efforts\n\nPriorities:\n1. Establish timeline of key data points (HbA1c, metformin dose, weight)  \n2. Analyze HbA1c response to metformin initiation and dose changes\n3. Determine any correlations between variables\n4. Identify any concerning trends needing intervention\n5. Summarize overall status of diabetes management",
+        "initial_data_gathered": {
+          "tool_calls_made": 1,
+          "data_available": true,
+          "summary": "The initial data overview shows:\n- HbA1c test results are available, with values, units, reference ranges, and abnormal flags. There are a few data points over the past 5 years.\n- Metformin prescription records exist, showing the medication name, dosage, frequency, and status at various dates. \n- Weight measurements are captured frequently, with values and units.\n- The data spans the requested 5 year period from 2020-2025.\n- With HbA1c, metformin, and weight data all available over a multi-year period, it should be possible to analyze trends and look for correlations between these variables to address the patient's question. Some additional querying and analysis will be needed.",
+          "result_count": 52,
+          "query": "Provide an overview of available data related to the patient's HbA1c levels, metformin medication history, and weight measurements over the past 5 years"
+        },
+        "analysis_time_ms": 48106.553,
+        "specialist_tasks": [
+          {
+            "specialist": "endocrinology",
+            "objective": "Analyze HbA1c trends over time in response to metformin treatment, identifying if glycemic control has improved and whether dosage adjustments correlate with changes in HbA1c values.",
+            "context": "Patient has been taking metformin for diabetes management and wants to understand how HbA1c has responded to treatment and dosage changes over a 5 year period from 2020-2025. Initial data shows HbA1c ...",
+            "expected_output": "Summary of HbA1c trends, analysis of how values have changed in response to starting metformin and subsequent dosage adjustments. Identification of any time periods where glycemic control was suboptimal and if it improved with titration of metformin.",
+            "priority": 1,
+            "max_tool_calls": 5
+          },
+          {
+            "specialist": "laboratory_medicine",
+            "objective": "Retrieve all HbA1c lab results from 2020-2025, including test values, units, and reference ranges. Align HbA1c values with metformin dosage at each test timepoint to enable analysis of medication response.",
+            "context": "Comprehensive HbA1c lab data is needed to analyze glycemic trends and response to metformin treatment. Initial data summary shows HbA1c results are available over a 5 year period with values, units, a...",
+            "expected_output": "Complete, chronological dataset of HbA1c lab results from 2020-2025 with test values, units, and reference ranges. Integration of metformin dosages aligned with each HbA1c timepoint.",
+            "priority": 2,
+            "max_tool_calls": 5
+          },
+          {
+            "specialist": "nutrition",
+            "objective": "Analyze patient's weight measurements over the 5 year period from 2020-2025, looking for any correlations between HbA1c values, metformin dosages, and weight changes.",
+            "context": "Weight management is an important factor in diabetes treatment. Patient has asked about relationships between HbA1c, metformin, and weight. Initial data shows frequent weight measurements are availabl...",
+            "expected_output": "Summary of patient's weight trends over the 5 year period, highlighting any significant changes. Analysis of potential correlations between weight and HbA1c values or metformin dosages, such as if periods of improved glycemic control or higher metformin doses were associated with weight loss.",
+            "priority": 3,
+            "max_tool_calls": 5
+          }
+        ],
+        "task_creation_success": true,
+        "task_creation_time_ms": 29501.392,
+        "task_creation_error": null,
+        "task_count": 3,
+        "approach_mentioned_specialties": "set()",
+        "key_data_points": [
+          "hba1c_trend",
+          "metformin_initiation",
+          "dose_adjustments",
+          "weight_correlation",
+          "glycemic_control",
+          "temporal_analysis"
+        ],
+        "failure_analyses": [
+          {
+            "dimension": "complexity_classification",
+            "root_cause": "The prompt does not provide clear enough guidance on what constitutes a COMPLEX query versus a STANDARD query, leading to misclassification in cases involving multiple related data points and potential correlations.",
+            "specific_issues": [],
+            "recommendations": [
+              "MODIFY RULE: Change 'Trend analysis, 2-3 related metrics, moderate complexity' to 'Queries involving up to 2 related clinical metrics over time'",
+              "ADD EXAMPLE: 'How have my HbA1c levels, metformin dosage, and weight changed over time and do they correlate?' \u2192 COMPLEX because it requires analyzing 3 interconnected clinical areas",
+              "CLARIFY: Change 'Multi-system analysis' to 'Analysis spanning 3+ distinct clinical areas or body systems'"
+            ],
+            "priority": "high",
+            "prompt_file": "backend/services/agents/cmo/prompts/1_gather_data_assess_complexity.txt",
+            "expected_impact": null
+          },
+          {
+            "dimension": "specialty_selection",
+            "root_cause": "The pharmacy and preventive_medicine specialists were incorrectly excluded from the selection, even though the query mentioned metformin dosage adjustments and correlations with weight changes over time, which are relevant to their domains.",
+            "specific_issues": [
+              "Missing pharmacy: No explicit rules or keyword mappings for detecting medication dosage/adjustment mentions",
+              "Missing preventive_medicine: Lack of guidance around detecting weight/risk factor correlations"
+            ],
+            "recommendations": [
+              "ADD to Selection Rules: 'ALWAYS include pharmacy when query mentions: medication names, dosages, dosage adjustments, or medication adherence'",
+              "ADD to Selection Rules: 'ALWAYS include preventive_medicine when query asks about correlations between lab values/medications and risk factors like weight'",
+              "ADD EXAMPLE: 'Query: How has my HbA1c level changed since starting metformin and how does that correlate with my weight?' \u2192 Select: [endocrinology, laboratory_medicine, pharmacy, preventive_medicine, nutrition]'",
+              "ADD keywords for pharmacy: ['medication', 'drug', 'dosage', 'dose', 'prescription']"
+            ],
+            "priority": "high",
+            "prompt_file": "backend/services/agents/cmo/prompts/3_assign_specialist_tasks.txt",
+            "expected_impact": null
+          }
+        ],
+        "weighted_score": 0.73375,
+        "dimension_success_rate": 0.6,
+        "evaluation_success": false
+      }
+    ]
+  },
+  "summary": {
+    "overall_success": false,
+    "weighted_score": 0.73375,
+    "success_rate": 0.0,
+    "total_tests": 1,
+    "failed_tests": [
+      "complex_002"
+    ],
+    "performance_metrics": {
+      "avg_response_time_ms": 90698.90100000001,
+      "avg_tokens_per_test": 610.0
+    }
+  },
+  "overall_success": false,
+  "timestamp": "2025-07-20T08:40:47.716742",
+  "test_count": 1,
+  "agent_type": "cmo",
+  "evaluation_framework_version": "2.0",
+  "metadata_driven": true,
+  "test_type": "real-world",
+  "category": null,
+  "macro_analyses": {
+    "complexity_classification": {
+      "common_patterns": [
+        {
+          "pattern": "Lack of clear guidance on what constitutes a COMPLEX query versus a STANDARD query",
+          "frequency": "Occurs in 1 of 1 failures",
+          "test_examples": [
+            "complex_002"
+          ],
+          "prompt_gap": "The current prompts do not provide sufficiently detailed examples or rules to distinguish between COMPLEX and STANDARD queries, especially those involving analysis of multiple related clinical metrics over time.",
+          "severity": "HIGH"
+        }
+      ],
+      "systemic_root_cause": "The current prompts lack comprehensive coverage and clear delineation of what query characteristics define each complexity level, particularly for the COMPLEX category.",
+      "contributing_factors": [
+        "Limited examples for COMPLEX queries",
+        "Ambiguous rules for multi-metric/temporal analysis queries"
+      ]
+    },
+    "specialty_selection": {
+      "common_patterns": [
+        {
+          "pattern": "Failure to include relevant specialists based on medication/dosage mentions",
+          "frequency": "Occurs in 1 of 1 failures",
+          "test_examples": [
+            "complex_002"
+          ],
+          "prompt_gap": "Current prompts do not explicitly cover inclusion of pharmacy specialist for medication/dosage related queries",
+          "severity": "HIGH"
+        },
+        {
+          "pattern": "Failure to include preventive medicine for queries about lab value correlations with risk factors",
+          "frequency": "Occurs in 1 of 1 failures",
+          "test_examples": [
+            "complex_002"
+          ],
+          "prompt_gap": "Prompts lack guidance on including preventive medicine when correlating lab results to risk factors like weight",
+          "severity": "MEDIUM"
+        }
+      ],
+      "systemic_root_cause": "Lack of comprehensive rules/examples for when to include pharmacy and preventive medicine specialists",
+      "contributing_factors": [
+        "Narrow focus on lab values in instructions",
+        "Missing connection between risk factors and preventive medicine"
+      ]
+    }
+  }
+}

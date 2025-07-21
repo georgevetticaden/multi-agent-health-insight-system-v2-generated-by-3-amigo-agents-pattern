@@ -764,21 +764,6 @@ class CMOAgent:
         
         # Define quality components for complex dimensions
         quality_components = {
-            # Complexity classification is deterministic - no components needed
-            CMO_DIMENSIONS["specialty_selection"]: [
-                QualityComponent(
-                    name="specialist_precision",
-                    description="Selected specialists match expected set",
-                    weight=0.6,
-                    evaluation_method=EvaluationMethod.DETERMINISTIC
-                ),
-                QualityComponent(
-                    name="specialist_rationale",
-                    description="Clear reasoning for specialist choices",
-                    weight=0.4,
-                    evaluation_method=EvaluationMethod.LLM_JUDGE
-                )
-            ],
             dimension_registry.get("analysis_quality"): [
                 QualityComponent(
                     name="data_gathering",
@@ -802,6 +787,21 @@ class CMOAgent:
                     name="concern_identification",
                     description="Identification of health concerns and risks",
                     weight=0.20,
+                    evaluation_method=EvaluationMethod.LLM_JUDGE
+                )
+            ],
+            # Complexity classification is deterministic - no components needed
+            CMO_DIMENSIONS["specialty_selection"]: [
+                QualityComponent(
+                    name="specialist_precision",
+                    description="Selected specialists match expected set",
+                    weight=0.6,
+                    evaluation_method=EvaluationMethod.DETERMINISTIC
+                ),
+                QualityComponent(
+                    name="specialist_rationale",
+                    description="Clear reasoning for specialist choices",
+                    weight=0.4,
                     evaluation_method=EvaluationMethod.LLM_JUDGE
                 )
             ],

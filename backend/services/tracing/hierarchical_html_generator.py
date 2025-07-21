@@ -5,6 +5,7 @@ Creates an intuitive, hierarchical view of trace events organized by
 agents and showing clear parent-child relationships.
 """
 
+import html
 import json
 from typing import Dict, Any, List, Tuple
 from .trace_models import CompleteTrace, TraceEventType, TraceEvent
@@ -1400,8 +1401,11 @@ def _generate_javascript() -> str:
             // Show response text with proper formatting
             const responseText = data.response_text;
             
-            // Check if it contains tasks (either XML format or structured format)
-            if ((responseText.includes('<tasks>') && responseText.includes('</tasks>')) || 
+            // Check for different response types
+            if (responseText.includes('<initial_assessment>') && responseText.includes('</initial_assessment>')) {
+                // Format initial assessment response
+                html += formatInitialAssessment(responseText);
+            } else if ((responseText.includes('<tasks>') && responseText.includes('</tasks>')) || 
                 (responseText.includes('endocrinology\\n') || responseText.includes('laboratory_medicine\\n') || 
                  responseText.includes('nutrition\\n') || responseText.includes('cardiology\\n') ||
                  responseText.includes('pharmacy\\n') || responseText.includes('preventive_medicine\\n'))) {
@@ -1428,11 +1432,94 @@ def _generate_javascript() -> str:
             return html;
         }
         
+        function formatInitialAssessment(text) {
+            let html = '<div class="initial-assessment">';
+            
+            // Extract and format the reflection if present
+            const reflectionMatch = text.match(/<search_quality_reflection>([\\s\\S]*?)<\\/search_quality_reflection>/);
+            if (reflectionMatch) {
+                html += '<div class="assessment-section" style="margin-bottom: 20px;">';
+                html += '<h4 style="color: #2c3e50; margin-bottom: 10px;">🔍 Search Quality Reflection</h4>';
+                html += formatTextContent(reflectionMatch[1].trim());
+                html += '</div>';
+            }
+            
+            // Extract and highlight the quality score
+            const scoreMatch = text.match(/<search_quality_score>(\\d+)<\\/search_quality_score>/);
+            if (scoreMatch) {
+                const score = parseInt(scoreMatch[1]);
+                const scoreColor = score >= 4 ? '#27ae60' : score >= 3 ? '#f39c12' : '#e74c3c';
+                html += `<div class="quality-score" style="margin-bottom: 20px;">
+                    <span style="font-weight: bold;">Quality Score: </span>
+                    <span style="background: ${scoreColor}; color: white; padding: 4px 12px; border-radius: 20px; font-weight: bold;">
+                        ${score}/5
+                    </span>
+                </div>`;
+            }
+            
+            // Extract complexity level
+            const complexityMatch = text.match(/<complexity>([^<]+)<\\/complexity>/);
+            if (complexityMatch) {
+                const complexity = complexityMatch[1].trim();
+                const complexityColors = {
+                    'SIMPLE': '#3498db',
+                    'STANDARD': '#9b59b6',
+                    'COMPLEX': '#e67e22',
+                    'COMPREHENSIVE': '#e74c3c'
+                };
+                const color = complexityColors[complexity] || '#95a5a6';
+                html += `<div class="complexity-level" style="margin-bottom: 20px;">
+                    <span style="font-weight: bold;">Complexity: </span>
+                    <span style="background: ${color}; color: white; padding: 4px 12px; border-radius: 20px; font-weight: bold;">
+                        ${complexity}
+                    </span>
+                </div>`;
+            }
+            
+            // Extract and format key findings
+            const findingsMatch = text.match(/<key_findings>([\\s\\S]*?)<\\/key_findings>/);
+            if (findingsMatch) {
+                html += '<div class="key-findings" style="margin-bottom: 20px;">';
+                html += '<h4 style="color: #2c3e50; margin-bottom: 10px;">📊 Key Findings</h4>';
+                const findings = findingsMatch[1].trim();
+                // Check if findings are bullet points
+                if (findings.includes('\\n-') || findings.includes('\\n•')) {
+                    html += formatList(findings);
+                } else {
+                    html += formatTextContent(findings);
+                }
+                html += '</div>';
+            }
+            
+            // Show any remaining content
+            const remainingText = text
+                .replace(/<search_quality_reflection>[\\s\\S]*?<\\/search_quality_reflection>/g, '')
+                .replace(/<search_quality_score>[\\s\\S]*?<\\/search_quality_score>/g, '')
+                .replace(/<initial_assessment>[\\s\\S]*?<\\/initial_assessment>/g, '')
+                .replace(/<complexity>[\\s\\S]*?<\\/complexity>/g, '')
+                .replace(/<key_findings>[\\s\\S]*?<\\/key_findings>/g, '')
+                .trim();
+            
+            if (remainingText) {
+                html += '<div class="additional-content" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e9ecef;">';
+                html += formatTextContent(remainingText);
+                html += '</div>';
+            }
+            
+            html += '</div>';
+            return html;
+        }
+        
         function formatTaskResponse(text) {
             let html = '<div class="task-response">';
             
+            console.log('formatTaskResponse called, text includes <tasks>:', text.includes('<tasks>'));
+            console.log('Text first 200 chars:', text.substring(0, 200));
+            
             // Check if it's XML format
             if (text.includes('<tasks>') && text.includes('</tasks>')) {
+                console.log('XML format detected');
+                
                 // Extract intro text
                 const introMatch = text.match(/^([\\s\\S]*?)<tasks>/);
                 if (introMatch) {
@@ -1442,22 +1529,36 @@ def _generate_javascript() -> str:
                 // Parse XML tasks
                 const tasksMatch = text.match(/<tasks>([\\s\\S]*?)<\\/tasks>/);
                 if (tasksMatch) {
+                    console.log('Tasks XML found');
                     const tasksXml = tasksMatch[1];
                     const tasks = parseTasksXML(tasksXml);
+                    
+                    console.log('Parsed tasks count:', tasks.length);
                     
                     html += '<div class="tasks-container" style="margin-top: 15px;">';
                     tasks.forEach((task, index) => {
                         html += formatTaskCard(task, index + 1);
                     });
                     html += '</div>';
+                } else {
+                    console.log('No tasks XML match found');
                 }
             } else {
                 // Try to parse the non-XML format
                 const tasks = parseNonXMLTasks(text);
                 if (tasks.length > 0) {
-                    // Extract intro text (everything before first task)
-                    const firstTaskIndex = text.search(/\\n\\n\\s*\\w+\\n\\s+\\w/);
-                    if (firstTaskIndex > 0) {
+                    // Extract intro text (everything before first specialist name or task emoji)
+                    const firstTaskIndex = Math.min(
+                        text.indexOf('\\nendocrinology\\n') >= 0 ? text.indexOf('\\nendocrinology\\n') : Infinity,
+                        text.indexOf('\\nlaboratory_medicine\\n') >= 0 ? text.indexOf('\\nlaboratory_medicine\\n') : Infinity,
+                        text.indexOf('\\nnutrition\\n') >= 0 ? text.indexOf('\\nnutrition\\n') : Infinity,
+                        text.indexOf('\\npharmacy\\n') >= 0 ? text.indexOf('\\npharmacy\\n') : Infinity,
+                        text.indexOf('\\ncardiology\\n') >= 0 ? text.indexOf('\\ncardiology\\n') : Infinity,
+                        text.indexOf('\\npreventive_medicine\\n') >= 0 ? text.indexOf('\\npreventive_medicine\\n') : Infinity,
+                        text.indexOf('👨‍⚕️ Task') >= 0 ? text.indexOf('👨‍⚕️ Task') : Infinity
+                    );
+                    
+                    if (firstTaskIndex > 0 && firstTaskIndex < Infinity) {
                         html += formatTextContent(text.substring(0, firstTaskIndex).trim());
                     }
                     
@@ -1479,27 +1580,27 @@ def _generate_javascript() -> str:
         function parseNonXMLTasks(text) {
             const tasks = [];
             
-            // This format has tasks separated by double newlines
-            // Each task starts with specialist name on its own line
-            // followed by content lines that are indented
-            const taskBlocks = text.split(/\\n\\n\\n+/);
+            console.log('parseNonXMLTasks called with text length:', text.length);
+            console.log('First 500 chars:', text.substring(0, 500));
             
-            taskBlocks.forEach(block => {
-                block = block.trim();
-                if (!block) return;
-                
-                // Check if this looks like a task block
-                const lines = block.split('\\n');
-                if (lines.length < 2) return;
-                
-                // First line might be the specialist name
-                const firstLine = lines[0].trim();
-                const specialistNames = ['endocrinology', 'laboratory_medicine', 'nutrition', 'cardiology', 'pharmacy', 'preventive_medicine'];
-                
-                if (specialistNames.includes(firstLine.toLowerCase())) {
-                    // This is a task block
+            // First try the format with specialist names followed by task details
+            const specialistPattern = /\\n\\s*(endocrinology|laboratory_medicine|nutrition|cardiology|pharmacy|preventive_medicine)\\s*\\n([\\s\\S]*?)(?=\\n\\s*(?:endocrinology|laboratory_medicine|nutrition|cardiology|pharmacy|preventive_medicine)\\s*\\n|$)/gi;
+            const specialistMatches = Array.from(text.matchAll(specialistPattern));
+            
+            console.log('Specialist matches found:', specialistMatches.length);
+            
+            if (specialistMatches.length > 0) {
+                // Parse specialist-based format
+                for (const match of specialistMatches) {
+                    const specialist = match[1].toLowerCase();
+                    const taskContent = match[2].trim();
+                    const lines = taskContent.split('\\n').map(line => line.trim()).filter(line => line);
+                    
+                    console.log('Processing specialist:', specialist);
+                    console.log('Task lines:', lines);
+                    
                     const task = {
-                        specialist: firstLine.toLowerCase(),
+                        specialist: specialist,
                         objective: '',
                         context: '',
                         expected_output: '',
@@ -1507,102 +1608,235 @@ def _generate_javascript() -> str:
                         tool_queries: []
                     };
                     
-                    // Parse the rest of the lines
-                    let currentSection = 'objective';
-                    let sectionContent = [];
+                    // Parse the content more carefully
+                    // The format appears to be:
+                    // objective (first non-empty line)
+                    // context (second non-empty line)
+                    // expected_output (marked with <expected_output> tags or third line)
+                    // priority (single digit on its own line)
+                    // tool_queries (marked with <tool_queries> tags or lines starting with -)
                     
-                    for (let i = 1; i < lines.length; i++) {
-                        const line = lines[i];
-                        const trimmed = line.trim();
-                        
-                        // Check if this is a priority number on its own line
-                        if (trimmed.match(/^\\d+$/) && i < lines.length - 3) {
-                            task.priority = trimmed;
-                            continue;
-                        }
-                        
-                        // Detect section based on content position
-                        if (i === 1 || (i === 2 && !task.objective)) {
-                            // First content line is objective
-                            task.objective = trimmed;
-                        } else if (i === 2 || (i === 3 && task.priority)) {
-                            // Second content line is context
-                            task.context = trimmed;
-                        } else if (trimmed.startsWith('-') && !task.expected_output) {
-                            // Lines starting with - before expected output are part of expected output
-                            if (!task.expected_output && sectionContent.length > 0) {
-                                task.expected_output = sectionContent.join(' ').trim();
-                                sectionContent = [];
+                    let fullContent = taskContent;
+                    
+                    // Check for XML-style tags within the content
+                    const objectiveMatch = fullContent.match(/<objective>([\\s\\S]*?)<\\/objective>/);
+                    const contextMatch = fullContent.match(/<context>([\\s\\S]*?)<\\/context>/);
+                    const expectedOutputMatch = fullContent.match(/<expected_output>([\\s\\S]*?)<\\/expected_output>/);
+                    const priorityMatch = fullContent.match(/<priority>(\\d+)<\\/priority>/) || fullContent.match(/\\n\\s*(\\d)\\s*\\n/);
+                    const toolQueriesMatch = fullContent.match(/<tool_queries>([\\s\\S]*?)<\\/tool_queries>/);
+                    
+                    if (objectiveMatch) {
+                        task.objective = objectiveMatch[1].trim();
+                    } else if (lines.length > 0) {
+                        task.objective = lines[0];
+                    }
+                    
+                    if (contextMatch) {
+                        task.context = contextMatch[1].trim();
+                    } else if (lines.length > 1) {
+                        task.context = lines[1];
+                    }
+                    
+                    if (expectedOutputMatch) {
+                        task.expected_output = expectedOutputMatch[1].trim();
+                    } else {
+                        // Look for lines between context and priority
+                        let i = 2;
+                        while (i < lines.length && !lines[i].match(/^\\d+$/)) {
+                            if (!lines[i].startsWith('-') && !lines[i].startsWith('"')) {
+                                task.expected_output += (task.expected_output ? ' ' : '') + lines[i];
+                            } else {
+                                break;
                             }
-                            task.expected_output += (task.expected_output ? '\\n' : '') + trimmed;
-                        } else if (trimmed.startsWith('-')) {
-                            // Tool queries
-                            task.tool_queries.push(trimmed.substring(1).trim().replace(/^["']|["']$/g, ''));
-                        } else if (trimmed && !task.expected_output) {
-                            // This might be expected output
-                            sectionContent.push(trimmed);
+                            i++;
                         }
                     }
                     
-                    // Finalize expected output if needed
-                    if (!task.expected_output && sectionContent.length > 0) {
-                        task.expected_output = sectionContent.join(' ').trim();
+                    if (priorityMatch) {
+                        task.priority = priorityMatch[1];
                     }
                     
-                    // Clean up expected output - remove list markers at the start
-                    if (task.expected_output) {
-                        task.expected_output = task.expected_output.replace(/^\\s*-\\s*/, '');
+                    if (toolQueriesMatch) {
+                        const queries = toolQueriesMatch[1].trim().split('\\n');
+                        queries.forEach(query => {
+                            const cleaned = query.replace(/^[-•*"']\\s*|["']$/g, '').trim();
+                            if (cleaned) {
+                                task.tool_queries.push(cleaned);
+                            }
+                        });
+                    } else {
+                        // Look for lines that look like queries (starting with - or quotes)
+                        lines.forEach(line => {
+                            if (line.match(/^[-"']/) || line.includes('show') || line.includes('calculate') || line.includes('plot') || line.includes('determine')) {
+                                const cleaned = line.replace(/^[-•*"']\\s*|["']$/g, '').trim();
+                                if (cleaned) {
+                                    task.tool_queries.push(cleaned);
+                                }
+                            }
+                        });
                     }
                     
                     tasks.push(task);
                 }
-            });
-            
-            return tasks;
-        }
-        
-        function parseTasksXML(xml) {
-            const tasks = [];
-            const taskMatches = xml.matchAll(/<task>([\\s\\S]*?)<\\/task>/g);
-            
-            for (const match of taskMatches) {
-                const taskContent = match[1];
-                const task = {
-                    specialist: extractXMLValue(taskContent, 'specialist'),
-                    objective: extractXMLValue(taskContent, 'objective'),
-                    context: extractXMLValue(taskContent, 'context'),
-                    expected_output: extractXMLValue(taskContent, 'expected_output'),
-                    priority: extractXMLValue(taskContent, 'priority'),
-                    tool_queries: extractToolQueries(taskContent)
-                };
-                tasks.push(task);
+            } else {
+                // Try the emoji-based format (👨‍⚕️ Task N:)
+                const taskPattern = /👨‍⚕️\\s*Task\\s*\\d+:([\\s\\S]*?)(?=👨‍⚕️\\s*Task\\s*\\d+:|$)/g;
+                const matches = text.matchAll(taskPattern);
+                
+                for (const match of matches) {
+                    const taskContent = match[1].trim();
+                    const task = {
+                        specialist: '',
+                        objective: '',
+                        context: '',
+                        expected_output: '',
+                        priority: '',
+                        tool_queries: []
+                    };
+                    
+                    // Parse fields from the task content
+                    const lines = taskContent.split('\\n');
+                    let currentField = '';
+                    
+                    for (const line of lines) {
+                        const trimmed = line.trim();
+                        
+                        // Check for field labels
+                        if (trimmed.match(/^Priority\\s*\\d*$/)) {
+                            currentField = 'priority';
+                            const priorityMatch = trimmed.match(/Priority\\s*(\\d+)/);
+                            if (priorityMatch) {
+                                task.priority = priorityMatch[1];
+                            }
+                        } else if (trimmed.startsWith('Objective:')) {
+                            currentField = 'objective';
+                            const value = trimmed.substring('Objective:'.length).trim();
+                            if (value) task.objective = value;
+                        } else if (trimmed.startsWith('Context:')) {
+                            currentField = 'context';
+                            const value = trimmed.substring('Context:'.length).trim();
+                            if (value) task.context = value;
+                        } else if (trimmed.startsWith('Expected Output:')) {
+                            currentField = 'expected_output';
+                            const value = trimmed.substring('Expected Output:'.length).trim();
+                            if (value) task.expected_output = value;
+                        } else if (trimmed.startsWith('Tool Queries:')) {
+                            currentField = 'tool_queries';
+                        } else if (currentField === 'tool_queries' && trimmed) {
+                            task.tool_queries.push(trimmed.replace(/^[-•*]\\s*/, ''));
+                        } else if (currentField && trimmed && currentField !== 'tool_queries') {
+                            task[currentField] = (task[currentField] ? task[currentField] + ' ' : '') + trimmed;
+                        }
+                    }
+                    
+                    // Set default priority if not found
+                    if (!task.priority) {
+                        task.priority = '2';
+                    }
+                    
+                    tasks.push(task);
+                }
             }
             
             return tasks;
         }
         
-        function extractXMLValue(xml, tag) {
-            const match = xml.match(new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`));
-            return match ? match[1].trim() : '';
+        function parseTasksXML(xml) {
+            console.log('parseTasksXML called');
+            const tasks = [];
+            
+            // Create a temporary DOM parser to handle the XML properly
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString('<root>' + xml + '</root>', 'text/xml');
+            
+            const taskElements = xmlDoc.getElementsByTagName('task');
+            console.log('Found task elements:', taskElements.length);
+            
+            for (let i = 0; i < taskElements.length; i++) {
+                const taskElement = taskElements[i];
+                
+                const task = {
+                    specialist: getElementText(taskElement, 'specialist'),
+                    objective: getElementText(taskElement, 'objective'),
+                    context: getElementText(taskElement, 'context'),
+                    expected_output: getElementText(taskElement, 'expected_output'),
+                    priority: getElementText(taskElement, 'priority'),
+                    tool_queries: extractToolQueriesFromElement(taskElement)
+                };
+                
+                console.log('Parsed task:', task);
+                tasks.push(task);
+            }
+            
+            console.log('Total tasks parsed:', tasks.length);
+            return tasks;
         }
         
-        function extractToolQueries(xml) {
-            const queriesMatch = xml.match(/<tool_queries>([\\s\\S]*?)<\\/tool_queries>/);
-            if (!queriesMatch) return [];
+        function getElementText(parent, tagName) {
+            const element = parent.getElementsByTagName(tagName)[0];
+            return element ? element.textContent.trim() : '';
+        }
+        
+        function extractToolQueriesFromElement(taskElement) {
+            const toolQueriesElement = taskElement.getElementsByTagName('tool_queries')[0];
+            if (!toolQueriesElement) return [];
             
             const queries = [];
-            const lines = queriesMatch[1].split('\\n');
+            const text = toolQueriesElement.textContent;
+            const lines = text.split('\\n');
+            
             lines.forEach(line => {
                 const cleaned = line.trim();
                 if (cleaned.startsWith('-')) {
-                    queries.push(cleaned.substring(1).trim().replace(/^["']|["']$/g, ''));
+                    const query = cleaned.substring(1).trim().replace(/^["']|["']$/g, '');
+                    if (query) queries.push(query);
                 }
             });
             
             return queries;
         }
         
+        function extractXMLValue(xml, tag) {
+            console.log(`Extracting ${tag} from:`, xml.substring(0, 100));
+            const regex = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, 'i');
+            const match = xml.match(regex);
+            console.log(`Match for ${tag}:`, match);
+            const value = match ? match[1].trim() : '';
+            console.log(`Extracted ${tag}:`, value);
+            return value;
+        }
+        
+        function extractToolQueries(xml) {
+            const queriesMatch = xml.match(/<tool_queries>([\\s\\S]*?)<\\/tool_queries>/);
+            if (!queriesMatch) {
+                console.log('No tool_queries match found');
+                return [];
+            }
+            
+            console.log('Tool queries content:', queriesMatch[1]);
+            
+            const queries = [];
+            const lines = queriesMatch[1].split('\\n');
+            lines.forEach(line => {
+                const cleaned = line.trim();
+                if (cleaned.startsWith('-')) {
+                    const query = cleaned.substring(1).trim().replace(/^["']|["']$/g, '');
+                    console.log('Adding query:', query);
+                    queries.push(query);
+                }
+            });
+            
+            console.log('Total queries extracted:', queries.length);
+            return queries;
+        }
+        
         function formatTaskCard(task, number) {
+            console.log('formatTaskCard called with task:', task);
+            console.log('Task specialist:', task.specialist);
+            console.log('Task objective:', task.objective);
+            console.log('Task context:', task.context);
+            console.log('Task priority:', task.priority);
+            
             const priorityColors = {
                 '1': '#e74c3c',
                 '2': '#f39c12',
@@ -1628,24 +1862,24 @@ def _generate_javascript() -> str:
                             ${emoji} Task ${number}: ${capitalizeFirst(task.specialist)}
                         </h4>
                         <span class="priority-badge" style="background: ${priorityColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">
-                            Priority ${task.priority}
+                            Priority ${task.priority || '?'}
                         </span>
                     </div>
                     
                     <div class="task-content">
                         <div class="task-field" style="margin-bottom: 10px;">
                             <strong style="color: #7f8c8d;">Objective:</strong>
-                            <div style="margin-left: 10px; color: #2c3e50;">${task.objective}</div>
+                            <div style="margin-left: 10px; color: #2c3e50;">${task.objective || '<em style="color: #999;">Not specified</em>'}</div>
                         </div>
                         
                         <div class="task-field" style="margin-bottom: 10px;">
                             <strong style="color: #7f8c8d;">Context:</strong>
-                            <div style="margin-left: 10px; color: #34495e; font-size: 13px;">${task.context}</div>
+                            <div style="margin-left: 10px; color: #34495e; font-size: 13px;">${task.context || '<em style="color: #999;">Not specified</em>'}</div>
                         </div>
                         
                         <div class="task-field" style="margin-bottom: 10px;">
                             <strong style="color: #7f8c8d;">Expected Output:</strong>
-                            <div style="margin-left: 10px; color: #27ae60; font-size: 13px;">${task.expected_output}</div>
+                            <div style="margin-left: 10px; color: #27ae60; font-size: 13px;">${task.expected_output || '<em style="color: #999;">Not specified</em>'}</div>
                         </div>
             `;
             
@@ -1944,24 +2178,13 @@ def _generate_javascript() -> str:
                         target: e.target
                     });
                     
-                    // Check if ctrl/cmd key is held for navigation
-                    if (e.ctrlKey || e.metaKey) {
-                        console.log('[TIMELINE NAV DEBUGGING] Ctrl/Cmd click detected, navigating...');
-                        e.preventDefault();
-                        navigateToAgentStage(stageId);
-                    } else {
-                        // Regular click for highlighting
-                        console.log('[TIMELINE NAV DEBUGGING] Regular click, highlighting related stages...');
-                        highlightRelatedStages(stageId);
-                    }
-                });
-                
-                // Double click for navigation
-                bar.addEventListener('dblclick', function(e) {
+                    // Regular click now triggers navigation (expanding agent and stage)
+                    console.log('[TIMELINE NAV DEBUGGING] Click detected, navigating to agent stage...');
                     e.preventDefault();
-                    const stageId = this.getAttribute('data-stage-id');
-                    console.log('[TIMELINE NAV DEBUGGING] Double-click detected:', stageId);
                     navigateToAgentStage(stageId);
+                    
+                    // Also highlight related stages for visual feedback
+                    highlightRelatedStages(stageId);
                 });
                 
                 // Update tooltip on hover
@@ -1970,7 +2193,7 @@ def _generate_javascript() -> str:
                     if (!existingTooltip) {
                         const tooltip = document.createElement('div');
                         tooltip.className = 'stage-bar-hover';
-                        tooltip.innerHTML = 'Double-click or Ctrl+Click to navigate to this stage';
+                        tooltip.innerHTML = 'Click to navigate to this stage in Agent Analysis';
                         tooltip.style.cssText = `
                             position: absolute;
                             bottom: -25px;
@@ -1991,7 +2214,7 @@ def _generate_javascript() -> str:
                 
                 bar.addEventListener('mouseleave', function() {
                     const tooltip = this.querySelector('.stage-bar-hover');
-                    if (tooltip && tooltip.innerHTML === 'Double-click or Ctrl+Click to navigate to this stage') {
+                    if (tooltip && tooltip.innerHTML === 'Click to navigate to this stage in Agent Analysis') {
                         tooltip.remove();
                     }
                 });
@@ -2069,17 +2292,17 @@ def _generate_javascript() -> str:
             });
             
             // Find and expand the target agent
-            console.log('[TIMELINE NAV DEBUGGING] Looking for agent:', `[id^="agent-${agentType}"]`);
-            const targetAgent = document.querySelector(`[id^="agent-${agentType}"]`);
-            if (targetAgent) {
-                console.log('[TIMELINE NAV DEBUGGING] Found target agent:', targetAgent.id);
-                const header = targetAgent.querySelector('.agent-header');
-                const content = targetAgent.querySelector('.agent-content');
+            console.log('[TIMELINE NAV DEBUGGING] Looking for agent header:', `#agent-${agentType}-header`);
+            const targetAgentHeader = document.getElementById(`agent-${agentType}-header`);
+            if (targetAgentHeader) {
+                console.log('[TIMELINE NAV DEBUGGING] Found target agent header:', targetAgentHeader.id);
+                const targetAgentSection = targetAgentHeader.parentElement;
+                const content = targetAgentSection.querySelector('.agent-content');
                 
-                if (header && content) {
+                if (targetAgentHeader && content) {
                     console.log('[TIMELINE NAV DEBUGGING] Expanding agent section');
                     // Expand the agent
-                    header.classList.add('expanded');
+                    targetAgentHeader.classList.add('expanded');
                     content.classList.add('show');
                     
                     // Find and expand the specific stage within the agent
@@ -2089,22 +2312,34 @@ def _generate_javascript() -> str:
                         console.log('[TIMELINE NAV DEBUGGING] Found stage headers:', stageHeaders.length);
                         
                         let foundStage = false;
-                        stageHeaders.forEach(stageHeader => {
+                        stageHeaders.forEach((stageHeader, index) => {
                             const stageSection = stageHeader.parentElement;
                             const stageContent = stageSection.querySelector('.stage-content');
                             
-                            // Check if this is the target stage
-                            const stageNameElement = stageHeader.querySelector('.stage-name');
+                            // Check if this is the target stage - look for h4 element
+                            const stageNameElement = stageHeader.querySelector('h4');
+                            console.log('[TIMELINE NAV DEBUGGING] Stage header', index, ':', {
+                                hasNameElement: !!stageNameElement,
+                                nameElementText: stageNameElement ? stageNameElement.textContent : 'N/A',
+                                stageHeaderClass: stageHeader.className
+                            });
+                            
                             if (stageNameElement) {
-                                const stageText = stageNameElement.textContent.toLowerCase();
+                                // Remove emoji and trim the stage text
+                                const stageText = stageNameElement.textContent.replace(/^📍\s*/, '').toLowerCase().trim();
                                 const targetText = stageName.replace(/_/g, ' ').toLowerCase();
+                                const exactMatch = stageText === targetText;
+                                const startsWithMatch = stageText.startsWith(targetText);
                                 console.log('[TIMELINE NAV DEBUGGING] Comparing stage:', {
                                     stageText: stageText,
                                     targetText: targetText,
-                                    matches: stageText.includes(targetText)
+                                    exactMatch: exactMatch,
+                                    startsWithMatch: startsWithMatch,
+                                    willMatch: exactMatch || startsWithMatch
                                 });
                                 
-                                if (stageText.includes(targetText)) {
+                                // Use exact match or starts with to avoid false positives
+                                if (exactMatch || startsWithMatch) {
                                     foundStage = true;
                                     console.log('[TIMELINE NAV DEBUGGING] Found matching stage!');
                                     // Expand this stage
@@ -2131,11 +2366,17 @@ def _generate_javascript() -> str:
                                 }
                             }
                         });
+                        
+                        if (!foundStage) {
+                            console.log('[TIMELINE NAV DEBUGGING] WARNING: No matching stage found for:', stageName);
+                        }
                     }, 100);
                     
                     // Scroll to the agent section
-                    targetAgent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    targetAgentSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
+            } else {
+                console.log('[TIMELINE NAV DEBUGGING] Agent header not found for:', agentType);
             }
         }
         
@@ -3305,7 +3546,8 @@ def _generate_agent_sections(sections: List[AgentSection]) -> str:
     sections_html = []
     
     for i, section in enumerate(sections):
-        agent_id = f"agent-{i}"
+        # Use agent type in ID for navigation
+        agent_id = f"agent-{section.agent_type}"
         agent_class = "cmo" if section.agent_type == "cmo" else "specialist"
         
         # Generate stage sections
@@ -3444,7 +3686,7 @@ def _generate_event_node(event: HierarchicalEvent, agent_id: str) -> str:
                 <div class="event-summary">
                     {summary}
                 </div>
-                <a class="show-details-btn" id="{event_id}-btn" onclick="toggleEventDetails({json.dumps(event_id)})">
+                <a class="show-details-btn" id="{event_id}-btn" onclick="toggleEventDetails('{event_id}')">
                     ▶ Show Details
                 </a>
                 <div class="event-details" id="{event_id}-details">
@@ -3483,7 +3725,7 @@ def _generate_event_summary(event: TraceEvent) -> str:
         return f"<strong>Prompt:</strong> {prompt_file} | <strong>Model:</strong> {model}"
         
     elif event.event_type == TraceEventType.LLM_RESPONSE:
-        response_preview = truncate_text(data.get('response_text', ''), 150)
+        response_preview = truncate_text(data.get('response_text', ''), 300)  # Increased from 150
         tool_calls = data.get('tool_calls', [])
         if tool_calls:
             return f"<strong>Response:</strong> Requesting tools: {', '.join(tool_calls)}"
@@ -3565,6 +3807,67 @@ def _generate_event_details(event: TraceEvent) -> str:
         </div>
         """
         
+    elif event.event_type == TraceEventType.LLM_RESPONSE:
+        # Show response text with formatting option
+        response_text = data.get('response_text', '')
+        
+        return f"""
+        <div style="margin-top: 10px;" id="event-{event.event_id}-details-content">
+            <div class="format-toggle" style="margin-bottom: 10px;">
+                <button onclick="toggleFormatting('{event.event_id}')" style="padding: 4px 8px; border: 1px solid #dee2e6; border-radius: 4px; background: white; cursor: pointer; font-size: 12px;">
+                    <span id="format-toggle-{event.event_id}">📝 View Raw</span>
+                </button>
+            </div>
+            <div id="formatted-{event.event_id}"></div>
+            <div id="raw-{event.event_id}" style="display: none;">
+                <pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 5px 0; font-size: 12px; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word; max-width: 100%; max-height: 500px; overflow-y: auto;">
+{html.escape(response_text)}</pre>
+            </div>
+            <script>
+                (function() {{
+                    const eventId = {json.dumps(event.event_id)};
+                    const eventData = {json.dumps(json.dumps(data))};
+                    
+                    document.getElementById('formatted-' + eventId).dataset.content = eventData;
+                    
+                    // Initialize formatted view on load
+                    if (document.readyState === 'loading') {{
+                        document.addEventListener('DOMContentLoaded', function() {{
+                            const formattedDiv = document.getElementById('formatted-' + eventId);
+                            if (formattedDiv && !formattedDiv.innerHTML) {{
+                                try {{
+                                    const content = JSON.parse(formattedDiv.dataset.content);
+                                    if (typeof formatEventData === 'function') {{
+                                        formatEventData(content, formattedDiv);
+                                    }} else {{
+                                        console.error('formatEventData is not defined yet');
+                                    }}
+                                }} catch (e) {{
+                                    console.error('Error formatting event data:', e);
+                                }}
+                            }}
+                        }});
+                    }} else {{
+                        // DOM already loaded
+                        const formattedDiv = document.getElementById('formatted-' + eventId);
+                        if (formattedDiv && !formattedDiv.innerHTML) {{
+                            try {{
+                                const content = JSON.parse(formattedDiv.dataset.content);
+                                if (typeof formatEventData === 'function') {{
+                                    formatEventData(content, formattedDiv);
+                                }} else {{
+                                    console.error('formatEventData is not defined yet');
+                                }}
+                            }} catch (e) {{
+                                console.error('Error formatting event data:', e);
+                            }}
+                        }}
+                    }}
+                }})();
+            </script>
+        </div>
+        """
+        
     elif event.event_type == TraceEventType.TOOL_RESULT:
         # Show full tool results
         result_data = data.get('result_data', {})
@@ -3574,7 +3877,7 @@ def _generate_event_details(event: TraceEvent) -> str:
         return f"""
         <div style="margin-top: 10px;" id="event-{event.event_id}-details-content">
             <div class="format-toggle" style="margin-bottom: 10px;">
-                <button onclick="toggleFormatting({json.dumps(event.event_id)})" style="padding: 4px 8px; border: 1px solid #dee2e6; border-radius: 4px; background: white; cursor: pointer; font-size: 12px;">
+                <button onclick="toggleFormatting('{event.event_id}')" style="padding: 4px 8px; border: 1px solid #dee2e6; border-radius: 4px; background: white; cursor: pointer; font-size: 12px;">
                     <span id="format-toggle-{event.event_id}">📝 View Raw</span>
                 </button>
             </div>
@@ -3633,7 +3936,7 @@ def _generate_event_details(event: TraceEvent) -> str:
         return f"""
         <div style="margin-top: 10px;" id="event-{event.event_id}-details-content">
             <div class="format-toggle" style="margin-bottom: 10px;">
-                <button onclick="toggleFormatting({json.dumps(event.event_id)})" style="padding: 4px 8px; border: 1px solid #dee2e6; border-radius: 4px; background: white; cursor: pointer; font-size: 12px;">
+                <button onclick="toggleFormatting('{event.event_id}')" style="padding: 4px 8px; border: 1px solid #dee2e6; border-radius: 4px; background: white; cursor: pointer; font-size: 12px;">
                     <span id="format-toggle-{event.event_id}">📝 View Raw</span>
                 </button>
             </div>

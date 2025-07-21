@@ -9,6 +9,15 @@ The Multi-Agent Health Insight System has been successfully implemented based on
 1. **Part 1: System Creation Guide (Historical Reference)** - How the system was built
 2. **Part 2: Enhancement & Feature Development Guide (Active)** - How to extend and improve the system
 
+## Recent Enhancements
+
+### Trace Viewer Improvements (Completed)
+- **Fixed text overflow issue** in hierarchical trace viewer where LLM responses were getting cut off
+- **Added non-XML task format parsing** to handle plain text task assignments  
+- **Made formatted view the default** for better user experience
+- **Added timeline stage click navigation** - clicking on execution timeline stages navigates to the corresponding agent analysis details
+- **Added trace viewer link in Medical Team tab** - displays "View Health Query Trace" button when analysis is complete
+
 ---
 
 # Part 1: System Creation Guide (Historical Reference)

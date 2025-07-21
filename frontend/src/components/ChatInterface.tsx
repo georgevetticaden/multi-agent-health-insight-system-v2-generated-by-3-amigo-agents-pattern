@@ -439,6 +439,40 @@ const ChatInterface = React.forwardRef<any, ChatInterfaceProps>(({
             // Skip visualization events - we're handling visualizations through code artifacts
             break;
             
+          case 'done':
+            console.log('🔍 [TRACE DEBUGGING] Done event in message handler:', chunk);
+            console.log('🔍 [TRACE DEBUGGING] Final accumulated content in done:', accumulatedContent);
+            console.log('🔍 [TRACE DEBUGGING] chunk.trace_id:', chunk.trace_id);
+            console.log('🔍 [TRACE DEBUGGING] onTeamUpdate exists:', !!onTeamUpdate);
+            
+            // Handle done event with trace_id
+            if (chunk.trace_id && onTeamUpdate) {
+              console.log('🔍 [TRACE DEBUGGING] Passing trace_id to team update:', chunk.trace_id);
+              const updatePayload = {
+                teamStatus: 'complete',
+                members: [],
+                overallProgress: 100,
+                traceId: chunk.trace_id
+              };
+              console.log('🔍 [TRACE DEBUGGING] Team update payload:', updatePayload);
+              onTeamUpdate(updatePayload);
+            } else {
+              console.log('🔍 [TRACE DEBUGGING] NOT passing trace_id - chunk.trace_id:', chunk.trace_id, 'onTeamUpdate:', !!onTeamUpdate);
+            }
+            
+            // Set done state and cleanup
+            isDone = true;
+            setIsLoading(false);
+            setToolStatus(null);
+            
+            // Close event source
+            clearInterval(connectionCheckInterval);
+            eventSource.close();
+            if (eventSourceRef.current) {
+              eventSourceRef.current = null;
+            }
+            break;
+            
           case 'error':
             setError(chunk.content || 'An error occurred');
             break;
@@ -534,27 +568,33 @@ const ChatInterface = React.forwardRef<any, ChatInterfaceProps>(({
             }
             break;
             
-          case 'done':
-            console.log('Received done signal');
-            console.log('Final accumulated content in done:', accumulatedContent);
-            isDone = true;
-            setIsLoading(false);
-            setToolStatus(null);
-            
-            // No need to extract code artifacts here since we're doing it in real-time
-            
-            clearInterval(connectionCheckInterval);
-            eventSource.close();
-            if (eventSourceRef.current) {
-              eventSourceRef.current = null;
-            }
-            break;
+          // Removed duplicate 'done' case - handled above
         }
       });
       
       // Add listener for done event
       eventSource.addEventListener('done', (event) => {
         console.log('Done event received:', event);
+        
+        // Parse the done event data to extract trace_id
+        try {
+          const doneData = JSON.parse(event.data);
+          if (doneData.trace_id) {
+            console.log('Trace ID received:', doneData.trace_id);
+            // Pass trace_id to parent through a new callback
+            if (onTeamUpdate) {
+              onTeamUpdate({
+                teamStatus: 'complete',
+                members: [],
+                overallProgress: 100,
+                traceId: doneData.trace_id
+              });
+            }
+          }
+        } catch (e) {
+          console.error('Error parsing done event data:', e);
+        }
+        
         isDone = true;
         setIsLoading(false);
         setToolStatus(null);

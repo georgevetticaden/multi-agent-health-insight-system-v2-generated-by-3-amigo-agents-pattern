@@ -39,6 +39,11 @@ def generate_hierarchical_trace_html(trace: CompleteTrace) -> str:
     <style>
         {_generate_css()}
     </style>
+    <script>
+        console.log('[TIMELINE NAV DEBUGGING] Head script starting...');
+        {_generate_javascript()}
+        console.log('[TIMELINE NAV DEBUGGING] Head script completed.');
+    </script>
 </head>
 <body>
     <div class="container">
@@ -48,10 +53,6 @@ def generate_hierarchical_trace_html(trace: CompleteTrace) -> str:
         {_generate_timeline(sections)}
         {_generate_agent_analysis_section(sections)}
     </div>
-    
-    <script>
-        {_generate_javascript()}
-    </script>
 </body>
 </html>
     """
@@ -514,6 +515,8 @@ def _generate_css() -> str:
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
             z-index: 10;
         }
+        
+        /* Removed CSS tooltip - using JS tooltip for better control */
         
         .timeline-stage-bar.cmo {
             background: #e74c3c;
@@ -1367,6 +1370,8 @@ def _generate_css() -> str:
 def _generate_javascript() -> str:
     """Generate JavaScript for interactivity"""
     return """
+        console.log('[TIMELINE NAV DEBUGGING] Script block executing...');
+        
         // Smart content formatter
         function formatEventData(data, container) {
             try {
@@ -1905,16 +1910,90 @@ def _generate_javascript() -> str:
         
         // Auto-expand first agent on load
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('[TIMELINE NAV DEBUGGING] DOMContentLoaded fired');
+            console.log('[TIMELINE NAV DEBUGGING] Document body exists:', !!document.body);
+            console.log('[TIMELINE NAV DEBUGGING] formatEventData defined:', typeof formatEventData);
+            
             const firstAgent = document.querySelector('.agent-header');
             if (firstAgent) {
+                console.log('[TIMELINE NAV DEBUGGING] Found first agent, clicking...');
                 firstAgent.click();
+            } else {
+                console.log('[TIMELINE NAV DEBUGGING] No agent header found');
             }
             
             // Add click handlers for timeline stages
-            document.querySelectorAll('.timeline-stage-bar').forEach(bar => {
-                bar.addEventListener('click', function() {
+            const timelineBars = document.querySelectorAll('.timeline-stage-bar');
+            console.log('[TIMELINE NAV DEBUGGING] Found timeline stage bars:', timelineBars.length);
+            
+            if (timelineBars.length === 0) {
+                console.log('[TIMELINE NAV DEBUGGING] No timeline bars found, checking page structure...');
+                console.log('[TIMELINE NAV DEBUGGING] All classes with timeline:', 
+                    Array.from(document.querySelectorAll('[class*="timeline"]')).map(el => el.className));
+            }
+            
+            timelineBars.forEach((bar, index) => {
+                console.log('[TIMELINE NAV DEBUGGING] Bar', index, 'data-stage-id:', bar.getAttribute('data-stage-id'));
+                // Single click with Ctrl/Cmd for navigation
+                bar.addEventListener('click', function(e) {
                     const stageId = this.getAttribute('data-stage-id');
-                    highlightRelatedStages(stageId);
+                    console.log('[TIMELINE NAV DEBUGGING] Click event:', {
+                        stageId: stageId,
+                        ctrlKey: e.ctrlKey,
+                        metaKey: e.metaKey,
+                        target: e.target
+                    });
+                    
+                    // Check if ctrl/cmd key is held for navigation
+                    if (e.ctrlKey || e.metaKey) {
+                        console.log('[TIMELINE NAV DEBUGGING] Ctrl/Cmd click detected, navigating...');
+                        e.preventDefault();
+                        navigateToAgentStage(stageId);
+                    } else {
+                        // Regular click for highlighting
+                        console.log('[TIMELINE NAV DEBUGGING] Regular click, highlighting related stages...');
+                        highlightRelatedStages(stageId);
+                    }
+                });
+                
+                // Double click for navigation
+                bar.addEventListener('dblclick', function(e) {
+                    e.preventDefault();
+                    const stageId = this.getAttribute('data-stage-id');
+                    console.log('[TIMELINE NAV DEBUGGING] Double-click detected:', stageId);
+                    navigateToAgentStage(stageId);
+                });
+                
+                // Update tooltip on hover
+                bar.addEventListener('mouseenter', function() {
+                    const existingTooltip = this.querySelector('.stage-bar-hover');
+                    if (!existingTooltip) {
+                        const tooltip = document.createElement('div');
+                        tooltip.className = 'stage-bar-hover';
+                        tooltip.innerHTML = 'Double-click or Ctrl+Click to navigate to this stage';
+                        tooltip.style.cssText = `
+                            position: absolute;
+                            bottom: -25px;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            background: rgba(0, 0, 0, 0.9);
+                            color: white;
+                            padding: 5px 10px;
+                            border-radius: 4px;
+                            font-size: 11px;
+                            white-space: nowrap;
+                            pointer-events: none;
+                            z-index: 1000;
+                        `;
+                        this.appendChild(tooltip);
+                    }
+                });
+                
+                bar.addEventListener('mouseleave', function() {
+                    const tooltip = this.querySelector('.stage-bar-hover');
+                    if (tooltip && tooltip.innerHTML === 'Double-click or Ctrl+Click to navigate to this stage') {
+                        tooltip.remove();
+                    }
                 });
             });
             
@@ -1961,6 +2040,101 @@ def _generate_javascript() -> str:
                     filterByDuration();
                 } catch (e) {
                     console.error('Failed to load filter preferences:', e);
+                }
+            }
+        }
+        
+        function navigateToAgentStage(stageId) {
+            console.log('[TIMELINE NAV DEBUGGING] navigateToAgentStage called with:', stageId);
+            
+            // Parse stage ID (format: "agent-stage")
+            const parts = stageId.split('-');
+            const agentType = parts[0];
+            const stageName = parts.slice(1).join('-');
+            
+            console.log('[TIMELINE NAV DEBUGGING] Parsed:', {
+                agentType: agentType,
+                stageName: stageName
+            });
+            
+            // First, collapse all agents
+            console.log('[TIMELINE NAV DEBUGGING] Collapsing all agents...');
+            document.querySelectorAll('.agent-section').forEach(section => {
+                const header = section.querySelector('.agent-header');
+                const content = section.querySelector('.agent-content');
+                if (header && content) {
+                    header.classList.remove('expanded');
+                    content.classList.remove('show');
+                }
+            });
+            
+            // Find and expand the target agent
+            console.log('[TIMELINE NAV DEBUGGING] Looking for agent:', `[id^="agent-${agentType}"]`);
+            const targetAgent = document.querySelector(`[id^="agent-${agentType}"]`);
+            if (targetAgent) {
+                console.log('[TIMELINE NAV DEBUGGING] Found target agent:', targetAgent.id);
+                const header = targetAgent.querySelector('.agent-header');
+                const content = targetAgent.querySelector('.agent-content');
+                
+                if (header && content) {
+                    console.log('[TIMELINE NAV DEBUGGING] Expanding agent section');
+                    // Expand the agent
+                    header.classList.add('expanded');
+                    content.classList.add('show');
+                    
+                    // Find and expand the specific stage within the agent
+                    setTimeout(() => {
+                        console.log('[TIMELINE NAV DEBUGGING] Looking for stage headers...');
+                        const stageHeaders = content.querySelectorAll('.stage-header');
+                        console.log('[TIMELINE NAV DEBUGGING] Found stage headers:', stageHeaders.length);
+                        
+                        let foundStage = false;
+                        stageHeaders.forEach(stageHeader => {
+                            const stageSection = stageHeader.parentElement;
+                            const stageContent = stageSection.querySelector('.stage-content');
+                            
+                            // Check if this is the target stage
+                            const stageNameElement = stageHeader.querySelector('.stage-name');
+                            if (stageNameElement) {
+                                const stageText = stageNameElement.textContent.toLowerCase();
+                                const targetText = stageName.replace(/_/g, ' ').toLowerCase();
+                                console.log('[TIMELINE NAV DEBUGGING] Comparing stage:', {
+                                    stageText: stageText,
+                                    targetText: targetText,
+                                    matches: stageText.includes(targetText)
+                                });
+                                
+                                if (stageText.includes(targetText)) {
+                                    foundStage = true;
+                                    console.log('[TIMELINE NAV DEBUGGING] Found matching stage!');
+                                    // Expand this stage
+                                    stageHeader.classList.add('expanded');
+                                    if (stageContent) {
+                                        stageContent.classList.add('show');
+                                    }
+                                    
+                                    // Scroll to the stage
+                                    console.log('[TIMELINE NAV DEBUGGING] Scrolling to stage');
+                                    stageSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    
+                                    // Highlight the stage briefly
+                                    stageSection.style.backgroundColor = '#fffacd';
+                                    setTimeout(() => {
+                                        stageSection.style.backgroundColor = '';
+                                    }, 2000);
+                                } else {
+                                    // Collapse other stages
+                                    stageHeader.classList.remove('expanded');
+                                    if (stageContent) {
+                                        stageContent.classList.remove('show');
+                                    }
+                                }
+                            }
+                        });
+                    }, 100);
+                    
+                    // Scroll to the agent section
+                    targetAgent.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
             }
         }
@@ -3270,7 +3444,7 @@ def _generate_event_node(event: HierarchicalEvent, agent_id: str) -> str:
                 <div class="event-summary">
                     {summary}
                 </div>
-                <a class="show-details-btn" id="{event_id}-btn" onclick="toggleEventDetails('{event_id}')">
+                <a class="show-details-btn" id="{event_id}-btn" onclick="toggleEventDetails({json.dumps(event_id)})">
                     ▶ Show Details
                 </a>
                 <div class="event-details" id="{event_id}-details">
@@ -3400,7 +3574,7 @@ def _generate_event_details(event: TraceEvent) -> str:
         return f"""
         <div style="margin-top: 10px;" id="event-{event.event_id}-details-content">
             <div class="format-toggle" style="margin-bottom: 10px;">
-                <button onclick="toggleFormatting('{event.event_id}')" style="padding: 4px 8px; border: 1px solid #dee2e6; border-radius: 4px; background: white; cursor: pointer; font-size: 12px;">
+                <button onclick="toggleFormatting({json.dumps(event.event_id)})" style="padding: 4px 8px; border: 1px solid #dee2e6; border-radius: 4px; background: white; cursor: pointer; font-size: 12px;">
                     <span id="format-toggle-{event.event_id}">📝 View Raw</span>
                 </button>
             </div>
@@ -3410,15 +3584,46 @@ def _generate_event_details(event: TraceEvent) -> str:
 {json.dumps(full_output, indent=2)}</pre>
             </div>
             <script>
-                document.getElementById('formatted-{event.event_id}').dataset.content = {json.dumps(json.dumps(full_output))};
-                // Initialize formatted view on load
-                window.addEventListener('DOMContentLoaded', function() {{
-                    const formattedDiv = document.getElementById('formatted-{event.event_id}');
-                    if (formattedDiv && !formattedDiv.innerHTML) {{
-                        const content = JSON.parse(formattedDiv.dataset.content);
-                        formatEventData(content, formattedDiv);
+                (function() {{
+                    const eventId = {json.dumps(event.event_id)};
+                    const eventData = {json.dumps(json.dumps(full_output))};
+                    
+                    document.getElementById('formatted-' + eventId).dataset.content = eventData;
+                    
+                    // Initialize formatted view on load
+                    if (document.readyState === 'loading') {{
+                        document.addEventListener('DOMContentLoaded', function() {{
+                            const formattedDiv = document.getElementById('formatted-' + eventId);
+                            if (formattedDiv && !formattedDiv.innerHTML) {{
+                                try {{
+                                    const content = JSON.parse(formattedDiv.dataset.content);
+                                    if (typeof formatEventData === 'function') {{
+                                        formatEventData(content, formattedDiv);
+                                    }} else {{
+                                        console.error('formatEventData is not defined yet');
+                                    }}
+                                }} catch (e) {{
+                                    console.error('Error formatting event data:', e);
+                                }}
+                            }}
+                        }});
+                    }} else {{
+                        // DOM already loaded
+                        const formattedDiv = document.getElementById('formatted-' + eventId);
+                        if (formattedDiv && !formattedDiv.innerHTML) {{
+                            try {{
+                                const content = JSON.parse(formattedDiv.dataset.content);
+                                if (typeof formatEventData === 'function') {{
+                                    formatEventData(content, formattedDiv);
+                                }} else {{
+                                    console.error('formatEventData is not defined yet');
+                                }}
+                            }} catch (e) {{
+                                console.error('Error formatting event data:', e);
+                            }}
+                        }}
                     }}
-                }});
+                }})();
             </script>
         </div>
         """
@@ -3428,7 +3633,7 @@ def _generate_event_details(event: TraceEvent) -> str:
         return f"""
         <div style="margin-top: 10px;" id="event-{event.event_id}-details-content">
             <div class="format-toggle" style="margin-bottom: 10px;">
-                <button onclick="toggleFormatting('{event.event_id}')" style="padding: 4px 8px; border: 1px solid #dee2e6; border-radius: 4px; background: white; cursor: pointer; font-size: 12px;">
+                <button onclick="toggleFormatting({json.dumps(event.event_id)})" style="padding: 4px 8px; border: 1px solid #dee2e6; border-radius: 4px; background: white; cursor: pointer; font-size: 12px;">
                     <span id="format-toggle-{event.event_id}">📝 View Raw</span>
                 </button>
             </div>
@@ -3438,15 +3643,46 @@ def _generate_event_details(event: TraceEvent) -> str:
 {json.dumps(data, indent=2)}</pre>
             </div>
             <script>
-                document.getElementById('formatted-{event.event_id}').dataset.content = {json.dumps(json.dumps(data))};
-                // Initialize formatted view on load
-                window.addEventListener('DOMContentLoaded', function() {{
-                    const formattedDiv = document.getElementById('formatted-{event.event_id}');
-                    if (formattedDiv && !formattedDiv.innerHTML) {{
-                        const content = JSON.parse(formattedDiv.dataset.content);
-                        formatEventData(content, formattedDiv);
+                (function() {{
+                    const eventId = {json.dumps(event.event_id)};
+                    const eventData = {json.dumps(json.dumps(data))};
+                    
+                    document.getElementById('formatted-' + eventId).dataset.content = eventData;
+                    
+                    // Initialize formatted view on load
+                    if (document.readyState === 'loading') {{
+                        document.addEventListener('DOMContentLoaded', function() {{
+                            const formattedDiv = document.getElementById('formatted-' + eventId);
+                            if (formattedDiv && !formattedDiv.innerHTML) {{
+                                try {{
+                                    const content = JSON.parse(formattedDiv.dataset.content);
+                                    if (typeof formatEventData === 'function') {{
+                                        formatEventData(content, formattedDiv);
+                                    }} else {{
+                                        console.error('formatEventData is not defined yet');
+                                    }}
+                                }} catch (e) {{
+                                    console.error('Error formatting event data:', e);
+                                }}
+                            }}
+                        }});
+                    }} else {{
+                        // DOM already loaded
+                        const formattedDiv = document.getElementById('formatted-' + eventId);
+                        if (formattedDiv && !formattedDiv.innerHTML) {{
+                            try {{
+                                const content = JSON.parse(formattedDiv.dataset.content);
+                                if (typeof formatEventData === 'function') {{
+                                    formatEventData(content, formattedDiv);
+                                }} else {{
+                                    console.error('formatEventData is not defined yet');
+                                }}
+                            }} catch (e) {{
+                                console.error('Error formatting event data:', e);
+                            }}
+                        }}
                     }}
-                }});
+                }})();
             </script>
         </div>
         """

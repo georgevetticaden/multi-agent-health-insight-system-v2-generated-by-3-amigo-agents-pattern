@@ -173,3 +173,63 @@ async def trace_viewer(trace_id: str) -> HTMLResponse:
     
     return HTMLResponse(content=html_content)
 
+
+@router.get("/{trace_id}/hierarchical")
+async def hierarchical_trace_viewer(trace_id: str) -> HTMLResponse:
+    """
+    Get hierarchical HTML viewer for a specific trace.
+    
+    Args:
+        trace_id: Unique trace identifier
+        
+    Returns:
+        Hierarchical HTML page for viewing the trace
+    """
+    if not TRACING_AVAILABLE:
+        return HTMLResponse(
+            content="<html><body><h1>Tracing Not Available</h1><p>Tracing functionality is not enabled.</p></body></html>",
+            status_code=503
+        )
+    
+    # First, try to find pre-generated hierarchical HTML file
+    trace_storage_path = Path(os.environ.get("TRACE_STORAGE_PATH", TRACE_STORAGE_PATH))
+    
+    # Search for hierarchical HTML file in date directories
+    for date_dir in trace_storage_path.iterdir():
+        if date_dir.is_dir() and date_dir.name.count('-') == 2:  # YYYY-MM-DD format
+            hierarchical_path = date_dir / f"{trace_id}.hierarchical.html"
+            if hierarchical_path.exists():
+                # Serve the pre-generated hierarchical HTML file
+                return FileResponse(
+                    path=str(hierarchical_path),
+                    media_type="text/html",
+                    headers={"Cache-Control": "max-age=3600"}  # Cache for 1 hour
+                )
+    
+    # If not found, try to generate it
+    try:
+        from services.tracing.hierarchical_html_generator import generate_hierarchical_trace_html
+        
+        trace_collector = get_trace_collector()
+        
+        # Try to get the trace
+        trace = await trace_collector.get_active_trace(trace_id)
+        if not trace:
+            trace = await trace_collector.get_stored_trace(trace_id)
+        
+        if not trace:
+            return HTMLResponse(
+                content=f"<html><body><h1>Trace Not Found</h1><p>Trace {trace_id} not found.</p></body></html>",
+                status_code=404
+            )
+        
+        # Generate hierarchical HTML content dynamically
+        html_content = generate_hierarchical_trace_html(trace)
+        
+        return HTMLResponse(content=html_content)
+    except ImportError:
+        return HTMLResponse(
+            content="<html><body><h1>Hierarchical Viewer Not Available</h1><p>Hierarchical trace viewer is not installed.</p></body></html>",
+            status_code=503
+        )
+

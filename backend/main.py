@@ -59,8 +59,7 @@ async def get_specialists():
             {"id": "analytics", "name": "Dr. Analytics", "specialty": "Data Analysis", "icon": "📊"},
             {"id": "prevention", "name": "Dr. Prevention", "specialty": "Preventive Medicine", "icon": "🛡️"},
             {"id": "pharma", "name": "Dr. Pharma", "specialty": "Pharmacy", "icon": "💊"},
-            {"id": "nutrition", "name": "Dr. Nutrition", "specialty": "Nutrition", "icon": "🥗"},
-            {"id": "primary", "name": "Dr. Primary", "specialty": "General Practice", "icon": "👨‍⚕️"}
+            {"id": "nutrition", "name": "Dr. Nutrition", "specialty": "Nutrition", "icon": "🥗"}
         ]
     }
 

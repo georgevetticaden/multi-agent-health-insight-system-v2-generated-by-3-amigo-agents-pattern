@@ -43,8 +43,7 @@ SPECIALIST_EMOJIS = {
     "data_analysis": "📊",
     "preventive_medicine": "🛡️",
     "pharmacy": "💊",
-    "nutrition": "🥗",
-    "general_practice": "👨‍⚕️"
+    "nutrition": "🥗"
 }
 
 # Specialist display names
@@ -55,8 +54,7 @@ SPECIALIST_NAMES = {
     "data_analysis": "Data Analysis",
     "preventive_medicine": "Preventive Medicine",
     "pharmacy": "Pharmacy",
-    "nutrition": "Nutrition",
-    "general_practice": "General Practice"
+    "nutrition": "Nutrition"
 }
 
 class HealthAnalystService:

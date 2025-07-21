@@ -70,9 +70,6 @@ export class SSEEventParser {
       } else if (specialty === 'nutrition') {
         specId = 'spec_nutrition';
         specialty = 'nutrition';
-      } else if (specialty === 'general practice') {
-        specId = 'spec_general';
-        specialty = 'general';
       } else {
         specId = `spec_${specialty}`;
       }
@@ -120,9 +117,6 @@ export class SSEEventParser {
       } else if (specialty === 'nutrition') {
         specId = 'spec_nutrition';
         specialty = 'nutrition';
-      } else if (specialty === 'general practice') {
-        specId = 'spec_general';
-        specialty = 'general';
       } else {
         specId = `spec_${specialty}`;
       }
@@ -216,7 +210,7 @@ export class SSEEventParser {
       
       // Extract specialists from the numbered list with emojis
       // Updated pattern to capture full specialty names including compound names
-      const specialistListPattern = /\d+\.\s*(?:❤️|🔬|📊|💊|🛡️|🔍|🧪)?\s*\*\*([^*]+)\*\*/g;
+      const specialistListPattern = /\d+\.\s*(?:❤️|🔬|📊|💊|🛡️|🔍|🧪|🥗)?\s*\*\*([^*]+)\*\*/g;
       let match;
       
       while ((match = specialistListPattern.exec(content)) !== null) {
@@ -266,7 +260,8 @@ export class SSEEventParser {
         'endocrinology': ['HbA1c', 'glucose', 'diabetes', 'metabolic'],
         'data': ['trend', 'analysis', 'pattern', 'data'],
         'preventive': ['prevention', 'screening', 'wellness'],
-        'pharmacy': ['medication', 'drug', 'prescription']
+        'pharmacy': ['medication', 'drug', 'prescription'],
+        'nutrition': ['diet', 'nutrition', 'weight', 'calorie', 'nutrient', 'vitamin']
       };
       
       let streamingContent: string | undefined;
@@ -309,7 +304,7 @@ export class SSEEventParser {
         // Extract analysis content (remove metadata)
         const cleanContent = content
           .replace(/\*\*/g, '') // Remove markdown bold
-          .replace(/❤️|🔬|📊|💊|🛡️|🔍|🧬|⚕️|🥗/g, '') // Remove emojis
+          .replace(/❤️|🔬|📊|💊|🛡️|🔍|🧬|⚕️|🧪|🥗/g, '') // Remove emojis
           .replace(/\s+/g, ' ') // Normalize whitespace
           .trim();
         
@@ -462,9 +457,6 @@ export class SSEEventParser {
       } else if (specialty === 'nutrition') {
         specId = 'spec_nutrition';
         specialty = 'nutrition';
-      } else if (specialty === 'general practice') {
-        specId = 'spec_general';
-        specialty = 'general';
       } else {
         specId = `spec_${specialty}`;
       }
@@ -510,9 +502,6 @@ export class SSEEventParser {
       } else if (specialty === 'nutrition') {
         specId = 'spec_nutrition';
         specialty = 'nutrition';
-      } else if (specialty === 'general practice') {
-        specId = 'spec_general';
-        specialty = 'general';
       } else {
         specId = `spec_${specialty}`;
       }
@@ -597,9 +586,7 @@ export class SSEEventParser {
       { specialty: 'analysis', name: 'Dr. Analytics', gradient: 'from-yellow-400 to-yellow-500', icon: 'BarChart3' }, // For "Data Analysis"
       { specialty: 'pharmacy', name: 'Dr. Pharma', gradient: 'from-orange-400 to-orange-500', icon: 'Pill' },
       { specialty: 'preventive', name: 'Dr. Prevention', gradient: 'from-indigo-400 to-indigo-500', icon: 'Shield' },
-      { specialty: 'nutrition', name: 'Dr. Nutrition', gradient: 'from-emerald-400 to-emerald-500', icon: 'Apple' },
-      { specialty: 'general', name: 'Dr. General', gradient: 'from-blue-400 to-blue-500', icon: 'Stethoscope' },
-      { specialty: 'practice', name: 'Dr. General', gradient: 'from-blue-400 to-blue-500', icon: 'Stethoscope' } // For "General Practice"
+      { specialty: 'nutrition', name: 'Dr. Nutrition', gradient: 'from-emerald-400 to-emerald-500', icon: 'Apple' }
     ];
     
     const config = specialists.find(s => s.specialty.toLowerCase() === specialty.toLowerCase()) || {

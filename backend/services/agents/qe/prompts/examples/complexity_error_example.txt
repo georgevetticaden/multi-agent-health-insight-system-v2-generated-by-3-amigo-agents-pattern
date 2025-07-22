@@ -1,0 +1,31 @@
+Example: Complexity Classification Error
+
+User Feedback: "This query was classified as STANDARD but it's asking for correlation between medications and lab results which should be COMPLEX"
+
+Trace Context:
+- Query: "How has my HbA1c level changed since I started taking metformin?"
+- Classified as: STANDARD
+- Assigned: endocrinology only
+
+Analysis:
+The query involves analyzing the relationship between medication (metformin) and lab results (HbA1c) over time. This requires:
+1. Medication history analysis (pharmacy specialist)
+2. Lab trend analysis (laboratory_medicine)
+3. Correlation between the two (data_analysis)
+
+This is clearly a COMPLEX query due to multi-factor correlation.
+
+Generated TestCase:
+```python
+TestCase(
+    id="complex_medication_lab_001",
+    query="How has my HbA1c level changed since I started taking metformin?",
+    expected_complexity="COMPLEX",
+    expected_specialties={"endocrinology", "pharmacy", "laboratory_medicine", "data_analysis"},
+    key_data_points=["metformin_start_date", "hba1c_trends", "medication_adherence", "dosage_changes"],
+    description="Multi-factor correlation between diabetes medication and lab results",
+    category="correlations",
+    based_on_real_query=True,
+    notes="Originally misclassified as STANDARD. Requires correlation analysis between medication timeline and lab trends."
+)
+```

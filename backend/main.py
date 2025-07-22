@@ -10,6 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from api.chat import router as chat_router
 from api.tracing import router as tracing_router
+from api.qe_chat import router as qe_chat_router
+from api.evaluation import router as evaluation_router
 from utils.logging_config import setup_backend_logging
 
 # Configure logging with both console and file output
@@ -40,6 +42,8 @@ app.add_middleware(
 # Include routers
 app.include_router(chat_router)
 app.include_router(tracing_router)
+app.include_router(qe_chat_router)
+app.include_router(evaluation_router)
 
 @app.get("/api/health")
 async def health_check():

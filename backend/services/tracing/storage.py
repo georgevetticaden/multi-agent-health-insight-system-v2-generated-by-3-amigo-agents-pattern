@@ -12,10 +12,30 @@ from typing import Dict, List, Optional, Any
 from pathlib import Path
 from datetime import datetime, timedelta
 from dataclasses import asdict
+from enum import Enum
 
 from .trace_models import CompleteTrace
 from .html_generator import generate_trace_viewer_html
 from .hierarchical_html_generator import generate_hierarchical_trace_html
+
+
+def serialize_trace(trace: CompleteTrace) -> dict:
+    """Custom serialization that properly handles enums"""
+    def convert_value(obj):
+        if isinstance(obj, Enum):
+            return obj.value
+        elif isinstance(obj, dict):
+            return {k: convert_value(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [convert_value(item) for item in obj]
+        elif hasattr(obj, '__dict__'):
+            return convert_value(obj.__dict__)
+        else:
+            return obj
+    
+    # Use asdict but then convert enum values
+    trace_dict = asdict(trace)
+    return convert_value(trace_dict)
 
 
 class TraceStorage(ABC):
@@ -186,7 +206,7 @@ class FileSystemTraceStorage(TraceStorage):
             
             async with self._lock:
                 with open(trace_path, 'w', encoding='utf-8') as f:
-                    json.dump(asdict(trace), f, indent=2, default=str, ensure_ascii=False)
+                    json.dump(serialize_trace(trace), f, indent=2, default=str, ensure_ascii=False)
                 
                 # Generate and store both HTML viewers
                 # 1. Original timeline viewer
@@ -340,11 +360,17 @@ class FileSystemTraceStorage(TraceStorage):
         # Convert events
         events = []
         for event_data in data.get('events', []):
+            # Handle both old format (with class prefix) and new format
+            event_type_str = event_data['event_type']
+            if event_type_str.startswith('TraceEventType.'):
+                # Old format: extract the enum name
+                event_type_str = event_type_str.split('.')[1].lower()
+            
             events.append(TraceEvent(
                 event_id=event_data['event_id'],
                 trace_id=event_data['trace_id'],
                 timestamp=event_data['timestamp'],
-                event_type=TraceEventType(event_data['event_type']),
+                event_type=TraceEventType(event_type_str),
                 agent_type=event_data['agent_type'],
                 stage=event_data['stage'],
                 data=event_data['data'],

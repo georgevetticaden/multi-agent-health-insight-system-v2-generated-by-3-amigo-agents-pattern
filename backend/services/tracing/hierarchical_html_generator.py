@@ -39,20 +39,35 @@ def generate_hierarchical_trace_html(trace: CompleteTrace) -> str:
     <title>Trace Analysis - {trace.trace_id}</title>
     <style>
         {_generate_css()}
+        {_generate_qe_css()}
     </style>
     <script>
         console.log('[TIMELINE NAV DEBUGGING] Head script starting...');
+        const TRACE_ID = '{trace.trace_id}';
+        
+        // Initialize trace viewer JavaScript
         {_generate_javascript()}
+        
+        // Initialize QE Agent JavaScript
+        {_generate_qe_javascript()}
         console.log('[TIMELINE NAV DEBUGGING] Head script completed.');
     </script>
 </head>
 <body>
-    <div class="container">
-        {_generate_header(trace, summary)}
-        {_generate_filter_panel()}
-        {_generate_summary_cards(sections, summary)}
-        {_generate_timeline(sections)}
-        {_generate_agent_analysis_section(sections)}
+    <div class="main-layout">
+        <div class="qe-panel">
+            {_generate_qe_chat_panel(trace)}
+        </div>
+        <div class="resizer" id="resizer"></div>
+        <div class="trace-panel">
+            <div class="container">
+                {_generate_header(trace, summary)}
+                {_generate_filter_panel()}
+                {_generate_summary_cards(sections, summary)}
+                {_generate_timeline(sections)}
+                {_generate_agent_analysis_section(sections)}
+            </div>
+        </div>
     </div>
 </body>
 </html>
@@ -3830,9 +3845,9 @@ def _generate_event_details(event: TraceEvent) -> str:
                     
                     document.getElementById('formatted-' + eventId).dataset.content = eventData;
                     
-                    // Initialize formatted view on load
-                    if (document.readyState === 'loading') {{
-                        document.addEventListener('DOMContentLoaded', function() {{
+                    // Defer initialization until all scripts are loaded
+                    window.addEventListener('load', function() {{
+                        setTimeout(function() {{
                             const formattedDiv = document.getElementById('formatted-' + eventId);
                             if (formattedDiv && !formattedDiv.innerHTML) {{
                                 try {{
@@ -3840,29 +3855,19 @@ def _generate_event_details(event: TraceEvent) -> str:
                                     if (typeof formatEventData === 'function') {{
                                         formatEventData(content, formattedDiv);
                                     }} else {{
-                                        console.error('formatEventData is not defined yet');
+                                        // Retry once more after a delay
+                                        setTimeout(function() {{
+                                            if (typeof formatEventData === 'function') {{
+                                                formatEventData(content, formattedDiv);
+                                            }}
+                                        }}, 100);
                                     }}
                                 }} catch (e) {{
                                     console.error('Error formatting event data:', e);
                                 }}
                             }}
-                        }});
-                    }} else {{
-                        // DOM already loaded
-                        const formattedDiv = document.getElementById('formatted-' + eventId);
-                        if (formattedDiv && !formattedDiv.innerHTML) {{
-                            try {{
-                                const content = JSON.parse(formattedDiv.dataset.content);
-                                if (typeof formatEventData === 'function') {{
-                                    formatEventData(content, formattedDiv);
-                                }} else {{
-                                    console.error('formatEventData is not defined yet');
-                                }}
-                            }} catch (e) {{
-                                console.error('Error formatting event data:', e);
-                            }}
-                        }}
-                    }}
+                        }}, 50);
+                    }});
                 }})();
             </script>
         </div>
@@ -3893,9 +3898,9 @@ def _generate_event_details(event: TraceEvent) -> str:
                     
                     document.getElementById('formatted-' + eventId).dataset.content = eventData;
                     
-                    // Initialize formatted view on load
-                    if (document.readyState === 'loading') {{
-                        document.addEventListener('DOMContentLoaded', function() {{
+                    // Defer initialization until all scripts are loaded
+                    window.addEventListener('load', function() {{
+                        setTimeout(function() {{
                             const formattedDiv = document.getElementById('formatted-' + eventId);
                             if (formattedDiv && !formattedDiv.innerHTML) {{
                                 try {{
@@ -3903,29 +3908,19 @@ def _generate_event_details(event: TraceEvent) -> str:
                                     if (typeof formatEventData === 'function') {{
                                         formatEventData(content, formattedDiv);
                                     }} else {{
-                                        console.error('formatEventData is not defined yet');
+                                        // Retry once more after a delay
+                                        setTimeout(function() {{
+                                            if (typeof formatEventData === 'function') {{
+                                                formatEventData(content, formattedDiv);
+                                            }}
+                                        }}, 100);
                                     }}
                                 }} catch (e) {{
                                     console.error('Error formatting event data:', e);
                                 }}
                             }}
-                        }});
-                    }} else {{
-                        // DOM already loaded
-                        const formattedDiv = document.getElementById('formatted-' + eventId);
-                        if (formattedDiv && !formattedDiv.innerHTML) {{
-                            try {{
-                                const content = JSON.parse(formattedDiv.dataset.content);
-                                if (typeof formatEventData === 'function') {{
-                                    formatEventData(content, formattedDiv);
-                                }} else {{
-                                    console.error('formatEventData is not defined yet');
-                                }}
-                            }} catch (e) {{
-                                console.error('Error formatting event data:', e);
-                            }}
-                        }}
-                    }}
+                        }}, 50);
+                    }});
                 }})();
             </script>
         </div>
@@ -3952,9 +3947,9 @@ def _generate_event_details(event: TraceEvent) -> str:
                     
                     document.getElementById('formatted-' + eventId).dataset.content = eventData;
                     
-                    // Initialize formatted view on load
-                    if (document.readyState === 'loading') {{
-                        document.addEventListener('DOMContentLoaded', function() {{
+                    // Defer initialization until all scripts are loaded
+                    window.addEventListener('load', function() {{
+                        setTimeout(function() {{
                             const formattedDiv = document.getElementById('formatted-' + eventId);
                             if (formattedDiv && !formattedDiv.innerHTML) {{
                                 try {{
@@ -3962,30 +3957,1299 @@ def _generate_event_details(event: TraceEvent) -> str:
                                     if (typeof formatEventData === 'function') {{
                                         formatEventData(content, formattedDiv);
                                     }} else {{
-                                        console.error('formatEventData is not defined yet');
+                                        // Retry once more after a delay
+                                        setTimeout(function() {{
+                                            if (typeof formatEventData === 'function') {{
+                                                formatEventData(content, formattedDiv);
+                                            }}
+                                        }}, 100);
                                     }}
                                 }} catch (e) {{
                                     console.error('Error formatting event data:', e);
                                 }}
                             }}
-                        }});
-                    }} else {{
-                        // DOM already loaded
-                        const formattedDiv = document.getElementById('formatted-' + eventId);
-                        if (formattedDiv && !formattedDiv.innerHTML) {{
-                            try {{
-                                const content = JSON.parse(formattedDiv.dataset.content);
-                                if (typeof formatEventData === 'function') {{
-                                    formatEventData(content, formattedDiv);
-                                }} else {{
-                                    console.error('formatEventData is not defined yet');
-                                }}
-                            }} catch (e) {{
-                                console.error('Error formatting event data:', e);
-                            }}
-                        }}
-                    }}
+                        }}, 50);
+                    }});
                 }})();
             </script>
         </div>
         """
+
+def _generate_qe_css() -> str:
+    """Generate CSS specific to QE panel"""
+    return """
+        /* Two-panel layout */
+        .main-layout {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .qe-panel {
+            width: 35%;
+            min-width: 400px;
+            max-width: 600px;
+            background: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .resizer {
+            width: 4px;
+            background: #dee2e6;
+            cursor: col-resize;
+            position: relative;
+        }
+        
+        .resizer:hover {
+            background: #6c757d;
+        }
+        
+        .trace-panel {
+            flex: 1;
+            overflow: auto;
+        }
+        
+        /* QE Chat styles */
+        .qe-header {
+            padding: 1rem;
+            background: white;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .qe-header h2 {
+            margin: 0;
+            font-size: 1.25rem;
+            color: #333;
+        }
+        
+        .qe-header p {
+            margin: 0.5rem 0 0 0;
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+        
+        .qe-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            background: #f8f9fa;
+        }
+        
+        .qe-message {
+            margin-bottom: 1rem;
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .qe-message.user {
+            text-align: right;
+        }
+        
+        .qe-message.user .message-content {
+            background: #007bff;
+            color: white;
+            display: inline-block;
+            padding: 0.75rem 1rem;
+            border-radius: 18px 18px 4px 18px;
+            max-width: 80%;
+            text-align: left;
+        }
+        
+        .qe-message.assistant {
+            text-align: left;
+        }
+        
+        .qe-message.assistant .message-content {
+            background: white;
+            border: 1px solid #dee2e6;
+            display: inline-block;
+            padding: 0.75rem 1rem;
+            border-radius: 18px 18px 18px 4px;
+            max-width: 90%;
+        }
+        
+        .qe-message.thinking .message-content {
+            background: #e9ecef;
+            font-style: italic;
+            color: #6c757d;
+        }
+        
+        .qe-input-container {
+            padding: 1rem;
+            background: white;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        .qe-input-wrapper {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        #qe-input {
+            flex: 1;
+            padding: 0.75rem;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            resize: none;
+            font-family: inherit;
+            font-size: 0.875rem;
+            min-height: 80px;
+        }
+        
+        #qe-input:focus {
+            outline: none;
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+        }
+        
+        .qe-send-btn {
+            padding: 0.75rem 1.5rem;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            align-self: flex-end;
+        }
+        
+        .qe-send-btn:hover {
+            background: #0056b3;
+        }
+        
+        .qe-send-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        /* Test case display */
+        .test-case-container {
+            margin-top: 1rem;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .action-menu {
+            margin-top: 0.5rem;
+            padding: 0;
+            line-height: 1.5;
+            font-size: 14px;
+        }
+        
+        .action-menu strong {
+            color: #495057;
+            font-weight: 600;
+            display: inline;
+            margin-right: 0.25rem;
+        }
+        
+        .action-menu br + br {
+            display: none;
+        }
+        
+        /* Evaluation results */
+        .evaluation-result {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+        }
+        
+        .evaluation-result h4 {
+            margin: 0 0 0.5rem 0;
+            color: #28a745;
+        }
+        
+        .result-summary {
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+        
+        .dimension-scores {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.5rem;
+        }
+        
+        .dimension-scores th,
+        .dimension-scores td {
+            padding: 0.5rem;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .dimension-scores th {
+            background: #e9ecef;
+            font-weight: 600;
+        }
+        
+        .dimension-scores tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .test-case-header {
+            padding: 0.75rem 1rem;
+            background: #e9ecef;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .test-case-header span {
+            font-weight: 500;
+            color: #495057;
+        }
+        
+        .copy-btn {
+            padding: 0.25rem 0.75rem;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        
+        .copy-btn:hover {
+            background: #218838;
+        }
+        
+        .copy-btn.copied {
+            background: #6c757d;
+        }
+        
+        /* Evaluation Progress Styles */
+        .evaluation-progress {
+            background: #f8f9fa;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+        
+        .evaluation-progress h4 {
+            margin: 0 0 1rem 0;
+            color: #2c3e50;
+        }
+        
+        .progress-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        
+        .progress-step {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            border-radius: 6px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            transition: all 0.3s ease;
+        }
+        
+        .progress-step.pending {
+            opacity: 0.6;
+        }
+        
+        .progress-step.active {
+            background: #e3f2fd;
+            border-color: #2196f3;
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+            animation: pulse 2s infinite;
+        }
+        
+        .progress-step.completed {
+            background: #e8f5e9;
+            border-color: #4caf50;
+        }
+        
+        .progress-step.error {
+            background: #ffebee;
+            border-color: #f44336;
+        }
+        
+        .step-icon {
+            font-size: 1.25rem;
+            width: 2rem;
+            text-align: center;
+        }
+        
+        .step-label {
+            flex: 1;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .progress-details {
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 0.75rem;
+            margin-top: 1rem;
+        }
+        
+        .progress-detail {
+            padding: 0.25rem 0;
+            color: #6c757d;
+        }
+        
+        .progress-detail .timestamp {
+            font-family: monospace;
+            color: #999;
+            margin-right: 0.5rem;
+        }
+        
+        .error-message {
+            color: #f44336;
+            font-weight: 500;
+            padding: 0.5rem;
+            background: #ffebee;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+        }
+        
+        /* Enhanced Result Display */
+        .result-summary {
+            display: flex;
+            gap: 2rem;
+            margin: 1rem 0;
+            align-items: center;
+        }
+        
+        .overall-score {
+            text-align: center;
+            padding: 1rem;
+            border-radius: 8px;
+            background: #f8f9fa;
+            border: 2px solid #e5e7eb;
+        }
+        
+        .overall-score.high {
+            background: #e8f5e9;
+            border-color: #4caf50;
+        }
+        
+        .overall-score.medium {
+            background: #fff3e0;
+            border-color: #ff9800;
+        }
+        
+        .overall-score.low {
+            background: #ffebee;
+            border-color: #f44336;
+        }
+        
+        .score-label {
+            display: block;
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-bottom: 0.25rem;
+        }
+        
+        .score-value {
+            display: block;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .pass-fail {
+            font-size: 1.25rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+        }
+        
+        .pass-fail.passed {
+            color: #2e7d32;
+            background: #e8f5e9;
+        }
+        
+        .pass-fail.failed {
+            color: #c62828;
+            background: #ffebee;
+        }
+        
+        .dimensions-section {
+            margin-top: 1.5rem;
+        }
+        
+        .dimensions-section h5 {
+            margin: 0 0 0.75rem 0;
+            color: #495057;
+        }
+        
+        .dimension-item {
+            margin-bottom: 0.75rem;
+            padding: 0.75rem;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+        }
+        
+        .dimension-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .dimension-name {
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+        
+        .dimension-score {
+            font-weight: bold;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+        }
+        
+        .dimension-score.high {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .dimension-score.medium {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+        
+        .dimension-score.low {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .dimension-feedback {
+            font-size: 0.85rem;
+            color: #6c757d;
+            line-height: 1.4;
+        }
+        
+        .execution-details {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e5e7eb;
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+        
+        .test-case-code {
+            padding: 1rem;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.8125rem;
+            line-height: 1.5;
+            white-space: pre;
+        }
+        
+        /* Stage context indicator */
+        .stage-context {
+            margin-bottom: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            font-size: 0.8125rem;
+            color: #856404;
+        }
+        
+        /* Streaming indicator */
+        .streaming-indicator {
+            display: inline-block;
+            margin-left: 0.5rem;
+        }
+        
+        .streaming-indicator span {
+            display: inline-block;
+            width: 4px;
+            height: 4px;
+            background: #007bff;
+            border-radius: 50%;
+            margin: 0 1px;
+            animation: pulse 1.4s infinite;
+        }
+        
+        .streaming-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .streaming-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes pulse {
+            0%, 60%, 100% { opacity: 0.3; }
+            30% { opacity: 1; }
+        }
+    """
+
+
+def _generate_qe_javascript() -> str:
+    """Generate JavaScript for QE chat functionality"""
+    return """
+        // QE Chat functionality
+        let qeEventSource = null;
+        let currentStreamingMessage = null;
+        let isStreaming = false;
+        
+        // Initialize resizer when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            const resizer = document.getElementById('resizer');
+            const qePanel = document.querySelector('.qe-panel');
+            const tracePanel = document.querySelector('.trace-panel');
+            
+            if (resizer && qePanel && tracePanel) {
+                let isResizing = false;
+                
+                resizer.addEventListener('mousedown', (e) => {
+                    isResizing = true;
+                    document.body.style.cursor = 'col-resize';
+                    e.preventDefault();
+                });
+                
+                document.addEventListener('mousemove', (e) => {
+                    if (!isResizing) return;
+                    
+                    const newWidth = e.clientX;
+                    if (newWidth > 400 && newWidth < window.innerWidth - 600) {
+                        qePanel.style.width = newWidth + 'px';
+                    }
+                });
+                
+                document.addEventListener('mouseup', () => {
+                    isResizing = false;
+                    document.body.style.cursor = 'default';
+                });
+            }
+        });
+        
+        // QE Chat functions
+        window.sendQEMessage = function() {
+            const input = document.getElementById('qe-input');
+            const message = input.value.trim();
+            
+            if (!message || isStreaming) return;
+            
+            // Clear input
+            input.value = '';
+            input.style.height = '80px';
+            
+            // Display user message
+            appendMessage('user', message);
+            
+            // Get stage context if user clicked on a stage
+            const stageContext = getCurrentStageContext();
+            
+            // Start streaming
+            startQEStream(message, stageContext);
+        }
+        
+        function getCurrentStageContext() {
+            // Check if user has highlighted a stage
+            const highlightedStage = document.querySelector('.stage-name.highlighted');
+            if (highlightedStage) {
+                return {
+                    stage_name: highlightedStage.textContent.replace(/📍\\s*/, ''),
+                    stage_id: highlightedStage.closest('.stage-header')?.id
+                };
+            }
+            return null;
+        }
+        
+        function startQEStream(message, stageContext) {
+            // Close any existing stream
+            if (qeEventSource) {
+                qeEventSource.close();
+            }
+            
+            // Mark as streaming
+            isStreaming = true;
+            updateSendButton();
+            
+            // Build URL with parameters
+            const params = new URLSearchParams({
+                trace_id: TRACE_ID,
+                message: message
+            });
+            
+            if (stageContext) {
+                params.append('stage_name', stageContext.stage_name);
+                params.append('stage_id', stageContext.stage_id);
+            }
+            
+            const url = `/api/qe/chat/stream?${params}`;
+            
+            // Create streaming message
+            currentStreamingMessage = createStreamingMessage();
+            
+            // Start SSE connection
+            qeEventSource = new EventSource(url);
+            
+            qeEventSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleQEStreamData(data);
+                } catch (e) {
+                    console.error('Error parsing QE stream data:', e);
+                }
+            };
+            
+            qeEventSource.onerror = (error) => {
+                // Check if the stream is just closing normally
+                if (qeEventSource.readyState === EventSource.CLOSED) {
+                    console.log('QE stream closed');
+                    finishStreaming();
+                    return;
+                }
+                
+                console.error('QE stream error:', error);
+                finishStreaming();
+                if (currentStreamingMessage) {
+                    updateStreamingMessage('Error: Connection lost');
+                }
+            };
+        }
+        
+        function handleQEStreamData(data) {
+            if (data.type === 'text') {
+                updateStreamingMessage(data.content);
+            } else if (data.type === 'report_link') {
+                // Handle special report link type
+                if (currentStreamingMessage) {
+                    // Finish any current streaming message first
+                    finishStreaming();
+                }
+                displayReportLink(data.url, data.text);
+            } else if (data.type === 'test_case' || data.type === 'tool_result') {
+                // Display test case
+                displayTestCase(data.content);
+            } else if (data.type === 'action_menu') {
+                // Display action menu after test case
+                displayActionMenu(data.content);
+            } else if (data.type === 'start_evaluation') {
+                // Start evaluation
+                startEvaluation(data.content);
+            } else if (data.type === 'save_test_case') {
+                // Save test case
+                saveTestCase(data.content);
+            } else if (data.type === 'thinking') {
+                updateStreamingMessage(data.content, 'thinking');
+            } else if (data.type === 'error') {
+                updateStreamingMessage('Error: ' + data.content);
+                finishStreaming();
+            }
+        }
+        
+        function createStreamingMessage() {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'qe-message assistant streaming';
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    <span class="streaming-content"></span>
+                    <span class="streaming-indicator">
+                        <span></span><span></span><span></span>
+                    </span>
+                </div>
+            `;
+            
+            const messagesContainer = document.getElementById('qe-messages');
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            return messageDiv;
+        }
+        
+        function updateStreamingMessage(content, type = 'text') {
+            if (!currentStreamingMessage) return;
+            
+            const contentSpan = currentStreamingMessage.querySelector('.streaming-content');
+            const currentText = contentSpan.textContent;
+            
+            // Append content
+            contentSpan.textContent = currentText + content;
+            
+            // Update styling if needed
+            if (type === 'thinking') {
+                currentStreamingMessage.classList.add('thinking');
+            }
+            
+            // Scroll to bottom
+            const messagesContainer = document.getElementById('qe-messages');
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        function finishStreaming() {
+            isStreaming = false;
+            updateSendButton();
+            
+            if (currentStreamingMessage) {
+                currentStreamingMessage.classList.remove('streaming');
+                const indicator = currentStreamingMessage.querySelector('.streaming-indicator');
+                if (indicator) indicator.remove();
+            }
+            
+            currentStreamingMessage = null;
+            
+            if (qeEventSource) {
+                qeEventSource.close();
+                qeEventSource = null;
+            }
+        }
+        
+        function appendMessage(type, content) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `qe-message ${type}`;
+            messageDiv.innerHTML = `<div class="message-content">${escapeHtml(content)}</div>`;
+            
+            const messagesContainer = document.getElementById('qe-messages');
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        function displayTestCase(testCaseCode) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'qe-message assistant';
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    <div class="test-case-container">
+                        <div class="test-case-header">
+                            <span>Generated Test Case</span>
+                            <button class="copy-btn" onclick="copyTestCase(this, '${escapeHtml(testCaseCode).replace(/'/g, "\\'")}')">
+                                Copy
+                            </button>
+                        </div>
+                        <pre class="test-case-code">${escapeHtml(testCaseCode)}</pre>
+                    </div>
+                </div>
+            `;
+            
+            const messagesContainer = document.getElementById('qe-messages');
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Don't finish streaming here - let action menu display after
+            // finishStreaming();
+        }
+        
+        function displayActionMenu(actionMenuText) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'qe-message assistant';
+            
+            // Convert the action menu text to formatted HTML with minimal formatting
+            const formattedMenu = actionMenuText
+                .replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>')
+                .replace(/\\n\\n/g, '<br><br>')
+                .replace(/\\n/g, '<br>')
+                .replace(/- /g, '<span style="color: #6c757d; margin-left: 1rem;">•</span> ');
+            
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    <div class="action-menu">
+                        ${formattedMenu}
+                    </div>
+                </div>
+            `;
+            
+            const messagesContainer = document.getElementById('qe-messages');
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Finish streaming after action menu is displayed
+            finishStreaming();
+        }
+        
+        function displayReportLink(url, text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'qe-message assistant';
+            
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    <a href="${url}" target="_blank" 
+                       style="display: inline-block; padding: 0.5rem 1rem; 
+                              background: #0066cc; color: white; 
+                              text-decoration: none; border-radius: 4px;
+                              font-weight: 500; font-size: 14px;
+                              box-shadow: 0 2px 4px rgba(0,102,204,0.2);
+                              transition: all 0.2s ease;"
+                       onmouseover="this.style.background='#0052a3'; this.style.boxShadow='0 4px 8px rgba(0,102,204,0.3)';"
+                       onmouseout="this.style.background='#0066cc'; this.style.boxShadow='0 2px 4px rgba(0,102,204,0.2)';">
+                        📊 ${text}
+                    </a>
+                </div>
+            `;
+            
+            const messagesContainer = document.getElementById('qe-messages');
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        function copyTestCase(button, code) {
+            // Decode the escaped code
+            const decodedCode = code.replace(/\\\\'/g, "'");
+            
+            navigator.clipboard.writeText(decodedCode).then(() => {
+                button.textContent = 'Copied!';
+                button.classList.add('copied');
+                
+                setTimeout(() => {
+                    button.textContent = 'Copy';
+                    button.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy test case');
+            });
+        }
+        
+        async function startEvaluation(testCase) {
+            // Create progress tracking message
+            const progressDiv = document.createElement('div');
+            progressDiv.className = 'qe-message assistant';
+            const timestamp = Date.now();
+            progressDiv.innerHTML = `
+                <div class="message-content">
+                    <div class="evaluation-progress">
+                        <h4>🚀 Evaluation Progress</h4>
+                        <div class="progress-steps" id="progress-steps-${timestamp}">
+                            <div class="progress-step pending" data-step="initialization">
+                                <span class="step-icon">⏳</span>
+                                <span class="step-label">Initializing evaluation...</span>
+                            </div>
+                            <div class="progress-step pending" data-step="query_execution">
+                                <span class="step-icon">⏳</span>
+                                <span class="step-label">Running query</span>
+                            </div>
+                            <div class="progress-step pending" data-step="dimension_evaluation">
+                                <span class="step-icon">⏳</span>
+                                <span class="step-label">Evaluating dimensions</span>
+                            </div>
+                            <div class="progress-step pending" data-step="completion">
+                                <span class="step-icon">⏳</span>
+                                <span class="step-label">Finalizing results</span>
+                            </div>
+                        </div>
+                        <div class="progress-details" id="progress-details-${timestamp}"></div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('qe-messages').appendChild(progressDiv);
+            scrollToBottom();
+            
+            const progressStepsId = `progress-steps-${timestamp}`;
+            const progressDetailsId = `progress-details-${timestamp}`;
+            
+            try {
+                // Call evaluation API
+                const response = await fetch('/api/evaluation/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        test_case: testCase,
+                        agent_type: 'cmo'
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to start evaluation: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                const evaluationId = result.evaluation_id;
+                
+                // Update initialization step
+                updateProgressStep(progressStepsId, 'initialization', 'active');
+                
+                // Start streaming evaluation progress
+                streamEvaluationProgress(evaluationId, progressStepsId, progressDetailsId);
+                
+            } catch (error) {
+                updateProgressStep(progressStepsId, 'initialization', 'error');
+                document.getElementById(progressDetailsId).innerHTML = 
+                    `<div class="error-message">❌ Failed to start evaluation: ${error.message}</div>`;
+            }
+        }
+        
+        function streamEvaluationProgress(evaluationId, progressStepsId, progressDetailsId) {
+            const eventSource = new EventSource(`/api/evaluation/stream/${evaluationId}`);
+            let currentStep = 'initialization';
+            let evaluationCompleted = false;
+            
+            eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === 'progress') {
+                    // Update progress based on content
+                    const content = data.content.toLowerCase();
+                    
+                    if (content.includes('initializ')) {
+                        updateProgressStep(progressStepsId, 'initialization', 'completed');
+                        currentStep = 'initialization';
+                    } else if (content.includes('query') || content.includes('cmo agent')) {
+                        updateProgressStep(progressStepsId, 'initialization', 'completed');
+                        updateProgressStep(progressStepsId, 'query_execution', 'active');
+                        currentStep = 'query_execution';
+                    } else if (content.includes('evaluat') || content.includes('dimension')) {
+                        updateProgressStep(progressStepsId, 'initialization', 'completed');
+                        updateProgressStep(progressStepsId, 'query_execution', 'completed');
+                        updateProgressStep(progressStepsId, 'dimension_evaluation', 'active');
+                        currentStep = 'dimension_evaluation';
+                    } else if (content.includes('complet') || content.includes('final')) {
+                        updateProgressStep(progressStepsId, 'initialization', 'completed');
+                        updateProgressStep(progressStepsId, 'query_execution', 'completed');
+                        updateProgressStep(progressStepsId, 'dimension_evaluation', 'completed');
+                        updateProgressStep(progressStepsId, 'completion', 'active');
+                        currentStep = 'completion';
+                    }
+                    
+                    // Add to details
+                    const detailsDiv = document.getElementById(progressDetailsId);
+                    if (detailsDiv) {
+                        const detailLine = document.createElement('div');
+                        detailLine.className = 'progress-detail';
+                        detailLine.innerHTML = `<span class="timestamp">${new Date().toLocaleTimeString()}</span> ${data.content}`;
+                        detailsDiv.appendChild(detailLine);
+                        detailsDiv.scrollTop = detailsDiv.scrollHeight;
+                    }
+                    
+                } else if (data.type === 'result') {
+                    // Mark evaluation as completed
+                    evaluationCompleted = true;
+                    
+                    // Mark all steps as completed
+                    updateProgressStep(progressStepsId, 'initialization', 'completed');
+                    updateProgressStep(progressStepsId, 'query_execution', 'completed');
+                    updateProgressStep(progressStepsId, 'dimension_evaluation', 'completed');
+                    updateProgressStep(progressStepsId, 'completion', 'completed');
+                    
+                    // Store result for QE Agent access
+                    window.lastEvaluationResult = data.data;
+                    console.log('Received evaluation result:', data.data);
+                    console.log('Report URL:', data.data.report_url);
+                    
+                    // Send result to backend QE Agent
+                    sendEvaluationResultToQEAgent(data.data);
+                    
+                    // Display result
+                    displayEvaluationResult(data.data);
+                    eventSource.close();
+                    
+                } else if (data.type === 'error') {
+                    // Mark current step as error
+                    updateProgressStep(progressStepsId, currentStep, 'error');
+                    
+                    const detailsDiv = document.getElementById(progressDetailsId);
+                    if (detailsDiv) {
+                        detailsDiv.innerHTML += `<div class="error-message">❌ ${data.content}</div>`;
+                    }
+                    eventSource.close();
+                }
+            };
+            
+            eventSource.onerror = (event) => {
+                // Don't show error if evaluation completed successfully
+                if (evaluationCompleted) {
+                    eventSource.close();
+                    return;
+                }
+                
+                // Check if the EventSource is in the CLOSED state (which happens on successful completion)
+                if (eventSource.readyState === EventSource.CLOSED) {
+                    // This is likely just the stream closing normally
+                    console.log('Evaluation stream closed normally');
+                    return;
+                }
+                
+                // Only show error if evaluation didn't complete
+                updateProgressStep(progressStepsId, currentStep, 'error');
+                const detailsDiv = document.getElementById(progressDetailsId);
+                if (detailsDiv) {
+                    detailsDiv.innerHTML += '<div class="error-message">❌ Lost connection to evaluation stream</div>';
+                }
+                eventSource.close();
+            };
+        }
+        
+        function updateProgressStep(stepsContainerId, stepName, status) {
+            const step = document.querySelector(`#${stepsContainerId} [data-step="${stepName}"]`);
+            if (!step) return;
+            
+            // Remove all status classes
+            step.classList.remove('pending', 'active', 'completed', 'error');
+            step.classList.add(status);
+            
+            // Update icon based on status
+            const iconSpan = step.querySelector('.step-icon');
+            switch(status) {
+                case 'active':
+                    iconSpan.innerHTML = '⚡';
+                    break;
+                case 'completed':
+                    iconSpan.innerHTML = '✅';
+                    break;
+                case 'error':
+                    iconSpan.innerHTML = '❌';
+                    break;
+                default:
+                    iconSpan.innerHTML = '⏳';
+            }
+        }
+        
+        async function sendEvaluationResultToQEAgent(result) {
+            try {
+                const response = await fetch(`/api/qe/evaluation-result/${TRACE_ID}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(result)
+                });
+                
+                if (!response.ok) {
+                    console.error('Failed to send evaluation result to QE Agent:', response.statusText);
+                } else {
+                    console.log('Successfully sent evaluation result to QE Agent');
+                }
+            } catch (error) {
+                console.error('Error sending evaluation result to QE Agent:', error);
+            }
+        }
+        
+        function displayEvaluationResult(result) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'qe-message assistant';
+            
+            const overallScore = (result.overall_score * 100).toFixed(1);
+            const overallScoreNum = parseFloat(overallScore);
+            const passed = overallScoreNum >= 70; // Assuming 70% is passing
+            
+            // Format dimension results
+            const dimensionItems = Object.entries(result.dimension_results)
+                .map(([name, dim]) => {
+                    const score = (dim.normalized_score * 100).toFixed(1);
+                    const scoreNum = parseFloat(score);
+                    const scoreClass = scoreNum >= 80 ? 'high' : scoreNum >= 50 ? 'medium' : 'low';
+                    const displayName = name.replace(/_/g, ' ');
+                    // Generate feedback from details or use default
+                    let feedback = '';
+                    if (dim.feedback) {
+                        feedback = dim.feedback;
+                    } else if (dim.details) {
+                        // Create feedback from details
+                        if (dim.details.message) {
+                            feedback = dim.details.message;
+                        } else if (dim.details.expected && dim.details.actual) {
+                            feedback = `Expected: ${dim.details.expected}, Actual: ${dim.details.actual}`;
+                        } else if (dim.details.precision !== undefined && dim.details.recall !== undefined) {
+                            feedback = `Precision: ${(dim.details.precision * 100).toFixed(1)}%, Recall: ${(dim.details.recall * 100).toFixed(1)}%`;
+                        } else {
+                            feedback = `Evaluated using ${dim.evaluation_method}`;
+                        }
+                    } else {
+                        feedback = `Evaluated using ${dim.evaluation_method}`;
+                    }
+                    
+                    return `
+                        <div class="dimension-item">
+                            <div class="dimension-header">
+                                <span class="dimension-name">${displayName}</span>
+                                <span class="dimension-score ${scoreClass}">${score}%</span>
+                            </div>
+                            <div class="dimension-feedback">${feedback}</div>
+                        </div>
+                    `;
+                }).join('');
+            
+            const overallClass = overallScoreNum >= 80 ? 'high' : overallScoreNum >= 50 ? 'medium' : 'low';
+            
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    <div class="evaluation-result">
+                        <h4>📊 Evaluation Complete</h4>
+                        <div class="result-summary">
+                            <div class="overall-score ${overallClass}">
+                                <span class="score-label">Overall Score</span>
+                                <span class="score-value">${overallScore}%</span>
+                            </div>
+                            <div class="pass-fail ${passed ? 'passed' : 'failed'}">
+                                ${passed ? '✅ PASSED' : '❌ FAILED'}
+                            </div>
+                        </div>
+                        
+                        <div class="dimensions-section">
+                            <h5>Dimension Scores</h5>
+                            ${dimensionItems}
+                        </div>
+                        
+                        <div class="execution-details">
+                            <span>🏃 Test Case: ${result.test_case_id}</span><br>
+                            <span>⏱️ Execution time: ${(result.execution_time_ms / 1000).toFixed(2)}s</span>
+                        </div>
+                        
+                        ${result.report_url ? `
+                        <div class="report-link" style="margin-top: 1rem;">
+                            <a href="${result.report_url}" target="_blank" class="view-report-btn" 
+                               style="display: inline-block; padding: 0.5rem 1rem; background: #0066cc; 
+                                      color: white; text-decoration: none; border-radius: 4px;">
+                                📊 View Full Evaluation Report
+                            </a>
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="action-menu" style="margin-top: 20px; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+                        <strong>What would you like to do next?</strong><br><br>
+                        
+                        <strong>Continue testing:</strong><br>
+                        • Type "new" to create another test case<br>
+                        • Type "refine" to update this test case<br>
+                        • Type "save" to save this test case<br><br>
+                        
+                        <strong>View results:</strong><br>
+                        • Type "details" for full evaluation report<br>
+                        • Type "export" to download results
+                    </div>
+                </div>
+            `;
+            
+            const messagesContainer = document.getElementById('qe-messages');
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        function scrollToBottom() {
+            const messages = document.getElementById('qe-messages');
+            if (messages) {
+                messages.scrollTop = messages.scrollHeight;
+            }
+        }
+        
+        async function saveTestCase(testCase) {
+            try {
+                const response = await fetch('/api/evaluation/test-case/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        test_case: testCase,
+                        session_id: window.currentTraceId // Use trace ID as session
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to save: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                appendMessage('assistant', `✅ ${result.message}`);
+                
+            } catch (error) {
+                appendMessage('assistant', `❌ Failed to save test case: ${error.message}`);
+            }
+        }
+        
+        function updateSendButton() {
+            const button = document.querySelector('.qe-send-btn');
+            const input = document.getElementById('qe-input');
+            
+            if (isStreaming) {
+                button.disabled = true;
+                button.textContent = 'Streaming...';
+            } else {
+                button.disabled = input.value.trim() === '';
+                button.textContent = 'Send';
+            }
+        }
+        
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+        
+        // Auto-resize textarea
+        document.addEventListener('DOMContentLoaded', () => {
+            const textarea = document.getElementById('qe-input');
+            if (textarea) {
+                textarea.addEventListener('input', () => {
+                    textarea.style.height = '80px';
+                    textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+                    updateSendButton();
+                });
+                
+                textarea.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendQEMessage();
+                    }
+                });
+            }
+            
+            // Initialize stage click integration
+            document.addEventListener('click', (e) => {
+                const stageHeader = e.target.closest('.stage-header');
+                if (stageHeader && e.ctrlKey) {
+                    // Add context to QE input
+                    const stageName = stageHeader.querySelector('.stage-name').textContent.replace(/📍\\s*/, '');
+                    const input = document.getElementById('qe-input');
+                    input.value = `Looking at stage "${stageName}": `;
+                    input.focus();
+                }
+            });
+        });
+    """
+
+
+def _generate_qe_chat_panel(trace: CompleteTrace) -> str:
+    """Generate the QE chat panel HTML"""
+    # Extract query from trace
+    query = "Unknown query"
+    for event in trace.events:
+        if event.event_type == TraceEventType.USER_QUERY:
+            query = event.data.get("query", query)
+            break
+    
+    return f"""
+        <div class="qe-header">
+            <h2>🔍 QE Agent - Test Case Generator</h2>
+            <p>Analyze this trace and generate test cases for evaluation</p>
+        </div>
+        
+        <div class="qe-messages" id="qe-messages">
+            <div class="qe-message assistant">
+                <div class="message-content">
+                    Hello! I'm the QE (Quality Evaluation) Agent. I can help you analyze this trace and generate test cases for the CMO agent evaluation.
+                    
+                    <br><br>
+                    <strong>Query analyzed:</strong> "{html.escape(query[:100])}{'...' if len(query) > 100 else ''}"
+                    
+                    <br><br>
+                    Tell me what issues you've identified, or click on a stage in the trace viewer (with Ctrl) to discuss specific problems.
+                </div>
+            </div>
+        </div>
+        
+        <div class="qe-input-container">
+            <div class="qe-input-wrapper">
+                <textarea 
+                    id="qe-input" 
+                    placeholder="Describe the issue you found (e.g., 'The complexity should be COMPLEX not STANDARD')"
+                    rows="3"
+                ></textarea>
+                <button class="qe-send-btn" onclick="sendQEMessage()">Send</button>
+            </div>
+        </div>
+    """

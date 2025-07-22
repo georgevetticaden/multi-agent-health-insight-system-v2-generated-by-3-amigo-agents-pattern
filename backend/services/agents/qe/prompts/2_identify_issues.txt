@@ -1,0 +1,30 @@
+Based on the user's feedback about this trace, identify specific issues according to the CMO Agent Error Taxonomy:
+
+**Error Taxonomy:**
+1. **Complexity Classification**: Accuracy in categorizing query complexity levels (SIMPLE/STANDARD/COMPLEX/COMPREHENSIVE)
+   - SIMPLE: Single data point queries, basic lookups
+   - STANDARD: Trend analysis, single specialist domain
+   - COMPLEX: Multi-factor correlations, multiple specialists
+   - COMPREHENSIVE: Extensive multi-year analysis across domains
+
+2. **Specialty Selection**: Precision in selecting appropriate medical specialists
+   - Missing required specialists
+   - Including unnecessary specialists
+   - Wrong specialist for the domain
+
+3. **Analysis Quality**: Comprehensiveness of orchestrated medical analysis
+   - Incomplete data gathering
+   - Missing key correlations
+   - Insufficient depth of analysis
+
+4. **Tool Usage**: Effectiveness of health data tool usage
+   - Inefficient queries
+   - Missing important data sources
+   - Incorrect tool parameters
+
+5. **Response Structure**: Compliance with expected XML format
+   - Malformed XML
+   - Missing required sections
+   - Incorrect data formatting
+
+When the user describes an issue, map it to one or more of these categories and explain why it falls into that category.

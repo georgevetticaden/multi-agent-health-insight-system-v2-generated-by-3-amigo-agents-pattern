@@ -5,6 +5,7 @@ Uses agent metadata to dynamically generate evaluation reports without hardcodin
 """
 
 import json
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional
@@ -17,6 +18,8 @@ from evaluation.core.dimensions import (
     EvaluationDimension,
     EvaluationCriteria
 )
+
+logger = logging.getLogger(__name__)
 
 
 class DynamicHTMLReportGenerator:
@@ -54,32 +57,54 @@ class DynamicHTMLReportGenerator:
     
     def generate_html_report(self, evaluation_results: Dict[str, Any]) -> Path:
         """Generate HTML report using agent metadata"""
+        logger.info(f"=== DYNAMIC HTML REPORT GENERATION START ===")
+        logger.info(f"Report directory: {self.report_dir}")
+        logger.info(f"Agent type: {self.agent_type}")
+        logger.info(f"Number of test results: {len(evaluation_results.get('results', []))}")
         
         # Generate visualizations
         if "results" in evaluation_results:
+            logger.info(f"Generating visualizations for {len(evaluation_results['results'])} results...")
             self._generate_visualizations(evaluation_results)
+        else:
+            logger.warning("No 'results' found in evaluation data, skipping visualizations")
         
         # Prepare template data with metadata
+        logger.info("Preparing template data...")
         template_data = self._prepare_template_data(evaluation_results)
+        logger.info(f"Template data keys: {list(template_data.keys())}")
         
         # Add agent-specific metadata
+        logger.info("Adding agent metadata to template data...")
         template_data['agent_metadata'] = self.agent_metadata.to_report_data()
         
         # Load template and render
         template_file = "report_template_health_insight.html"
-        template = self.env.get_template(template_file)
+        logger.info(f"Loading template: {template_file}")
+        try:
+            template = self.env.get_template(template_file)
+            logger.info("Template loaded successfully")
+        except Exception as e:
+            logger.error(f"Failed to load template: {e}")
+            raise
+        
+        logger.info("Rendering HTML from template...")
         html_content = template.render(**template_data)
+        logger.info(f"Rendered HTML size: {len(html_content)} characters")
         
         # Save HTML report
         html_path = self.report_dir / "report.html"
         with open(html_path, 'w', encoding='utf-8') as f:
             f.write(html_content)
+        logger.info(f"Saved HTML report to: {html_path}")
         
         # Save raw results
         raw_data_path = self.report_dir / "raw_results.json"
         with open(raw_data_path, 'w') as f:
             json.dump(evaluation_results, f, indent=2, default=str)
+        logger.info(f"Saved raw results to: {raw_data_path}")
         
+        logger.info(f"=== DYNAMIC HTML REPORT GENERATION COMPLETE ===")
         return self.report_dir
     
     def _prepare_template_data(self, results: Dict[str, Any]) -> Dict[str, Any]:

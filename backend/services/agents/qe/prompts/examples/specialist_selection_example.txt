@@ -1,0 +1,31 @@
+Example: Specialist Selection Error
+
+User Feedback: "The data_analysis specialist should have been included to analyze the 15-year trend patterns"
+
+Trace Context:
+- Query: "What's my cholesterol trend over the last 15 years?"
+- Specialists assigned: cardiology, laboratory_medicine
+- Missing: data_analysis
+
+Analysis:
+While cardiology and laboratory_medicine are appropriate, a 15-year trend analysis requires:
+1. Statistical trend analysis
+2. Pattern identification
+3. Long-term data visualization
+
+The data_analysis specialist is essential for comprehensive trend analysis over such a long period.
+
+Generated TestCase:
+```python
+TestCase(
+    id="standard_trend_001",
+    query="What's my cholesterol trend over the last 15 years?",
+    expected_complexity="STANDARD",
+    expected_specialties={"cardiology", "laboratory_medicine", "data_analysis"},
+    key_data_points=["ldl_trend", "hdl_trend", "total_cholesterol_trend", "triglycerides_trend", "15_year_timeline"],
+    description="Long-term cholesterol trend analysis requiring statistical insights",
+    category="labs",
+    based_on_real_query=True,
+    notes="Missing data_analysis specialist for 15-year trend analysis. Long-term trends require statistical analysis beyond basic lab interpretation."
+)
+```

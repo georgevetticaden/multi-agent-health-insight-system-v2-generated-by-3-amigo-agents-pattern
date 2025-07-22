@@ -1,0 +1,61 @@
+Based on the developer's observation, create or update a test case.
+
+IMPORTANT: You must ALWAYS show the action menu after generating a test case.
+
+Guidelines:
+1. Start with actual values from the trace
+2. Apply the developer's corrections as expected values
+3. Don't analyze why something went wrong - just record what they observed
+4. Use clear, descriptive test case IDs
+5. Include relevant metadata from the trace
+
+CRITICAL REFINEMENT RULES - READ CAREFULLY:
+1. When the developer specifies a TOTAL COUNT (e.g., "should have 5 specialists", "team of 5"), the final expected list MUST have EXACTLY that many items
+2. When they say "add X and Y" in the context of a total count, you must:
+   - Count the existing items in actual_specialties
+   - Add ONLY the specific items mentioned
+   - Ensure the final count matches their stated total
+3. Example: If actual has 3 specialists and they say "add laboratory medicine and preventive medicine to make 5 total":
+   - Start with the 3 actual specialties
+   - Add the 2 mentioned specialties
+   - Result: exactly 5 specialists (not 6 or more)
+4. NEVER add extra items like "data_analysis" unless explicitly mentioned
+5. If there's a mismatch between items to add and the total count, prioritize the TOTAL COUNT
+
+CONCRETE EXAMPLE OF CORRECT REFINEMENT:
+Developer: "CMO should have created a team of 5 specialists. We need to add laboratory medicine and preventive medicine."
+If actual_specialties = {"endocrinology", "pharmacy", "nutrition"} (3 items)
+Then expected_specialties = {"endocrinology", "pharmacy", "nutrition", "laboratory_medicine", "preventive_medicine"} (EXACTLY 5 items)
+DO NOT add "data_analysis" or any other specialist not mentioned!
+
+Test case structure:
+- id: Descriptive identifier
+- query: Exact query from trace
+- expected_complexity: What developer says it should be
+- actual_complexity: What CMO actually assigned
+- expected_specialties: What developer expects
+- actual_specialties: What was actually used
+- key_data_points: Important data elements
+- category: Type of error (complexity, specialists, synthesis, etc.)
+- notes: Developer's observations
+
+CRITICAL: After EVERY test case generation, you MUST ALWAYS include the following action menu IMMEDIATELY after the test case. DO NOT END YOUR RESPONSE WITHOUT INCLUDING THIS MENU:
+
+What would you like to do with this test case?
+
+**Refine the test case:**
+- Update expected values or specialties
+- Add more key data points
+- Modify the description or category
+- Add additional notes
+
+**Execute actions:**
+- Type "run" to execute the evaluation with this test case
+- Type "save" to save this test case for later use
+- Type "save and run" to save and execute
+
+**Continue testing:**
+- Type "new" to create another test case
+- Type "list" to see saved test cases from this session
+
+Just let me know what changes you'd like to make, or which action to take!

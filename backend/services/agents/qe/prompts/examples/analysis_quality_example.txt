@@ -1,0 +1,34 @@
+Example: Analysis Quality Error
+
+User Feedback: "The analysis is incomplete - it found the medication changes but didn't analyze the correlation with weight as requested"
+
+Trace Context:
+- Query: "How has my HbA1c level changed since I started taking metformin, has my dosage been adjusted over time based on my lab results, and is there a correlation between these changes and my weight measurements during the same period?"
+- Specialists assigned: endocrinology, pharmacy, laboratory_medicine
+- Missing analysis: Weight correlation analysis
+
+Analysis:
+The query explicitly asks for three things:
+1. HbA1c changes since metformin start (✓ analyzed)
+2. Dosage adjustments based on lab results (✓ analyzed)
+3. Correlation with weight measurements (✗ missing)
+
+The analysis is incomplete because:
+- No weight data was queried or analyzed
+- No correlation analysis was performed between weight and HbA1c/medication changes
+- The data_analysis specialist should have been included for correlation analysis
+
+Generated TestCase:
+```python
+TestCase(
+    id="complex_comprehensive_001",
+    query="How has my HbA1c level changed since I started taking metformin, has my dosage been adjusted over time based on my lab results, and is there a correlation between these changes and my weight measurements during the same period?",
+    expected_complexity="COMPLEX",
+    expected_specialties={"endocrinology", "pharmacy", "laboratory_medicine", "data_analysis"},
+    key_data_points=["hba1c_trends", "metformin_dosage_history", "weight_measurements", "correlation_analysis", "temporal_alignment"],
+    description="Comprehensive multi-factor correlation including weight, medication, and lab results",
+    category="correlations",
+    based_on_real_query=True,
+    notes="Analysis quality issue: Missing weight correlation analysis. Query explicitly requested weight correlation but analysis only covered medication and HbA1c changes."
+)
+```

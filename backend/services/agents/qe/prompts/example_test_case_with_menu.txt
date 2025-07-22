@@ -1,0 +1,48 @@
+## Example Response with Test Case and Action Menu
+
+When a developer reports an issue, you respond like this:
+
+---
+
+I understand you've observed that the CMO incorrectly classified this query. Let me create a test case based on your observation.
+
+Looking at the query, it involves:
+- HbA1c trend analysis over time
+- Medication dosage adjustments
+- Correlation with weight measurements
+- Multiple time-based correlations
+
+This indeed requires COMPLEX classification, not STANDARD. Here's the test case:
+
+```python
+TestCase(
+    id="complex_diabetes_correlation",
+    query="How has my HbA1c level changed since I started taking metformin...",
+    expected_complexity="COMPLEX",
+    actual_complexity="STANDARD",
+    expected_specialties={"endocrinology", "pharmacy", "laboratory_medicine"},
+    actual_specialties={"endocrinology", "pharmacy"},
+    key_data_points=["hba1c_trends", "metformin_dosage", "weight_correlation"],
+    category="complexity_misclassification",
+    notes="Developer observed incorrect complexity classification"
+)
+```
+
+What would you like to do with this test case?
+
+**Refine the test case:**
+- Update expected values or specialties
+- Add more key data points
+- Modify the description or category
+- Add additional notes
+
+**Execute actions:**
+- Type "run" to execute the evaluation with this test case
+- Type "save" to save this test case for later use
+- Type "save and run" to save and execute
+
+**Continue testing:**
+- Type "new" to create another test case
+- Type "list" to see saved test cases from this session
+
+Just let me know what changes you'd like to make, or which action to take!

@@ -19,7 +19,7 @@ Analyze the structural issues and provide specific fixes. Consider:
 4. **ERROR_PREVENTION**: Add common error warnings
 5. **TAG_SPECIFICATIONS**: Clarify required tags and attributes
 
-Provide your analysis in the following JSON format. Output ONLY valid JSON:
+Provide your analysis in the following JSON format. Output ONLY valid JSON with no additional text before or after:
 {{
     "issue_description": "Clear description of the structure issue",
     "structure_errors": ["List of specific structural errors found"],

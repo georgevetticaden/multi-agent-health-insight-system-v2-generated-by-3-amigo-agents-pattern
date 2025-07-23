@@ -268,7 +268,7 @@ class ReportService:
             "approach_text": evaluation_result.get("metadata", {}).get("approach_text", ""),
             
             # Failure analysis (if available)
-            "failure_analyses": {}
+            "failure_analyses": evaluation_result.get("metadata", {}).get("failure_analyses", [])
         }
         
         # Calculate summary statistics  

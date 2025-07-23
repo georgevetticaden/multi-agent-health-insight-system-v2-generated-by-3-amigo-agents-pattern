@@ -201,7 +201,7 @@ class CMOEvaluator(BaseEvaluator):
         if anthropic_client:
             self.llm_judge = LLMTestJudge(
                 anthropic_client=anthropic_client,
-                model="claude-3-sonnet-20240229"  # Use Sonnet for evaluation
+                model="claude-opus-4-20250514"  # Use Opus 4 for evaluation, claude-3-7-sonnet-20250219 or claude-opus-4-20250514
             )
         
         # Get metadata from the agent class and set it for BaseEvaluator
@@ -696,7 +696,7 @@ class CMOEvaluator(BaseEvaluator):
             logger.warning(f"LLM Judge context awareness evaluation failed: {e}")
             return self._get_default_score_for_method(EvaluationMethod.LLM_JUDGE)
 
-    async def _llm_judge_specialist_rationale(self, analysis: str) -> float:
+    async def _llm_judge_specialist_rationale(self, analysis: str, query: str = "", specialists: List[str] = None) -> float:
         """
         Evaluate specialist selection rationale using LLM Judge.
         
@@ -705,29 +705,47 @@ class CMOEvaluator(BaseEvaluator):
         
         Args:
             analysis: Agent's analysis text containing specialist rationale
+            query: Original patient query for context
+            specialists: List of actual specialists selected (optional)
             
         Returns:
             Score from 0.0 to 1.0 indicating rationale quality
         """
-        logger.debug(f"          🤖 LLM Judge evaluating specialist rationale...")
+        logger.info(f"          🤖 LLM Judge evaluating specialist rationale...")
+        logger.info(f"          Analysis length: {len(analysis)} characters")
+        logger.info(f"          Query length: {len(query)} characters" if query else "          No query provided")
+        
         if not self.llm_judge:
-            logger.debug(f"          LLM Judge not available, returning default score")
+            logger.warning(f"          ❌ LLM Judge not available, returning default score (0.5)")
             return self._get_default_score_for_method(EvaluationMethod.LLM_JUDGE)
         
         try:
-            # Extract specialists from the analysis to provide context
-            specialists = list(self._extract_specialties_from_analysis(analysis))
-            logger.debug(f"          Specialists found in analysis: {specialists}")
+            # Use provided specialists or try to extract from analysis
+            if specialists is None:
+                specialists = list(self._extract_specialties_from_analysis(analysis))
+                logger.info(f"          Specialists extracted from analysis: {specialists}")
+            else:
+                logger.info(f"          Specialists provided: {specialists}")
+            
+            logger.info(f"          Query for context: {query[:100]}..." if query else "          No query provided")
+            
+            logger.info(f"          🚀 Calling LLM Judge score_specialist_rationale...")
             result = await self.llm_judge.score_specialist_rationale(
                 approach=analysis, 
                 specialists=specialists, 
-                query=""  # Query is embedded in the analysis
+                query=query
             )
-            logger.debug(f"          Specialist rationale score: {result.score:.3f}")
-            logger.debug(f"          Reasoning: {result.reasoning[:100]}...")
+            logger.info(f"          ✅ LLM Judge returned specialist rationale score: {result.score:.3f}")
+            logger.info(f"          📝 LLM Judge reasoning: {result.reasoning[:200]}...")
+            
+            if result.score == 0.0:
+                logger.warning(f"          ⚠️  LLM Judge returned exactly 0.0 - this may indicate an issue")
+                logger.warning(f"          📄 Full reasoning: {result.reasoning}")
+            
             return result.score
         except Exception as e:
-            logger.warning(f"LLM Judge specialist rationale evaluation failed: {e}")
+            logger.error(f"          ❌ LLM Judge specialist rationale evaluation failed: {e}")
+            logger.error(f"          📊 Returning default LLM Judge score (0.5)")
             return self._get_default_score_for_method(EvaluationMethod.LLM_JUDGE)
 
     async def _llm_judge_comprehensive_approach(self, analysis: str, key_concepts: List[str], query: str) -> float:
@@ -974,6 +992,13 @@ class CMOEvaluator(BaseEvaluator):
                 # Calculate success rate from raw data
                 calls_made = result_data.get('tool_calls_made', 0)
                 successful_calls = result_data.get('successful_tool_calls', 0)
+                
+                # Use updated totals from initial_data_gathered if available
+                initial_data = result_data.get('initial_data_gathered', {})
+                if isinstance(initial_data, dict):
+                    calls_made = initial_data.get('total_tool_calls_all_stages', calls_made)
+                    successful_calls = initial_data.get('total_successful_tool_calls', successful_calls)
+                
                 return successful_calls / calls_made if calls_made > 0 else 0.0
                 
             elif component.name == "tool_relevance":
@@ -1034,7 +1059,16 @@ class CMOEvaluator(BaseEvaluator):
         if dimension.name == "specialty_selection":
             if component.name == "specialist_rationale":
                 # Evaluate the rationale for specialist selection
-                return await self._llm_judge_specialist_rationale(result_data.get('approach_text', ''))
+                logger.info(f"      🎯 Routing to LLM Judge for specialty_selection.specialist_rationale")
+                approach_text = result_data.get('approach_text', '')
+                query = result_data.get('query', '')
+                actual_specialties = result_data.get('actual_specialties', set())
+                # Convert set to list of specialist names
+                specialists = list(actual_specialties) if actual_specialties else []
+                logger.info(f"         📄 Approach text available: {bool(approach_text)} ({len(approach_text)} chars)")
+                logger.info(f"         🔍 Query available: {bool(query)} ({len(query) if query else 0} chars)")
+                logger.info(f"         👥 Actual specialists: {specialists}")
+                return await self._llm_judge_specialist_rationale(approach_text, query, specialists)
         
         elif dimension.name == "analysis_quality":
             if component.name == "context_awareness":
@@ -1046,7 +1080,11 @@ class CMOEvaluator(BaseEvaluator):
             elif component.name == "specialist_rationale":
                 # Evaluate specialist task assignment rationale
                 approach_text = result_data.get('approach_text', '')
-                return await self._llm_judge_specialist_rationale(approach_text)
+                query = result_data.get('query', '')
+                actual_specialties = result_data.get('actual_specialties', set())
+                # Convert set to list of specialist names
+                specialists = list(actual_specialties) if actual_specialties else []
+                return await self._llm_judge_specialist_rationale(approach_text, query, specialists)
                 
             elif component.name == "comprehensive_approach":
                 # Evaluate comprehensiveness of approach
@@ -1139,13 +1177,31 @@ class CMOEvaluator(BaseEvaluator):
                 )
             
             elif dimension_name == "tool_usage":
+                # Use updated tool call counts if available
+                initial_data = result_data.get('initial_data_gathered', {})
+                
+                # Get tool counts from updated values if available
+                if isinstance(initial_data, dict) and 'total_tool_calls_all_stages' in initial_data:
+                    tool_calls_made = initial_data.get('total_tool_calls_all_stages', result_data.get('tool_calls_made', 0))
+                    successful_calls = initial_data.get('total_successful_tool_calls', result_data.get('successful_tool_calls', 0))
+                else:
+                    tool_calls_made = result_data.get('tool_calls_made', 0)
+                    successful_calls = result_data.get('successful_tool_calls', 0)
+                
+                tool_success_rate = successful_calls / tool_calls_made if tool_calls_made > 0 else 0.0
+                
+                logger.info(f"Tool usage LLM Judge parameters:")
+                logger.info(f"  - tool_calls_made: {tool_calls_made}")
+                logger.info(f"  - successful_calls: {successful_calls}")
+                logger.info(f"  - tool_success_rate: {tool_success_rate}")
+                
                 return await self.llm_judge.analyze_tool_usage_issues(
                     agent_type="cmo",
                     query=test_case.query,
-                    tool_calls_made=result_data.get('tool_calls_made', 0),
-                    tool_success_rate=result_data.get('successful_tool_calls', 0) / result_data.get('tool_calls_made', 1) if result_data.get('tool_calls_made', 0) > 0 else 0.0,
+                    tool_calls_made=tool_calls_made,
+                    tool_success_rate=tool_success_rate,
                     tool_relevance_score=result_data.get('tool_relevance_score', 0.0),
-                    initial_data_gathered=result_data.get('initial_data_gathered', {})
+                    initial_data_gathered=initial_data
                 )
             
             elif dimension_name == "response_structure":

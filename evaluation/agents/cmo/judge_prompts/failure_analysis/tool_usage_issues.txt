@@ -21,10 +21,9 @@ Analyze why the tool usage was insufficient. Consider:
 - Missing temporal context in queries
 - Failed to query related data
 
-Provide your analysis in the following JSON format. Output ONLY valid JSON:
+Provide your analysis in the following JSON format. Output ONLY valid JSON with no additional text before or after:
 {{
     "issue_description": "Clear description of the tool usage issue",
-    "root_cause": "Why the tool usage was insufficient",
     "failed_queries": [
         {{
             "query": "The actual query that was made",
@@ -42,12 +41,12 @@ Provide your analysis in the following JSON format. Output ONLY valid JSON:
     "recommendations": [
         {{
             "category": "QUERY_PATTERN",
-            "recommendation": "ADD to tool usage guidance: 'For trending queries, always include date range parameters: WHERE date >= DATEADD(month, -3, CURRENT_DATE())'",
+            "content": "ADD to tool usage guidance: 'For trending queries, always include date range parameters: WHERE date >= DATEADD(month, -3, CURRENT_DATE())'",
             "expected_impact": "Will capture historical data needed for trend analysis"
         }},
         {{
-            "category": "ERROR_HANDLING", 
-            "recommendation": "ADD error recovery: 'If initial query returns no results, broaden search criteria and retry'",
+            "category": "ERROR_HANDLING",
+            "content": "ADD error recovery: 'If initial query returns no results, broaden search criteria and retry'",
             "expected_impact": "Reduces false negatives from overly specific queries"
         }}
     ],

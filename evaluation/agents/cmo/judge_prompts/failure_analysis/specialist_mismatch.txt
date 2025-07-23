@@ -35,7 +35,16 @@ Based on this analysis and the actual prompt content above, provide specific, ac
 4. **RULE MODIFICATIONS**: Change selection logic (format: "MODIFY RULE: [Specific change]")
 5. **KEYWORD MAPPINGS**: Add query keyword to specialist mappings
 
-Provide your analysis in the following JSON format. Output ONLY valid JSON with no additional text before or after:
+CRITICAL INSTRUCTIONS FOR YOUR RESPONSE:
+1. You MUST return a COMPLETE, VALID JSON object
+2. Do NOT truncate or cut off your response
+3. Ensure ALL brackets and quotes are properly closed
+4. The JSON must be parseable by standard JSON parsers
+5. Do not include any text before or after the JSON object
+6. Make sure to include ALL required fields in the response
+7. Even if you have many recommendations, include them ALL - do not truncate
+
+Provide your analysis in EXACTLY the following JSON format. Output ONLY valid, complete JSON with no additional text before or after:
 {{
     "prompt_file": "backend/services/agents/cmo/prompts/3_assign_specialist_tasks.txt",
     "issue_description": "Clear description of why the specialist selection failed",

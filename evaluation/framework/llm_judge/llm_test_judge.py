@@ -288,26 +288,45 @@ class LLMTestJudge:
         
         try:
             response_text = response.content[0].text.strip()
-            logger.debug(f"LLM Judge response for specialist rationale: {response_text[:200]}...")
+            logger.info(f"          📄 LLM Judge specialist rationale response: {response_text[:300]}...")
             
             import re
             score_match = re.search(r'<score>([\d.]+)</score>', response_text)
             reasoning_match = re.search(r'<reasoning>(.*?)</reasoning>', response_text, re.DOTALL)
             
             if not score_match:
-                logger.warning(f"No score found in response: {response_text[:100]}...")
-                return ScoringResult(score=0.5, reasoning="Failed to parse score from response")
+                logger.warning(f"          ❌ XML parsing failed: No <score> tag found in response")
+                logger.warning(f"          📄 Full response: {response_text}")
+                return ScoringResult(score=0.5, reasoning="Failed to parse score from response - no <score> tag found")
             
-            score = float(score_match.group(1))
-            score = max(0.0, min(1.0, score))  # Clamp to valid range
+            score_text = score_match.group(1)
+            logger.info(f"          ✅ Found score in XML: '{score_text}'")
             
-            reasoning = reasoning_match.group(1).strip() if reasoning_match else "No reasoning provided"
+            try:
+                score = float(score_text)
+                original_score = score
+                score = max(0.0, min(1.0, score))  # Clamp to valid range
+                
+                if original_score != score:
+                    logger.warning(f"          ⚠️  Score {original_score} was clamped to {score}")
+                    
+            except ValueError as ve:
+                logger.error(f"          ❌ Could not convert score '{score_text}' to float: {ve}")
+                return ScoringResult(score=0.5, reasoning=f"Invalid score format: '{score_text}'")
             
-            logger.debug(f"Parsed specialist rationale - Score: {score}, Reasoning: {reasoning[:50]}...")
+            if not reasoning_match:
+                logger.warning(f"          ⚠️  No <reasoning> tag found, using default")
+                reasoning = "No reasoning provided in response"
+            else:
+                reasoning = reasoning_match.group(1).strip()
+                logger.info(f"          ✅ Found reasoning: {reasoning[:100]}...")
+            
+            logger.info(f"          🎯 Final specialist rationale result: score={score:.3f}")
             return ScoringResult(score=score, reasoning=reasoning)
+            
         except Exception as e:
-            logger.error(f"Failed to parse specialist rationale score: {e}")
-            logger.error(f"Response was: {response.content[0].text[:200] if response.content else 'No content'}")
+            logger.error(f"          ❌ Exception during specialist rationale XML parsing: {e}")
+            logger.error(f"          📄 Response was: {response.content[0].text[:500] if response.content else 'No content'}")
             return ScoringResult(score=0.5, reasoning=f"Parsing error: {str(e)}")
     
     async def score_comprehensive_approach(self, analysis: str, query: str, key_areas: List[str]) -> ScoringResult:
@@ -574,18 +593,27 @@ class LLMTestJudge:
         
         response = self.client.messages.create(
             model=self.model,
-            max_tokens=1000,
+            max_tokens=4000,
             messages=[{"role": "user", "content": prompt}]
         )
         
         try:
             response_text = response.content[0].text.strip()
+            logger.info(f"Raw LLM response for complexity mismatch (first 1000 chars): {response_text[:1000]}...")
+            if len(response_text) > 1000:
+                logger.info(f"Raw LLM response (chars 1000-2000): {response_text[1000:2000]}...")
+            if len(response_text) > 2000:
+                logger.info(f"Raw LLM response (last 500 chars): ...{response_text[-500:]}")
+            
             import re
             json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', response_text, re.DOTALL)
             if json_match:
                 result = json.loads(json_match.group())
             else:
                 result = json.loads(response_text)
+            
+            logger.info(f"Parsed JSON keys: {list(result.keys())}")
+            logger.info(f"Full parsed result: {json.dumps(result, indent=2)}")
             
             # Extract recommendations from new format
             recommendations = []
@@ -598,7 +626,7 @@ class LLMTestJudge:
                         # Simple string format
                         recommendations.append(str(rec))
             
-            return FailureAnalysis(
+            failure_analysis = FailureAnalysis(
                 dimension="complexity_classification",
                 root_cause=result.get('root_cause', result.get('issue_description', '')),
                 specific_issues=result.get('complexity_indicators', []),
@@ -607,6 +635,13 @@ class LLMTestJudge:
                 prompt_file=result.get('prompt_file'),
                 expected_impact=result.get('expected_impact')
             )
+            
+            logger.info(f"✅ COMPLEXITY CLASSIFICATION ANALYSIS CREATED:")
+            logger.info(f"   root_cause: '{failure_analysis.root_cause[:50]}...' (length: {len(failure_analysis.root_cause)})")
+            logger.info(f"   specific_issues: {len(failure_analysis.specific_issues)} items")
+            logger.info(f"   recommendations: {len(failure_analysis.recommendations)} items")
+            
+            return failure_analysis
         except Exception as e:
             logger.error(f"Failed to parse complexity mismatch analysis: {e}")
             return FailureAnalysis(
@@ -647,58 +682,203 @@ class LLMTestJudge:
             actual_prompt_content=actual_prompt_content
         )
         
+        logger.info(f"=== LLM JUDGE SPECIALTY_SELECTION PROMPT ===")
+        logger.info(f"Prompt length: {len(prompt)} characters")
+        logger.info(f"First 1000 chars: {prompt[:1000]}")
+        if len(prompt) > 1000:
+            logger.info(f"Next 1000 chars: {prompt[1000:2000]}")
+        if len(prompt) > 2000:
+            logger.info(f"Final 500 chars: {prompt[-500:]}")
+        logger.info(f"=== END SPECIALTY_SELECTION PROMPT ===")
+        
         response = self.client.messages.create(
             model=self.model,
-            max_tokens=1000,
+            max_tokens=4000,
             messages=[{"role": "user", "content": prompt}]
         )
         
         try:
             response_text = response.content[0].text.strip()
-            logger.debug(f"Raw LLM response for specialist mismatch: {response_text[:500]}...")
+            logger.info(f"Raw LLM response for specialist mismatch (first 1000 chars): {response_text[:1000]}...")
+            if len(response_text) > 1000:
+                logger.info(f"Raw LLM response (chars 1000-2000): {response_text[1000:2000]}...")
+            if len(response_text) > 2000:
+                logger.info(f"Raw LLM response (last 500 chars): ...{response_text[-500:]}")
+            
             import re
-            json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', response_text, re.DOTALL)
-            if json_match:
-                result = json.loads(json_match.group())
+            
+            # Method 1: Try to extract from markdown code blocks (most reliable)
+            markdown_match = re.search(r'```(?:json)?\s*\n?(.*?)```', response_text, re.DOTALL)
+            result = None
+            
+            if markdown_match:
+                logger.info("Found markdown code block")
+                json_content = markdown_match.group(1).strip()
+                
+                # Method 1a: Direct parse
+                try:
+                    result = json.loads(json_content)
+                    logger.info(f"Successfully parsed JSON from markdown block")
+                    logger.info(f"Parsed JSON keys: {list(result.keys())}")
+                except json.JSONDecodeError as e:
+                    logger.warning(f"Direct parse failed: {e}")
+                    
+                    # Method 1b: Find the outermost JSON object by tracking braces
+                    if result is None:
+                        brace_count = 0
+                        json_start = None
+                        json_end = None
+                        
+                        for i, char in enumerate(json_content):
+                            if char == '{':
+                                if brace_count == 0:
+                                    json_start = i
+                                brace_count += 1
+                            elif char == '}':
+                                brace_count -= 1
+                                if brace_count == 0 and json_start is not None:
+                                    json_end = i + 1
+                                    break
+                        
+                        if json_start is not None and json_end is not None:
+                            try:
+                                json_substring = json_content[json_start:json_end]
+                                result = json.loads(json_substring)
+                                logger.info(f"Successfully parsed JSON using brace matching (start: {json_start}, end: {json_end})")
+                                logger.info(f"Parsed JSON keys: {list(result.keys())}")
+                            except json.JSONDecodeError as e:
+                                logger.warning(f"Brace matching parse failed: {e}")
+            
+            # Method 2: If markdown extraction failed, try to find JSON in the entire response
+            if result is None:
+                logger.info("Markdown extraction failed, trying to find JSON in entire response")
+                
+                # Method 2a: Look for JSON that starts with expected structure
+                json_pattern = r'\{\s*"prompt_file"\s*:.*?"priority"\s*:\s*"[^"]+"\s*\}'
+                json_match = re.search(json_pattern, response_text, re.DOTALL)
+                
+                if json_match:
+                    try:
+                        result = json.loads(json_match.group())
+                        logger.info("Successfully parsed JSON using structure pattern")
+                        logger.info(f"Parsed JSON keys: {list(result.keys())}")
+                    except json.JSONDecodeError:
+                        logger.warning("Structure pattern parse failed")
+                
+                # Method 2b: Track braces in entire response
+                if result is None:
+                    brace_count = 0
+                    json_start = None
+                    json_end = None
+                    
+                    for i, char in enumerate(response_text):
+                        if char == '{':
+                            if brace_count == 0:
+                                json_start = i
+                            brace_count += 1
+                        elif char == '}':
+                            brace_count -= 1
+                            if brace_count == 0 and json_start is not None:
+                                json_end = i + 1
+                                # Try to parse this potential JSON object
+                                try:
+                                    json_substring = response_text[json_start:json_end]
+                                    candidate = json.loads(json_substring)
+                                    # Check if this looks like our expected response
+                                    if isinstance(candidate, dict) and ('issue_description' in candidate or 'prompt_file' in candidate):
+                                        result = candidate
+                                        logger.info(f"Found valid JSON response at position {json_start}-{json_end}")
+                                        logger.info(f"Parsed JSON keys: {list(result.keys())}")
+                                        break
+                                except json.JSONDecodeError:
+                                    # Continue looking for next potential JSON object
+                                    json_start = None
+                
+                # Method 2c: Last resort - try direct parse
+                if result is None:
+                    try:
+                        result = json.loads(response_text)
+                        logger.info("Successfully parsed entire response as JSON")
+                    except json.JSONDecodeError:
+                        logger.error("All JSON parsing methods failed")
+            
+            if result:
+                logger.info(f"Parsed JSON keys: {list(result.keys())}")
+                logger.info(f"Full parsed result: {json.dumps(result, indent=2)}")
+                logger.info(f"issue_description: '{result.get('issue_description', 'NOT FOUND')}'")
+                logger.info(f"missing_specialists_reason type: {type(result.get('missing_specialists_reason'))}")
+                logger.info(f"recommendations length: {len(result.get('recommendations', []))}")
             else:
-                result = json.loads(response_text)
-            logger.debug(f"Parsed JSON result: {result}")
+                logger.error("Failed to parse any valid JSON from response")
+                # Try to extract what we can from the raw response text
+                # This is a fallback for when JSON parsing completely fails
+                raise ValueError("No valid JSON could be parsed from LLM response")
             
             # Extract specific issues from the new format
             specific_issues = []
-            if result.get('missing_specialists_reason'):
+            if result.get('missing_specialists_reason') and isinstance(result['missing_specialists_reason'], dict):
                 for spec, reason in result['missing_specialists_reason'].items():
-                    specific_issues.append(f"Missing {spec}: {reason}")
-            if result.get('unnecessary_specialists'):
-                specific_issues.append(f"Unnecessary: {', '.join(result['unnecessary_specialists'])}")
+                    if reason:  # Only add if reason is not empty
+                        specific_issues.append(f"Missing {spec}: {reason}")
+            if result.get('unnecessary_specialists') and isinstance(result['unnecessary_specialists'], list):
+                if result['unnecessary_specialists']:  # Only add if list is not empty
+                    specific_issues.append(f"Unnecessary: {', '.join(result['unnecessary_specialists'])}")
             
             # Extract recommendations from new format
             recommendations = []
-            if result.get('recommendations'):
+            if result.get('recommendations') and isinstance(result['recommendations'], list):
                 for rec in result['recommendations']:
                     if isinstance(rec, dict):
                         # New structured format
-                        recommendations.append(rec.get('recommendation', str(rec)))
-                    else:
+                        rec_text = rec.get('recommendation', str(rec))
+                        if rec_text and rec_text.strip():  # Only add non-empty recommendations
+                            recommendations.append(rec_text)
+                    elif isinstance(rec, str) and rec.strip():
                         # Simple string format
-                        recommendations.append(str(rec))
+                        recommendations.append(rec)
             
-            return FailureAnalysis(
+            # Get root cause - ensure it's not empty
+            root_cause = result.get('issue_description', '')
+            if not root_cause or not root_cause.strip():
+                # Fallback to a generic message if empty
+                root_cause = f"Failed to select correct specialists: expected {', '.join(expected_specialists)}, got {', '.join(actual_specialists)}"
+                logger.warning(f"Empty issue_description, using fallback root cause")
+            
+            failure_analysis = FailureAnalysis(
                 dimension="specialty_selection",
-                root_cause=result.get('issue_description', ''),
+                root_cause=root_cause,
                 specific_issues=specific_issues,
                 recommendations=recommendations,
                 priority=result.get('priority', 'medium'),
                 prompt_file=result.get('prompt_file')
             )
+            
+            logger.info(f"✅ SPECIALTY SELECTION ANALYSIS CREATED:")
+            logger.info(f"   root_cause: '{failure_analysis.root_cause[:50]}...' (length: {len(failure_analysis.root_cause)})")
+            logger.info(f"   specific_issues: {len(failure_analysis.specific_issues)} items")
+            logger.info(f"   recommendations: {len(failure_analysis.recommendations)} items")
+            
+            return failure_analysis
         except Exception as e:
             logger.error(f"Failed to parse specialist mismatch analysis: {e}")
+            logger.error(f"Exception type: {type(e).__name__}")
+            logger.error(f"Response content available: {response.content[0].text[:200] if response.content else 'No content'}")
+            
+            # Create a meaningful fallback based on the actual test data
+            specific_issues = []
+            if missing_critical:
+                specific_issues.append(f"Missing critical specialists: {', '.join(missing_critical)}")
+            specific_issues.append(f"Expected {len(expected_specialists)} specialists, got {len(actual_specialists)}")
+            
             return FailureAnalysis(
                 dimension="specialty_selection",
-                root_cause="Failed to analyze specialist selection mismatch",
-                specific_issues=[f"Missing: {', '.join(missing_critical)}"],
-                recommendations=["Review specialist selection criteria"],
-                priority="medium"
+                root_cause=f"Specialist selection failed with F1 score {f1_score:.2f}. Expected: {', '.join(sorted(expected_specialists))}, Actual: {', '.join(sorted(actual_specialists))}",
+                specific_issues=specific_issues,
+                recommendations=[
+                    "Review specialist selection criteria in prompts",
+                    f"Add explicit rules for including {', '.join(missing_critical)}" if missing_critical else "Improve specialist matching logic"
+                ],
+                priority="high" if f1_score < 0.5 else "medium"
             )
     
     async def analyze_quality_issues(
@@ -796,9 +976,20 @@ class LLMTestJudge:
             relevant_prompts=json.dumps(relevant_prompts, indent=2)
         )
         
+        logger.info(f"=== LLM JUDGE ANALYSIS_QUALITY PROMPT ===")
+        logger.info(f"Prompt length: {len(prompt)} characters")
+        logger.info(f"First 1000 chars: {prompt[:1000]}")
+        if len(prompt) > 1000:
+            logger.info(f"Next 1000 chars: {prompt[1000:2000]}")
+        if len(prompt) > 2000:
+            logger.info(f"Next 1000 chars: {prompt[2000:3000]}")
+        if len(prompt) > 3000:
+            logger.info(f"Final 500 chars: {prompt[-500:]}")
+        logger.info(f"=== END ANALYSIS_QUALITY PROMPT ===")
+        
         response = self.client.messages.create(
             model=self.model,
-            max_tokens=1000,
+            max_tokens=4000,
             messages=[{"role": "user", "content": prompt}]
         )
         
@@ -870,6 +1061,8 @@ class LLMTestJudge:
             tool_relevance_score=tool_relevance_score,
             initial_data_gathered=json.dumps(initial_data_gathered, indent=2)
         )
+        
+        logger.info(f"LLM Judge tool_usage prompt (first 300 chars): {prompt[:300]}...")
         
         response = self.client.messages.create(
             model=self.model,
@@ -1160,7 +1353,6 @@ Individual LLM Judge Analysis:
             # Parse response
             response_text = response.content[0].text.strip()
             logger.debug(f"Raw macro analysis response: {response_text[:500]}...")
-            
             import re
             json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', response_text, re.DOTALL)
             if json_match:

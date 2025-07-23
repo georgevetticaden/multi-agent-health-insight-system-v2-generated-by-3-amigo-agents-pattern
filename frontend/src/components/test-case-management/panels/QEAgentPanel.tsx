@@ -26,25 +26,47 @@ const QEAgentPanel: React.FC<QEAgentPanelProps> = ({
   const eventSourceRef = useRef<EventSource | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+//   // Initial greeting
+//   useEffect(() => {
+//     setMessages([{
+//       id: '1',
+//       role: 'assistant',
+//       content: `Hello! I'm the QE (Quality Engineering) Agent. I'm here to help you create and refine test cases for the health query you just executed.
+
+// I've analyzed the trace and created an initial test case based on what actually happened. You can see it in the right panel.
+
+// Here's how I can help:
+// - Review the trace with you to identify areas for improvement
+// - Update test case expectations based on your insights
+// - Run evaluations to measure agent performance
+// - Suggest improvements based on evaluation results
+
+// Feel free to share your observations about the trace, and I'll help update the test case accordingly. When you're ready to evaluate, just type "run".`,
+//       timestamp: new Date()
+//     }]);
+//   }, []);
+
+
   // Initial greeting
   useEffect(() => {
     setMessages([{
       id: '1',
       role: 'assistant',
-      content: `Hello! I'm the QE (Quality Engineering) Agent. I'm here to help you create and refine test cases for the health query you just executed.
+      content: `Hi! I'm your Eval Development Assistant. I help you turn execution traces into actionable test cases and evaluation reports.
 
-I've analyzed the trace and created an initial test case based on what actually happened. You can see it in the right panel.
+I've analyzed the trace from your health query and created an initial test case (see right panel). Right now, the expected values match what actually happened—but that's probably not what you want.
 
-Here's how I can help:
-- Review the trace with you to identify areas for improvement
-- Update test case expectations based on your insights
-- Run evaluations to measure agent performance
-- Suggest improvements based on evaluation results
+Let's work through the Analyze → Measure workflow:
+- Tell me what went wrong in the trace, and I'll update the test case
+- Point out failures like misclassified complexity or missing specialists
+- Click the ⋯ menu in the Test Case panel and select "Run Evaluation" when ready
+- See exactly where and why your agent failed
 
-Feel free to share your observations about the trace, and I'll help update the test case accordingly. When you're ready to evaluate, just type "run".`,
-      timestamp: new Date()
-    }]);
-  }, []);
+What issues do you see in this trace?`,
+    timestamp: new Date()
+  }]);
+}, []);
+
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -296,7 +318,7 @@ Feel free to share your observations about the trace, and I'll help update the t
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Bot className="w-5 h-5 text-blue-600" />
-            <h2 className="font-semibold text-gray-900">QE Agent Chat</h2>
+            <h2 className="font-semibold text-gray-900">Eval Development Assistant (EDA)</h2>
             {isConnected && (
               <span className="ml-2 text-xs text-green-600 flex items-center gap-1">
                 <span className="w-2 h-2 bg-green-600 rounded-full"></span>

@@ -47,6 +47,41 @@ const EvalReportViewer: React.FC<EvalReportViewerProps> = ({ report }) => {
     response_structure: 'Response Structure'
   };
 
+  // Show only the iframe for the full report
+  if (report.report_url) {
+    return (
+      <div className="h-full flex flex-col">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
+          <div className="flex items-center gap-3">
+            <BarChart2 className="w-5 h-5 text-gray-600" />
+            <h3 className="text-sm font-semibold text-gray-900">CMO Agent Evaluation Report</h3>
+            <span className={`text-sm font-semibold ${getScoreColor(report.overall_score)}`}>
+              ({(report.overall_score * 100).toFixed(1)}%)
+            </span>
+          </div>
+          <a
+            href={report.report_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
+          >
+            <span>Open in new tab</span>
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <iframe
+            src={report.report_url}
+            className="w-full h-full border-0"
+            title="Evaluation Report"
+            sandbox="allow-scripts allow-same-origin"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback to simple view if no report URL
   return (
     <div className="h-full overflow-y-scroll">
       {/* Overall Score Header */}
@@ -174,32 +209,6 @@ const EvalReportViewer: React.FC<EvalReportViewerProps> = ({ report }) => {
           );
         })}
       </div>
-
-      {/* Full HTML Report in iframe */}
-      {report.report_url && (
-        <div className="px-4 py-4 border-t border-gray-200">
-          <div className="mb-3 flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-gray-700">Full Evaluation Report</h4>
-            <a
-              href={report.report_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
-            >
-              <span>Open in new tab</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
-          </div>
-          <div className="border border-gray-300 rounded-lg overflow-hidden" style={{ height: '600px' }}>
-            <iframe
-              src={report.report_url}
-              className="w-full h-full"
-              title="Evaluation Report"
-              sandbox="allow-scripts allow-same-origin"
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 };

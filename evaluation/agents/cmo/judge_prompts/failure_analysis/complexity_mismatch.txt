@@ -23,7 +23,15 @@ Based on this analysis and the actual prompt content above, provide specific, ac
 4. **BOUNDARY_DEFINITIONS**: Define clearer boundaries between levels
 5. **KEYWORD_INDICATORS**: Add keywords that signal complexity levels
 
-Provide your analysis in the following JSON format. Output ONLY valid JSON with no additional text before or after:
+CRITICAL INSTRUCTIONS FOR YOUR RESPONSE:
+1. You MUST return a COMPLETE, VALID JSON object
+2. Do NOT truncate or cut off your response
+3. Ensure ALL brackets and quotes are properly closed
+4. The JSON must be parseable by standard JSON parsers
+5. Do not include any text before or after the JSON object
+6. Make sure to include ALL required fields in the response
+
+Provide your analysis in EXACTLY the following JSON format. Output ONLY valid, complete JSON with no additional text before or after:
 {{
     "prompt_file": "backend/services/agents/cmo/prompts/1_gather_data_assess_complexity.txt",
     "issue_description": "Clear description of why the misclassification occurred",

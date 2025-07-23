@@ -294,7 +294,7 @@ async def evaluate_test_case(test_case_id: str):
         evaluation_id = await eval_service.run_evaluation(test_case_data, agent_type="cmo")
         
         # Wait for evaluation to complete (with timeout)
-        max_wait_time = 30  # seconds
+        max_wait_time = 180  # seconds (3 minutes to account for LLM Judge processing)
         start_time = datetime.now()
         
         while (datetime.now() - start_time).total_seconds() < max_wait_time:

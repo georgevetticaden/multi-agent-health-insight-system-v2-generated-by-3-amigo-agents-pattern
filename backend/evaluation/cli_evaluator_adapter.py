@@ -2,39 +2,50 @@
 CLI Evaluator Adapter
 
 This module provides an adapter to use the CLI evaluator from the backend,
-enabling trace-based evaluation using the same comprehensive evaluation logic.
+enabling trace-based evaluation using the FULL evaluation framework.
+
+Instead of reimplementing evaluation logic, this adapter:
+1. Extracts data from traces using TraceDataExtractor
+2. Creates a MockCMOAgent with the extracted data
+3. Uses the real CMOEvaluator from the evaluation framework
+4. Returns the comprehensive evaluation results with all features
 """
 
 import sys
 import os
 import logging
-from typing import Dict, Any, Optional, Tuple, List
+from typing import Dict, Any, Optional, List
 from pathlib import Path
+import json
+from datetime import datetime
 
-# Add evaluation directory to path to import CLI evaluator
-sys.path.append(str(Path(__file__).parent.parent.parent))
-
-# Import models and evaluators from core
-from evaluation.core.models import TestCase as CMOTestCase, EvaluationResult as CMOEvaluationResult
-from evaluation.core.runner import EvaluationRunner
-from evaluation.core.evaluators.deterministic import DeterministicEvaluator
-from evaluation.core.evaluators.llm_judge import LLMJudgeEvaluator
-from evaluation.trace_parser import TraceDataExtractor, MockSpecialistTask
-from services.tracing.trace_models import CompleteTrace, TraceEvent
-from services.agents.models import QueryComplexity
-
+# Create a logger for this module
 logger = logging.getLogger(__name__)
+
+# Import from backend modules  
+from evaluation.mock_agents import MockCMOAgent
+from evaluation.trace_parser import TraceDataExtractor
+from evaluation.subprocess_evaluator import run_evaluation_subprocess
+from services.tracing.trace_models import CompleteTrace, TraceEvent, TraceEventType
+from services.agents.models import QueryComplexity, MedicalSpecialty
 
 
 class CLIEvaluatorAdapter:
     """
-    Adapter to use CLI evaluator with trace data instead of live execution.
+    Adapter to use the FULL CLI evaluation framework with trace data.
     
     This adapter:
-    1. Takes a trace and test case
-    2. Extracts the necessary data from the trace
-    3. Feeds it to the CLI evaluator as if it came from live execution
-    4. Returns the evaluation results
+    1. Extracts data from execution traces
+    2. Creates a MockCMOAgent that replays the trace data
+    3. Uses the real CMOEvaluator with all its features
+    4. Returns comprehensive evaluation results
+    
+    This ensures we get:
+    - Full LLM Judge evaluation with sophisticated prompts
+    - Hybrid evaluation methods (deterministic + LLM)
+    - Component-based scoring with proper weights
+    - Comprehensive failure analysis
+    - Semantic similarity scoring for specialists
     """
     
     def __init__(self, cmo_agent=None, anthropic_client=None):
@@ -42,40 +53,39 @@ class CLIEvaluatorAdapter:
         Initialize the adapter.
         
         Args:
-            cmo_agent: Optional CMO agent (not needed for trace evaluation)
-            anthropic_client: Anthropic client for LLM judge
+            cmo_agent: Optional CMO agent (not used - we create MockCMOAgent)
+            anthropic_client: Anthropic client for LLM judge evaluation
         """
         self.extractor = TraceDataExtractor()
-        self.cmo_agent = cmo_agent
         self.anthropic_client = anthropic_client
-        self.runner = EvaluationRunner()
-        self.deterministic_evaluator = DeterministicEvaluator()
-        self.llm_evaluator = LLMJudgeEvaluator()
     
     async def evaluate_from_trace(
         self,
         test_case: Dict[str, Any],
         trace: CompleteTrace
-    ) -> CMOEvaluationResult:
+    ) -> Dict[str, Any]:
         """
-        Evaluate a test case using trace data.
+        Evaluate a test case using trace data with the FULL evaluation framework.
+        
+        This method:
+        1. Extracts data from the trace
+        2. Runs evaluation in subprocess to avoid import issues
+        3. Returns the comprehensive results
         
         Args:
             test_case: Test case dict from QE Agent
             trace: Complete trace of the execution
             
         Returns:
-            CMOEvaluationResult with all dimension scores
+            Dictionary with comprehensive evaluation results including:
+            - All dimension scores with component breakdowns
+            - LLM Judge analysis results
+            - Failure analyses with recommendations
+            - Full metadata and context
         """
-        logger.info(f"=== CLI EVALUATOR ADAPTER: Starting trace-based evaluation ===")
+        logger.info(f"=== CLI EVALUATOR ADAPTER: Starting FULL framework evaluation ===")
         logger.info(f"Test case ID: {test_case.get('id', 'unknown')}")
         logger.info(f"Trace ID: {trace.trace_id}")
-        
-        # Convert test case to CLI format
-        logger.info("Converting test case to CLI format...")
-        cmo_test_case = self._convert_test_case(test_case)
-        logger.info(f"Converted test case: expected_complexity={cmo_test_case.expected_complexity}, "
-                   f"expected_specialties={cmo_test_case.expected_specialties}")
         
         # Extract data from trace
         logger.info("Extracting evaluation data from trace...")
@@ -89,201 +99,166 @@ class CLIEvaluatorAdapter:
         logger.info(f"  - Specialist tasks: {len(specialist_tasks)} tasks")
         logger.info(f"  - Specialists: {[task.specialist.value for task in specialist_tasks]}")
         
-        # Use the evaluator's evaluation logic directly
-        # We need to patch the evaluator to accept pre-extracted data
-        logger.info("Running CLI evaluator with extracted data...")
-        result = await self._evaluate_with_extracted_data(
-            cmo_test_case,
-            complexity,
-            approach,
-            initial_data,
-            specialist_tasks
-        )
+        # Convert to serializable format for subprocess
+        trace_data = {
+            'complexity': complexity.value,  # Convert enum to string
+            'approach': approach,
+            'initial_data': initial_data,
+            'specialist_tasks': [
+                {
+                    'specialist': task.specialist.value,  # Convert enum to string
+                    'objective': task.objective,
+                    'context': task.context,
+                    'expected_output': task.expected_output,
+                    'priority': task.priority,
+                    'max_tool_calls': task.max_tool_calls
+                }
+                for task in specialist_tasks
+            ]
+        }
         
-        logger.info(f"=== CLI EVALUATOR ADAPTER: Evaluation complete ===")
-        return result
+        # Get API key if available
+        api_key = None
+        if self.anthropic_client:
+            # Try to extract API key from client
+            try:
+                api_key = self.anthropic_client.api_key
+                logger.info(f"✅ API key extracted from Anthropic client (length: {len(api_key) if api_key else 0})")
+            except:
+                # Try environment as fallback
+                from dotenv import load_dotenv
+                load_dotenv()
+                api_key = os.environ.get('ANTHROPIC_API_KEY')
+                if api_key:
+                    logger.info(f"✅ API key found in environment variable (length: {len(api_key)})")
+                else:
+                    logger.warning("⚠️  No API key available - LLM Judge will be disabled")
+        else:
+            # No client provided, try environment
+            from dotenv import load_dotenv
+            load_dotenv()
+            api_key = os.environ.get('ANTHROPIC_API_KEY')
+            if api_key:
+                logger.info(f"✅ API key found in environment variable (length: {len(api_key)})")
+            else:
+                logger.warning("⚠️  No API key available - LLM Judge will be disabled")
+        
+        # Run evaluation in subprocess
+        logger.info("Running evaluation in subprocess...")
+        try:
+            result = run_evaluation_subprocess(test_case, trace_data, api_key)
+            logger.info(f"=== FULL EVALUATION COMPLETE ===")
+            logger.info(f"Overall score: {result.get('overall_score', 0):.3f}")
+            return result
+        except Exception as e:
+            logger.error(f"Subprocess evaluation failed: {e}")
+            # No fallback - fail properly
+            raise RuntimeError(f"Evaluation failed: {str(e)}. The full evaluation framework must be used.")
     
-    def _convert_test_case(self, test_case_dict: Dict[str, Any]) -> CMOTestCase:
-        """Convert QE Agent test case to CLI test case format."""
-        return CMOTestCase(
-            id=test_case_dict.get("id", "unknown"),
-            query=test_case_dict.get("query", ""),
-            expected_complexity=test_case_dict.get("expected_complexity", "SIMPLE"),
-            expected_specialties=set(test_case_dict.get("expected_specialties", [])),
-            key_data_points=test_case_dict.get("key_data_points", []),
-            notes=test_case_dict.get("notes", "")
-        )
-    
-    async def _evaluate_with_extracted_data(
+    def _create_fallback_result(
         self,
-        test_case: CMOTestCase,
+        test_case: Dict[str, Any],
         complexity: QueryComplexity,
         approach: str,
         initial_data: Dict[str, Any],
-        specialist_tasks: List[MockSpecialistTask]
-    ) -> CMOEvaluationResult:
-        """
-        Evaluate using extracted data instead of running the agent.
+        specialist_tasks: List[Any]
+    ) -> Dict[str, Any]:
+        """Create a fallback result if subprocess evaluation fails."""
+        logger.warning("Using fallback evaluation result")
         
-        This method creates an evaluation result based on the extracted trace data.
-        """
-        from evaluation.core.models import DimensionResult
+        # Basic scoring logic
+        complexity_score = 1.0 if test_case.get('expected_complexity', '').upper() == complexity.value.upper() else 0.0
         
-        # Evaluate complexity classification
-        complexity_correct = test_case.expected_complexity.upper() == complexity.value.upper()
-        complexity_score = 1.0 if complexity_correct else 0.0
+        expected_specs = set(test_case.get('expected_specialties', []))
+        actual_specs = set([task.specialist.value for task in specialist_tasks])
+        precision = len(expected_specs & actual_specs) / len(actual_specs) if actual_specs else 0
+        recall = len(expected_specs & actual_specs) / len(expected_specs) if expected_specs else 0
+        f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
         
-        # Evaluate specialty selection
-        actual_specialties = {task.specialist.value.upper() for task in specialist_tasks}
-        expected_specialties = {s.upper() for s in test_case.expected_specialties}
+        tool_score = min(1.0, initial_data.get('tool_calls_made', 0) / 3.0)
         
-        # Calculate precision, recall, F1
-        if not actual_specialties:
-            precision = 0.0
-            recall = 0.0
-            f1_score = 0.0
-        else:
-            true_positives = len(actual_specialties & expected_specialties)
-            false_positives = len(actual_specialties - expected_specialties)
-            false_negatives = len(expected_specialties - actual_specialties)
-            
-            precision = true_positives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else 0.0
-            recall = true_positives / (true_positives + false_negatives) if (true_positives + false_negatives) > 0 else 0.0
-            f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
-        
-        # Evaluate tool usage
-        tool_calls_made = initial_data.get('tool_calls_made', 0)
-        tool_success_count = initial_data.get('successful_tool_calls', tool_calls_made)
-        tool_success_rate = tool_success_count / tool_calls_made if tool_calls_made > 0 else 1.0
-        tool_score = tool_success_rate
-        
-        # Evaluate analysis quality based on approach content and other factors
-        # Calculate component scores first
-        data_gathering_score = 1.0 if tool_calls_made > 0 else 0.0
-        context_awareness_score = 0.8 if approach and len(approach) > 50 else 0.0
-        comprehensive_approach_score = 0.8 if approach and len(approach) > 100 else 0.4 if approach else 0.0
-        concern_identification_score = 0.7 if approach and "risk" in approach.lower() or "concern" in approach.lower() else 0.5 if approach else 0.0
-        
-        # Calculate weighted analysis score
-        analysis_score = (
-            data_gathering_score * 0.2 +
-            context_awareness_score * 0.15 +
-            comprehensive_approach_score * 0.25 +
-            concern_identification_score * 0.2 +
-            0.2  # Base score for attempt
-        )
-        
-        # Evaluate response structure
-        response_valid = len(specialist_tasks) > 0
-        response_score = 1.0 if response_valid else 0.0
-        
-        # Calculate overall score
+        # Calculate weighted overall score
         overall_score = (
-            complexity_score * 0.2 +
-            f1_score * 0.3 +
-            analysis_score * 0.2 +
-            tool_score * 0.15 +
-            response_score * 0.15
+            0.3 * complexity_score +
+            0.3 * f1_score +
+            0.2 * tool_score +
+            0.1 * (1.0 if approach else 0.0) +
+            0.1 * 1.0  # Structure always valid in fallback
         )
         
-        # Create dimension results
-        dimension_results = {
-            "complexity_classification": DimensionResult(
-                dimension_name="complexity_classification",
-                score=complexity_score,
-                max_score=1.0,
-                details={
-                    "expected": test_case.expected_complexity,
-                    "actual": complexity.value,
-                    "correct": complexity_correct
+        return {
+            'test_case_id': test_case.get('id', 'unknown'),
+            'overall_score': overall_score,
+            'dimension_results': {
+                'complexity_classification': {
+                    'score': complexity_score,
+                    'normalized_score': complexity_score,
+                    'components': {},
+                    'details': {
+                        'expected': test_case.get('expected_complexity', 'SIMPLE'),
+                        'actual': complexity.value,
+                        'correct': complexity_score == 1.0
+                    },
+                    'evaluation_method': 'deterministic'
                 },
-                evaluation_method="deterministic"
-            ),
-            "specialty_selection": DimensionResult(
-                dimension_name="specialty_selection",
-                score=f1_score,
-                max_score=1.0,
-                components={
-                    "specialist_precision": precision,
-                    "specialist_rationale": 0.8 if actual_specialties else 0.0  # Simplified for now
+                'specialty_selection': {
+                    'score': f1_score,
+                    'normalized_score': f1_score,
+                    'components': {
+                        'specialist_precision': precision,
+                        'specialist_recall': recall
+                    },
+                    'details': {
+                        'expected_specialties': list(expected_specs),
+                        'actual_specialties': list(actual_specs),
+                        'precision': precision,
+                        'recall': recall,
+                        'f1_score': f1_score
+                    },
+                    'evaluation_method': 'deterministic'
                 },
-                details={
-                    "expected_specialties": list(expected_specialties),
-                    "actual_specialties": list(actual_specialties),
-                    "precision": precision,
-                    "recall": recall,
-                    "f1_score": f1_score
+                'analysis_quality': {
+                    'score': 0.7,  # Default score
+                    'normalized_score': 0.7,
+                    'components': {},
+                    'details': {
+                        'approach_length': len(approach),
+                        'approach_text': approach[:500]
+                    },
+                    'evaluation_method': 'fallback'
                 },
-                evaluation_method="hybrid"
-            ),
-            "analysis_quality": DimensionResult(
-                dimension_name="analysis_quality",
-                score=analysis_score,
-                max_score=1.0,
-                components={
-                    "data_gathering": data_gathering_score,
-                    "context_awareness": context_awareness_score,
-                    "comprehensive_approach": comprehensive_approach_score,
-                    "concern_identification": concern_identification_score
+                'tool_usage': {
+                    'score': tool_score,
+                    'normalized_score': tool_score,
+                    'components': {},
+                    'details': {
+                        'tool_calls_made': initial_data.get('tool_calls_made', 0),
+                        'successful_tool_calls': initial_data.get('tool_calls_made', 0),
+                        'success_rate': 1.0
+                    },
+                    'evaluation_method': 'deterministic'
                 },
-                details={
-                    "approach_length": len(approach),
-                    "approach_text": approach[:500] if approach else ""
-                },
-                evaluation_method="hybrid"
-            ),
-            "tool_usage": DimensionResult(
-                dimension_name="tool_usage",
-                score=tool_score,
-                max_score=1.0,
-                components={
-                    "tool_success_rate": tool_success_rate
-                },
-                details={
-                    "tool_calls_made": tool_calls_made,
-                    "successful_tool_calls": tool_success_count,
-                    "success_rate": tool_success_rate
-                },
-                evaluation_method="deterministic"
-            ),
-            "response_structure": DimensionResult(
-                dimension_name="response_structure",
-                score=response_score,
-                max_score=1.0,
-                components={
-                    "xml_validity": 1.0 if response_valid else 0.0,
-                    "required_fields": 1.0 if response_valid else 0.0
-                },
-                details={
-                    "response_valid": response_valid,
-                    "structure_errors": [] if response_valid else ["No specialist tasks created"]
-                },
-                evaluation_method="deterministic"
-            )
-        }
-        
-        # Extract response time from trace
-        response_time_ms = 0
-        if hasattr(trace, 'total_duration_ms'):
-            response_time_ms = trace.total_duration_ms
-        elif hasattr(trace, 'summary') and trace.summary.get('duration_ms'):
-            response_time_ms = trace.summary.get('duration_ms', 0)
-        
-        # Create evaluation result
-        result = CMOEvaluationResult(
-            test_case_id=test_case.id,
-            agent_type="cmo",
-            overall_score=overall_score,
-            dimension_results=dimension_results,
-            execution_time_ms=response_time_ms,
-            metadata={
-                "approach_text": approach,
-                "test_case_category": getattr(test_case, 'category', 'general'),
-                "initial_data_gathered": initial_data
+                'response_structure': {
+                    'score': 1.0,
+                    'normalized_score': 1.0,
+                    'components': {},
+                    'details': {
+                        'response_valid': True,
+                        'structure_errors': []
+                    },
+                    'evaluation_method': 'deterministic'
+                }
+            },
+            'execution_time_ms': 0,
+            'metadata': {
+                'approach_text': approach,
+                'test_case_category': test_case.get('category', 'general'),
+                'initial_data_gathered': initial_data,
+                'specialist_tasks': len(specialist_tasks),
+                'failure_analyses': [],
+                'fallback_mode': True
             }
-        )
-        
-        return result
+        }
 
 
 class TraceEvaluationService:
@@ -328,51 +303,73 @@ class TraceEvaluationService:
         result = await self.adapter.evaluate_from_trace(test_case, trace)
         
         logger.info(f"Evaluation result:")
-        logger.info(f"  - Overall score: {result.overall_score:.2%}")
-        logger.info(f"  - Test case ID: {result.test_case_id}")
-        logger.info(f"  - Agent type: {result.agent_type}")
-        
-        # Convert to dict for API response
-        logger.info("Converting result to dict format...")
-        result_dict = self._convert_result_to_dict(result)
+        logger.info(f"  - Overall score: {result.get('overall_score', 0):.2%}")
+        logger.info(f"  - Test case ID: {result.get('test_case_id', 'unknown')}")
         
         logger.info(f"=== TRACE EVALUATION SERVICE COMPLETE ===")
-        return result_dict
+        return result
     
     def _load_trace(self, trace_path: str) -> CompleteTrace:
-        """Load trace from file."""
+        """
+        Load trace from file with error handling.
+        
+        Args:
+            trace_path: Path to the trace JSON file
+            
+        Returns:
+            CompleteTrace object
+            
+        Raises:
+            FileNotFoundError: If trace file doesn't exist
+            json.JSONDecodeError: If trace file is not valid JSON
+            ValueError: If trace data is missing required fields
+        """
         import json
         from datetime import datetime
-        from services.tracing.trace_models import TraceEventType
         
-        with open(trace_path, 'r') as f:
-            trace_data = json.load(f)
+        try:
+            with open(trace_path, 'r') as f:
+                trace_data = json.load(f)
+        except FileNotFoundError:
+            logger.error(f"Trace file not found: {trace_path}")
+            raise
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON in trace file: {e}")
+            raise
         
-        # Convert events to TraceEvent objects
+        # Validate required fields
+        if not trace_data.get('trace_id'):
+            raise ValueError("Trace data missing required field: trace_id")
+        
+        # Convert events to TraceEvent objects with error handling
         events = []
-        for event_data in trace_data.get('events', []):
-            # Convert event_type string to enum
-            event_type_str = event_data.get('event_type', '')
+        for i, event_data in enumerate(trace_data.get('events', [])):
             try:
-                event_type = TraceEventType(event_type_str)
-            except ValueError:
-                # If the event type is not recognized, use ERROR
-                event_type = TraceEventType.ERROR
-            
-            event = TraceEvent(
-                event_id=event_data.get('event_id', ''),
-                trace_id=event_data.get('trace_id', trace_data.get('trace_id', '')),
-                timestamp=event_data.get('timestamp', ''),
-                event_type=event_type,
-                agent_type=event_data.get('agent_type', ''),
-                stage=event_data.get('stage', ''),
-                data=event_data.get('data', {}),
-                parent_event_id=event_data.get('parent_event_id'),
-                duration_ms=event_data.get('duration_ms'),
-                tokens_used=event_data.get('tokens_used'),
-                metadata=event_data.get('metadata', {})
-            )
-            events.append(event)
+                # Convert event_type string to enum
+                event_type_str = event_data.get('event_type', '')
+                try:
+                    event_type = TraceEventType(event_type_str)
+                except ValueError:
+                    logger.warning(f"Unknown event type '{event_type_str}' in event {i}, using ERROR")
+                    event_type = TraceEventType.ERROR
+                
+                event = TraceEvent(
+                    event_id=event_data.get('event_id', f'unknown_{i}'),
+                    trace_id=event_data.get('trace_id', trace_data.get('trace_id', '')),
+                    timestamp=event_data.get('timestamp', datetime.now().isoformat()),
+                    event_type=event_type,
+                    agent_type=event_data.get('agent_type', ''),
+                    stage=event_data.get('stage', ''),
+                    data=event_data.get('data', {}),
+                    parent_event_id=event_data.get('parent_event_id'),
+                    duration_ms=event_data.get('duration_ms'),
+                    tokens_used=event_data.get('tokens_used'),
+                    metadata=event_data.get('metadata', {})
+                )
+                events.append(event)
+            except Exception as e:
+                logger.error(f"Error processing event {i}: {e}")
+                # Continue processing other events
         
         # Create CompleteTrace object
         return CompleteTrace(
@@ -389,29 +386,3 @@ class TraceEvaluationService:
             metadata=trace_data.get('metadata', {}),
             total_duration_ms=trace_data.get('duration_ms', 0)
         )
-    
-    def _convert_result_to_dict(self, result: CMOEvaluationResult) -> Dict[str, Any]:
-        """Convert CMOEvaluationResult to dict format."""
-        # Use the to_dict method if available
-        if hasattr(result, 'to_dict'):
-            return result.to_dict()
-        
-        # Otherwise convert manually
-        # Convert dimension results to dict format
-        dimension_results = {}
-        for dim_name, dim_result in result.dimension_results.items():
-            dimension_results[dim_name] = {
-                "score": dim_result.score,
-                "normalized_score": dim_result.normalized_score,
-                "components": getattr(dim_result, 'components', {}),
-                "details": getattr(dim_result, 'details', {}),
-                "evaluation_method": getattr(dim_result, 'evaluation_method', 'deterministic')
-            }
-        
-        return {
-            "test_case_id": result.test_case_id,
-            "overall_score": result.overall_score,
-            "dimension_results": dimension_results,
-            "execution_time_ms": result.execution_time_ms,
-            "metadata": result.metadata
-        }

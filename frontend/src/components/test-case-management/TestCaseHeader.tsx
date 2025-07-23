@@ -11,11 +11,11 @@ const TestCaseHeader: React.FC = () => {
   };
 
   return (
-    <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg">
+    <header className="bg-gradient-to-r from-blue-400 to-blue-500 text-white shadow-lg">
       <div className="px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Eval Driven Agent Development Dashboard</h1>
+            <h1 className="text-2xl font-bold">Eval Development Studio</h1>
             <p className="text-blue-100 text-sm mt-1">Create and manage test cases for continuous agent improvement</p>
           </div>
 

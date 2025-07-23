@@ -811,18 +811,20 @@ class BaseEvaluator(ABC):
         # Evaluate each component
         component_scores = {}
         for component in components:
-            logger.debug(f"    Evaluating component '{component.name}' ({component.evaluation_method.value})")
+            logger.info(f"    📊 Evaluating component '{component.name}' using {component.evaluation_method.value}")
             
             if component.evaluation_method == EvaluationMethod.DETERMINISTIC:
+                logger.info(f"      🔢 Using deterministic evaluation for {component.name}")
                 score = await self._evaluate_deterministic_component(component, dimension, result_data, test_case)
-                logger.debug(f"      Deterministic score: {score:.3f}")
+                logger.info(f"      ✅ Deterministic score: {score:.3f}")
             elif component.evaluation_method == EvaluationMethod.LLM_JUDGE:
+                logger.info(f"      🤖 Using LLM Judge evaluation for {component.name}")
                 score = await self._evaluate_llm_component(component, dimension, result_data, test_case)
-                logger.debug(f"      LLM Judge score: {score:.3f}")
+                logger.info(f"      ✅ LLM Judge score: {score:.3f}")
             else:
-                logger.warning(f"Unknown evaluation method {component.evaluation_method} for component {component.name}")
+                logger.warning(f"❌ Unknown evaluation method {component.evaluation_method} for component {component.name}")
                 score = self._get_default_score_for_method(component.evaluation_method)
-                logger.debug(f"      Default score: {score:.3f}")
+                logger.warning(f"      ⚠️  Default score: {score:.3f}")
             
             component_scores[component.name] = score
         

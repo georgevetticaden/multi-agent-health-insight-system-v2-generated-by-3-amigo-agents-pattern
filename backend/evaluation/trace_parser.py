@@ -76,6 +76,11 @@ class TraceDataExtractor:
         logger.info(f"    Tool calls made: {initial_data.get('tool_calls_made', 0)}")
         logger.info(f"    Successful calls: {len([tc for tc in initial_data.get('tool_calls', []) if tc.get('success')])}")
         
+        # Extract execution time
+        execution_time = self._extract_execution_time(trace)
+        initial_data['execution_time_ms'] = execution_time
+        logger.info(f"  - Extracted execution time: {execution_time}ms")
+        
         # Extract Stage 2 data (specialist tasks)
         logger.info("Stage 2: Extracting specialist tasks...")
         specialist_tasks = self._extract_specialist_tasks_as_objects(trace)
@@ -164,19 +169,24 @@ class TraceDataExtractor:
         initial_data = {
             'tool_calls': [],
             'tool_calls_made': 0,
-            'health_context': {}
+            'health_context': {},
+            'total_tool_calls_all_stages': 0,  # Track total across all stages
+            'tool_calls_by_stage': {},  # Track by stage for debugging
+            'data_available': False  # Track if data was successfully gathered
         }
         
-        # Extract tool calls from query_analysis stage only
-        tool_calls_in_stage = []
+        # Count tool calls across ALL stages, not just query_analysis
+        all_tool_calls = []
+        tool_calls_by_stage = {}
         
         for i, event in enumerate(trace.events):
-            if (event.event_type == TraceEventType.TOOL_INVOCATION and
-                event.stage == "query_analysis"):
+            if event.event_type == TraceEventType.TOOL_INVOCATION:
+                stage = event.stage or 'unknown'
                 
                 tool_call = {
                     'tool_name': event.data.get("tool_name", ""),
                     'parameters': event.data.get("parameters", {}),
+                    'stage': stage,
                     'success': False,
                     'result': None
                 }
@@ -189,15 +199,55 @@ class TraceDataExtractor:
                         tool_call['success'] = not result_event.data.get("error", False)
                         tool_call['result'] = result_event.data.get("result")
                         
-                        # Merge successful results into health_context
-                        if tool_call['success'] and tool_call['result']:
+                        # Merge successful results into health_context if from query_analysis
+                        if stage == "query_analysis" and tool_call['success'] and tool_call['result']:
                             initial_data['health_context'].update(tool_call['result'])
                         break
                 
-                tool_calls_in_stage.append(tool_call)
+                all_tool_calls.append(tool_call)
+                
+                # Track by stage
+                if stage not in tool_calls_by_stage:
+                    tool_calls_by_stage[stage] = []
+                tool_calls_by_stage[stage].append(tool_call)
         
-        initial_data['tool_calls'] = tool_calls_in_stage
-        initial_data['tool_calls_made'] = len(tool_calls_in_stage)
+        # Store query_analysis tool calls for backward compatibility
+        initial_data['tool_calls'] = [tc for tc in all_tool_calls if tc['stage'] == 'query_analysis']
+        initial_data['tool_calls_made'] = len(initial_data['tool_calls'])
+        
+        # Calculate successful tool calls
+        successful_query_calls = len([tc for tc in initial_data['tool_calls'] if tc.get('success', False)])
+        successful_all_calls = len([tc for tc in all_tool_calls if tc.get('success', False)])
+        
+        initial_data['successful_tool_calls'] = successful_query_calls  # For backward compatibility
+        initial_data['total_successful_tool_calls'] = successful_all_calls  # All stages
+        
+        # Store total tool calls across all stages
+        initial_data['total_tool_calls_all_stages'] = len(all_tool_calls)
+        initial_data['tool_calls_by_stage'] = {
+            stage: len(calls) for stage, calls in tool_calls_by_stage.items()
+        }
+        
+        # Extract data_available from query_analysis stage events
+        for event in trace.events:
+            if (event.stage == "query_analysis" and 
+                hasattr(event, 'data') and 
+                isinstance(event.data, dict) and 
+                'data_available' in event.data):
+                initial_data['data_available'] = event.data['data_available']
+                logger.info(f"  - Found data_available: {initial_data['data_available']}")
+                break
+        
+        # If no explicit data_available found, infer from successful tool calls
+        if not initial_data['data_available'] and successful_query_calls > 0:
+            initial_data['data_available'] = True
+            logger.info(f"  - Inferred data_available: True (from {successful_query_calls} successful calls)")
+        
+        logger.info(f"  - Tool calls by stage: {initial_data['tool_calls_by_stage']}")
+        logger.info(f"  - Total tool calls across all stages: {initial_data['total_tool_calls_all_stages']}")
+        logger.info(f"  - Successful tool calls (query stage): {successful_query_calls}/{initial_data['tool_calls_made']}")
+        logger.info(f"  - Successful tool calls (all stages): {successful_all_calls}/{len(all_tool_calls)}")
+        logger.info(f"  - Data available: {initial_data['data_available']}")
         
         return initial_data
     
@@ -225,7 +275,13 @@ class TraceDataExtractor:
                     for spec in specialists:
                         try:
                             # MedicalSpecialty enum values are lowercase
-                            specialty = MedicalSpecialty(spec.lower())
+                            spec_lower = spec.lower()
+                            # Handle common variations
+                            if spec_lower == 'preventive_medicine' or spec_lower == 'preventative_medicine':
+                                spec_lower = 'preventive_medicine'
+                            elif spec_lower == 'lab' or spec_lower == 'lab_medicine':
+                                spec_lower = 'laboratory_medicine'
+                            specialty = MedicalSpecialty(spec_lower)
                         except (KeyError, ValueError):
                             logger.warning(f"Unknown specialty: {spec}, using laboratory_medicine as default")
                             specialty = MedicalSpecialty.LABORATORY_MEDICINE
@@ -293,6 +349,11 @@ class TraceDataExtractor:
                         # Handle both 'specialist' and 'specialty' field names
                         # MedicalSpecialty enum values are lowercase
                         specialty_str = specialty_str.strip().lower()
+                        # Handle common variations
+                        if specialty_str == 'preventive_medicine' or specialty_str == 'preventative_medicine':
+                            specialty_str = 'preventive_medicine'
+                        elif specialty_str == 'lab' or specialty_str == 'lab_medicine':
+                            specialty_str = 'laboratory_medicine'
                         specialty = MedicalSpecialty(specialty_str)
                     except (KeyError, ValueError):
                         logger.warning(f"Unknown specialty in XML: {specialty_str}, using laboratory_medicine as default")
@@ -316,6 +377,47 @@ class TraceDataExtractor:
                 break  # Stop after first successful pattern
         
         return tasks
+    
+    def _extract_execution_time(self, trace: CompleteTrace) -> float:
+        """Extract total execution time from trace events."""
+        # Try to get from trace summary first
+        if trace.total_duration_ms is not None and trace.total_duration_ms > 0:
+            logger.info(f"  - Using total_duration_ms from trace: {trace.total_duration_ms}ms")
+            return trace.total_duration_ms
+        
+        # Look for duration in summary
+        if hasattr(trace, 'summary') and trace.summary:
+            if 'duration_ms' in trace.summary:
+                duration = trace.summary['duration_ms']
+                logger.info(f"  - Using duration_ms from summary: {duration}ms")
+                return float(duration)
+        
+        # Otherwise calculate from events
+        start_time = None
+        end_time = None
+        
+        # Find first and last event timestamps
+        for event in trace.events:
+            if event.timestamp:
+                if start_time is None:
+                    start_time = event.timestamp
+                end_time = event.timestamp
+        
+        # Calculate duration if we have timestamps
+        if start_time and end_time:
+            try:
+                from datetime import datetime
+                start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+                end_dt = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
+                duration = (end_dt - start_dt).total_seconds() * 1000  # Convert to ms
+                logger.info(f"  - Calculated duration from timestamps: {duration}ms")
+                return duration
+            except Exception as e:
+                logger.warning(f"Failed to parse timestamps for duration calculation: {e}")
+        
+        # Default to a reasonable value if we can't calculate
+        logger.warning("Could not extract execution time, using default 300ms")
+        return 300.0  # Default to 300ms instead of 0
 
 
 class TraceBasedEvaluationAdapter:

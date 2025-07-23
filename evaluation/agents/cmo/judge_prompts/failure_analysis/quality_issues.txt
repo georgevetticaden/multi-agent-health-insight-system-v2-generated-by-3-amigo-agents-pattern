@@ -43,7 +43,6 @@ Based on your analysis of the actual prompts above, evaluate EACH prompt for pot
 Provide your analysis in the following JSON format. Output ONLY valid JSON with no additional text before or after:
 {{
     "overall_issue_description": "Clear description of the orchestration quality issue",
-    "root_cause": "Why the CMO's overall performance was insufficient",
     "weak_components": {{
         "component_name": "Specific reason why this component scored low"
     }},

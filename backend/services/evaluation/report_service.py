@@ -132,11 +132,23 @@ class ReportService:
         logger.info(f"Test case ID: {test_case.get('id', 'unknown')}")
         logger.info(f"Agent type: {agent_type}")
         
-        # Create directory structure similar to CLI evaluator
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        test_name = f"qe_{test_case.get('id', 'unknown')}_{timestamp}"
-        test_run_dir = self.base_report_dir / test_name
-        test_run_dir.mkdir(exist_ok=True, parents=True)
+        # Try to use unified storage if available
+        test_run_dir = None
+        try:
+            from evaluation.data.config import EvaluationDataConfig
+            run_dir = EvaluationDataConfig.find_run_dir(evaluation_id)
+            if run_dir:
+                test_run_dir = run_dir
+                logger.info(f"Using unified storage for report: {test_run_dir}")
+        except ImportError:
+            pass
+        
+        if not test_run_dir:
+            # Fallback to old directory structure
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            test_name = f"qe_{test_case.get('id', 'unknown')}_{timestamp}"
+            test_run_dir = self.base_report_dir / test_name
+            test_run_dir.mkdir(exist_ok=True, parents=True)
         
         logger.info(f"Created report directory: {test_run_dir}")
         

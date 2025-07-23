@@ -41,7 +41,15 @@ class TraceCollector:
         from pathlib import Path
         
         storage_type = os.getenv("TRACE_STORAGE_TYPE", "filesystem")
-        storage_path = Path(os.getenv("TRACE_STORAGE_PATH", "./traces"))
+        
+        # Use new unified evaluation data config if available
+        try:
+            from evaluation.data.config import EvaluationDataConfig
+            EvaluationDataConfig.init_directories()
+            storage_path = EvaluationDataConfig.TRACES_DIR
+        except ImportError:
+            # Fallback to environment variable or default
+            storage_path = Path(os.getenv("TRACE_STORAGE_PATH", "./traces"))
         
         if storage_type == "filesystem":
             return FileSystemTraceStorage(storage_path)

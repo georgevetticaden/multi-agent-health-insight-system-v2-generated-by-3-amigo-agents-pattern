@@ -39,9 +39,9 @@ from tools.tool_registry import ToolRegistry
 from evaluation.agents.cmo import CMOEvaluator
 from evaluation.agents.specialist import SpecialistEvaluator
 
-# Import test cases
-from evaluation.agents.cmo.test_cases import CMOTestCases
-from evaluation.agents.specialist import SpecialistTestCases
+# Import test loader and converter
+from evaluation.data.test_loader import TestLoader
+from evaluation.cli.test_case_converter import convert_json_test_cases
 
 # Import other evaluation components
 from evaluation.framework.report_generator import DynamicHTMLReportGenerator
@@ -218,11 +218,11 @@ class EvaluationRunner:
             "specialist": self._create_specialist_evaluator
         }
         
-        # Map of agent types to test cases
-        self.test_case_map = {
-            "cmo": CMOTestCases,
-            "specialist": SpecialistTestCases
-        }
+        # Test loader for new JSON test cases
+        self.test_loader = TestLoader()
+        
+        # We still need the map for agent type validation
+        self.test_case_map = {"cmo": True, "specialist": True}
     
     def _create_cmo_evaluator(self) -> CMOEvaluator:
         """Create CMO evaluator"""
@@ -260,7 +260,28 @@ class EvaluationRunner:
         medical_specialty = MedicalSpecialty(specialty)
         return SpecialistEvaluator(specialist_agent, medical_specialty, self.anthropic_client)
     
-    def get_test_cases(self, agent_type: str, test_type: str, category: Optional[str] = None, specialty: Optional[str] = None) -> List[Any]:
+    def _get_json_test_cases(self, agent_type: str, test_type: str, category: Optional[str] = None, specialty: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Get test cases from JSON storage"""
+        # Load all test cases for the agent type
+        all_tests = self.test_loader.load_all_tests(agent_type=agent_type)
+        
+        if not all_tests:
+            logger.warning(f"No test cases found for agent type: {agent_type}")
+            return []
+        
+        # Apply filters based on test type
+        if test_type == "example":
+            return all_tests[:1]
+        elif test_type == "comprehensive":
+            return all_tests[:8]
+        elif test_type == "all":
+            return all_tests
+        elif category:
+            return [t for t in all_tests if t.get("category") == category]
+        
+        return all_tests
+    
+    def get_test_cases_new(self, agent_type: str, test_type: str, category: Optional[str] = None, specialty: Optional[str] = None) -> List[Any]:
         """Get test cases for specified agent and test type"""
         
         if agent_type not in self.test_case_map:
@@ -341,8 +362,11 @@ class EvaluationRunner:
         else:
             evaluator = self.evaluator_map[agent_type]()
         
-        # Get test cases
-        test_cases = self.get_test_cases(agent_type, test_type, category, specialty)
+        # Get test cases using new JSON loader
+        json_test_cases = self._get_json_test_cases(agent_type, test_type, category, specialty)
+        
+        # Convert to appropriate objects
+        test_cases = convert_json_test_cases(json_test_cases, agent_type)
         
         if not test_cases:
             logger.warning(f"No test cases found for agent={agent_type}, test={test_type}, category={category}")
@@ -394,9 +418,22 @@ class EvaluationRunner:
         """Create directory for test run outputs"""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         test_name = f"{agent_type}-{test_type}_{timestamp}"
-        test_dir = Path("evaluation/test_runs") / test_name
-        test_dir.mkdir(parents=True, exist_ok=True)
-        return test_dir
+        
+        # Try to use unified storage for runs
+        try:
+            from evaluation.data.config import EvaluationDataConfig
+            import uuid
+            # Create evaluation ID for this run
+            evaluation_id = f"{test_name}_{uuid.uuid4().hex[:8]}"
+            test_dir = EvaluationDataConfig.get_run_dir(evaluation_id)
+            logger.info(f"Using unified run storage: {test_dir}")
+            return test_dir
+        except ImportError:
+            # Fallback to old location
+            test_dir = Path("evaluation/test_runs") / test_name
+            test_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Using legacy test directory: {test_dir}")
+            return test_dir
 
 
 async def main():
@@ -469,8 +506,17 @@ async def main():
     # Setup logging for this test run
     setup_evaluation_logging(log_level=log_level, log_to_file=True, log_dir=test_dir)
     
-    # Configure trace storage to use test directory BEFORE any imports that might initialize tracing
-    os.environ["TRACE_STORAGE_PATH"] = str(test_dir / "traces")
+    # Configure trace storage - prefer unified storage if available
+    try:
+        from evaluation.data.config import EvaluationDataConfig
+        EvaluationDataConfig.init_directories()
+        # Always use unified trace storage when available
+        os.environ["TRACE_STORAGE_PATH"] = str(EvaluationDataConfig.TRACES_DIR)
+        logger.info(f"Using unified trace storage: {EvaluationDataConfig.TRACES_DIR}")
+    except ImportError:
+        # Only fall back to test directory if unified storage not available
+        os.environ["TRACE_STORAGE_PATH"] = str(test_dir / "traces")
+        logger.info(f"Using test directory trace storage: {test_dir / 'traces'}")
     os.environ["TRACE_STORAGE_TYPE"] = "filesystem"
     
     # Reset the trace collector if it was already initialized with default path
@@ -478,15 +524,16 @@ async def main():
         from services.tracing.trace_collector import set_trace_collector, TraceCollector
         from services.tracing.storage import FileSystemTraceStorage
         # Create a new trace collector with the correct storage path
-        storage = FileSystemTraceStorage(test_dir / "traces")
+        trace_storage_path = Path(os.environ.get("TRACE_STORAGE_PATH", str(test_dir / "traces")))
+        storage = FileSystemTraceStorage(trace_storage_path)
         new_collector = TraceCollector(storage_backend=storage)
         set_trace_collector(new_collector)
-        logger.info(f"Reset trace collector with storage path: {test_dir / 'traces'}")
+        logger.info(f"Reset trace collector with storage path: {trace_storage_path}")
     
     logger.info(f"Starting {args.agent} agent evaluation")
     logger.info(f"Test type: {args.test}")
     logger.info(f"Test directory: {test_dir}")
-    logger.info(f"Trace storage: {test_dir / 'traces'}")
+    logger.info(f"Trace storage: {os.environ.get('TRACE_STORAGE_PATH', 'default')}")
     
     try:
         # Run evaluation
@@ -505,6 +552,30 @@ async def main():
             json.dump(results, f, indent=2, default=str)
         
         logger.info(f"Results saved to: {results_file}")
+        
+        # Rename directory to include trace ID if available
+        if results.get("results") and len(results["results"]) > 0:
+            # Get the first trace_id from results (typically all tests in a run share same trace)
+            first_result = results["results"][0]
+            trace_id = first_result.get("trace_id")
+            
+            if trace_id:
+                # Extract the first 8 chars of trace ID for brevity
+                trace_suffix = trace_id[:8]
+                
+                # Create new directory name with trace ID
+                old_dir_name = test_dir.name
+                new_dir_name = f"{old_dir_name}_trace_{trace_suffix}"
+                new_test_dir = test_dir.parent / new_dir_name
+                
+                try:
+                    # Rename the directory
+                    test_dir.rename(new_test_dir)
+                    test_dir = new_test_dir
+                    results_file = test_dir / "results.json"
+                    logger.info(f"Renamed test directory to include trace ID: {new_test_dir}")
+                except Exception as e:
+                    logger.warning(f"Could not rename directory to include trace ID: {e}")
         
         # Generate report
         if results.get("results"):

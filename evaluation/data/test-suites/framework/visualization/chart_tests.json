@@ -1,0 +1,51 @@
+[
+  {
+    "id": "viz_001",
+    "agent_type": "visualization",
+    "query": "Create a chart showing blood pressure trends over the last 6 months",
+    "input_data": {
+      "type": "time_series",
+      "metrics": [
+        "systolic_bp",
+        "diastolic_bp"
+      ],
+      "time_range": "6_months"
+    },
+    "expected_chart_type": "LineChart",
+    "expected_features": [
+      "dual_y_axis",
+      "trend_line",
+      "date_axis"
+    ],
+    "expected_libraries": [
+      "recharts"
+    ],
+    "created_by": "framework",
+    "created_at": "2025-01-01T00:00:00Z"
+  },
+  {
+    "id": "viz_002",
+    "agent_type": "visualization",
+    "query": "Show distribution of cholesterol levels by age group",
+    "input_data": {
+      "type": "distribution",
+      "metrics": [
+        "cholesterol_total",
+        "cholesterol_ldl",
+        "cholesterol_hdl"
+      ],
+      "grouping": "age_group"
+    },
+    "expected_chart_type": "BarChart",
+    "expected_features": [
+      "grouped_bars",
+      "legend",
+      "tooltips"
+    ],
+    "expected_libraries": [
+      "recharts"
+    ],
+    "created_by": "framework",
+    "created_at": "2025-01-01T00:00:00Z"
+  }
+]

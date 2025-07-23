@@ -315,21 +315,43 @@ class TraceEvaluationService:
         # Create event callback if evaluation tracking is enabled
         event_callback = None
         if evaluation_id and evaluations:
+            # Try to use unified storage if available
+            use_file_storage = False
+            run_dir = None
+            try:
+                from evaluation.data.config import EvaluationDataConfig
+                run_dir = EvaluationDataConfig.find_run_dir(evaluation_id)
+                if run_dir:
+                    use_file_storage = True
+                    logger.info(f"Using file-based event storage at: {run_dir}")
+            except ImportError:
+                logger.info("Using in-memory event storage")
+            
             def store_event(event: Dict[str, Any]):
-                """Store evaluation event in the evaluations dict"""
+                """Store evaluation event in file system or memory"""
                 logger.info(f"Attempting to store event for evaluation {evaluation_id}")
-                logger.info(f"Available evaluations in dict: {list(evaluations.keys())}")
                 
-                if evaluation_id in evaluations:
-                    events = evaluations[evaluation_id].get("events", [])
-                    event["timestamp"] = datetime.now().isoformat()
-                    events.append(event)
-                    evaluations[evaluation_id]["events"] = events
-                    logger.info(f"✅ Stored event: {event.get('type', 'unknown')} - {event.get('message', '')}")
-                    logger.info(f"Total events now: {len(events)}")
+                event["timestamp"] = datetime.now().isoformat()
+                
+                if use_file_storage and run_dir:
+                    # Store to file system
+                    event_num = len(list((run_dir / "events").glob("*.json"))) + 1
+                    event_file = run_dir / "events" / f"{event_num:03d}_{event.get('type', 'unknown')}.json"
+                    event_file.write_text(json.dumps(event, indent=2))
+                    logger.info(f"✅ Stored event to file: {event_file.name}")
                 else:
-                    logger.error(f"❌ Evaluation {evaluation_id} not found in evaluations dict!")
-                    logger.error(f"Cannot store event: {event.get('type', 'unknown')} - {event.get('message', '')}")
+                    # Store to memory
+                    logger.info(f"Available evaluations in dict: {list(evaluations.keys())}")
+                    
+                    if evaluation_id in evaluations:
+                        events = evaluations[evaluation_id].get("events", [])
+                        events.append(event)
+                        evaluations[evaluation_id]["events"] = events
+                        logger.info(f"✅ Stored event: {event.get('type', 'unknown')} - {event.get('message', '')}")
+                        logger.info(f"Total events now: {len(events)}")
+                    else:
+                        logger.error(f"❌ Evaluation {evaluation_id} not found in evaluations dict!")
+                        logger.error(f"Cannot store event: {event.get('type', 'unknown')} - {event.get('message', '')}")
             
             event_callback = store_event
         

@@ -50,7 +50,17 @@ class EvaluationService:
     """Service for running evaluations from test cases"""
     
     def __init__(self):
-        self.evaluations: Dict[str, Dict[str, Any]] = {}
+        # Import evaluation data config
+        try:
+            from evaluation.data.config import EvaluationDataConfig
+            self.config = EvaluationDataConfig
+            self.config.init_directories()
+            self.use_unified_storage = True
+        except ImportError:
+            self.config = None
+            self.use_unified_storage = False
+            
+        self.evaluations: Dict[str, Dict[str, Any]] = {}  # Still maintain in-memory cache
         self.results_dir = Path("evaluation_results")
         self.results_dir.mkdir(exist_ok=True)
     
@@ -93,6 +103,20 @@ class EvaluationService:
         }
         logger.info(f"Stored evaluation info in memory")
         
+        # If using unified storage, create metadata file
+        if self.use_unified_storage:
+            run_dir = self.config.get_run_dir(evaluation_id)
+            metadata = {
+                "evaluation_id": evaluation_id,
+                "test_case_id": test_case_data.get("id"),
+                "trace_id": test_case_data.get("trace_id"),
+                "agent_type": agent_type,
+                "started_at": datetime.now().isoformat(),
+                "status": EvaluationStatus.PENDING.value
+            }
+            (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
+            logger.info(f"Created metadata file at: {run_dir / 'metadata.json'}")
+        
         # Start evaluation in background
         logger.info(f"Starting background evaluation task...")
         asyncio.create_task(self._run_evaluation_async(
@@ -115,26 +139,59 @@ class EvaluationService:
     def get_evaluation_events(self, evaluation_id: str, start_index: int = 0) -> Dict[str, Any]:
         """Get evaluation events since the given index"""
         logger.info(f"Getting events for evaluation {evaluation_id}")
-        logger.info(f"Available evaluations: {list(self.evaluations.keys())}")
         
-        if evaluation_id not in self.evaluations:
-            logger.error(f"Evaluation {evaluation_id} not found in evaluations dict")
-            return {"error": "Evaluation not found", "events": []}
-        
-        evaluation = self.evaluations[evaluation_id]
-        all_events = evaluation.get("events", [])
-        logger.info(f"Total events stored: {len(all_events)}")
-        
-        events = all_events[start_index:]
-        logger.info(f"Returning {len(events)} events starting from index {start_index}")
-        
-        return {
-            "evaluation_id": evaluation_id,
-            "status": evaluation["status"].value,
-            "events": events,
-            "total_events": len(all_events),
-            "has_more": len(events) < len(all_events)
-        }
+        # If using unified storage, read from file system
+        if self.use_unified_storage:
+            run_dir = self.config.find_run_dir(evaluation_id)
+            if not run_dir:
+                logger.error(f"Evaluation {evaluation_id} not found in file system")
+                return {"error": "Evaluation not found", "events": []}
+            
+            # Read events from files
+            event_files = sorted((run_dir / "events").glob("*.json"))
+            events = []
+            for event_file in event_files[start_index:]:
+                with open(event_file) as f:
+                    events.append(json.load(f))
+            
+            # Read metadata for status
+            metadata_path = run_dir / "metadata.json"
+            if metadata_path.exists():
+                with open(metadata_path) as f:
+                    metadata = json.load(f)
+                status = metadata.get("status", "unknown")
+            else:
+                status = "unknown"
+            
+            return {
+                "evaluation_id": evaluation_id,
+                "status": status,
+                "events": events,
+                "total_events": len(event_files),
+                "has_more": False
+            }
+        else:
+            # Fallback to in-memory storage
+            logger.info(f"Available evaluations: {list(self.evaluations.keys())}")
+            
+            if evaluation_id not in self.evaluations:
+                logger.error(f"Evaluation {evaluation_id} not found in evaluations dict")
+                return {"error": "Evaluation not found", "events": []}
+            
+            evaluation = self.evaluations[evaluation_id]
+            all_events = evaluation.get("events", [])
+            logger.info(f"Total events stored: {len(all_events)}")
+            
+            events = all_events[start_index:]
+            logger.info(f"Returning {len(events)} events starting from index {start_index}")
+            
+            return {
+                "evaluation_id": evaluation_id,
+                "status": evaluation["status"].value,
+                "events": events,
+                "total_events": len(all_events),
+                "has_more": len(events) < len(all_events)
+            }
     
     async def save_test_case(
         self,
@@ -142,7 +199,35 @@ class EvaluationService:
         session_id: Optional[str] = None
     ) -> str:
         """Save a test case to disk"""
-        # Create directory structure
+        if self.use_unified_storage:
+            # Save using TestLoader to unified storage
+            try:
+                from evaluation.data.test_loader import TestLoader
+                
+                # Ensure test case has required fields
+                if 'id' not in test_case_data:
+                    test_case_data['id'] = str(uuid.uuid4())
+                if 'agent_type' not in test_case_data:
+                    test_case_data['agent_type'] = 'cmo'  # Default to CMO
+                if 'created_at' not in test_case_data:
+                    test_case_data['created_at'] = datetime.now().isoformat()
+                if 'created_by' not in test_case_data:
+                    test_case_data['created_by'] = 'studio'
+                
+                # Save test case
+                if TestLoader.save_test_case(test_case_data, source='studio'):
+                    test_path = self.config.get_test_case_path(
+                        test_case_data['id'], 
+                        test_case_data['agent_type']
+                    )
+                    logger.info(f"Saved test case to unified storage: {test_path}")
+                    return str(test_path)
+                else:
+                    logger.error("Failed to save test case to unified storage")
+            except Exception as e:
+                logger.error(f"Error saving to unified storage: {e}")
+        
+        # Fallback to old storage method
         today = datetime.now().strftime("%Y-%m-%d")
         if session_id:
             save_dir = Path("test_cases") / today / session_id
@@ -243,6 +328,12 @@ class EvaluationService:
     
     def _find_trace_file(self, trace_id: str) -> Optional[str]:
         """Find trace file by ID."""
+        # Try unified storage first
+        if self.use_unified_storage:
+            trace_path = self.config.find_trace(trace_id)
+            if trace_path:
+                return str(trace_path)
+        
         # Look in standard trace directories
         trace_dirs = [
             Path("backend/traces"),
@@ -278,6 +369,17 @@ class EvaluationService:
             # Update status
             logger.info(f"Updating evaluation status to RUNNING...")
             evaluation["status"] = EvaluationStatus.RUNNING
+            
+            # Update metadata file if using unified storage
+            if self.use_unified_storage:
+                run_dir = self.config.find_run_dir(evaluation_id)
+                if run_dir:
+                    metadata_path = run_dir / "metadata.json"
+                    if metadata_path.exists():
+                        with open(metadata_path) as f:
+                            metadata = json.load(f)
+                        metadata["status"] = EvaluationStatus.RUNNING.value
+                        metadata_path.write_text(json.dumps(metadata, indent=2))
             
             # Use CLI evaluator with subprocess
             trace_id = test_case_data.get('trace_id')
@@ -356,15 +458,57 @@ class EvaluationService:
             evaluation["status"] = EvaluationStatus.COMPLETED
             evaluation["completed_at"] = datetime.now()
             
+            # Update metadata file if using unified storage
+            if self.use_unified_storage:
+                run_dir = self.config.find_run_dir(evaluation_id)
+                if run_dir:
+                    metadata_path = run_dir / "metadata.json"
+                    if metadata_path.exists():
+                        with open(metadata_path) as f:
+                            metadata = json.load(f)
+                        metadata["status"] = EvaluationStatus.COMPLETED.value
+                        metadata["completed_at"] = datetime.now().isoformat()
+                        metadata_path.write_text(json.dumps(metadata, indent=2))
+            
             logger.info(f"Evaluation {evaluation_id} completed successfully")
             
         except Exception as e:
             logger.error(f"Evaluation {evaluation_id} failed: {e}", exc_info=True)
             evaluation["status"] = EvaluationStatus.FAILED
             evaluation["error"] = str(e)
+            
+            # Update metadata file if using unified storage
+            if self.use_unified_storage:
+                run_dir = self.config.find_run_dir(evaluation_id)
+                if run_dir:
+                    metadata_path = run_dir / "metadata.json"
+                    if metadata_path.exists():
+                        with open(metadata_path) as f:
+                            metadata = json.load(f)
+                        metadata["status"] = EvaluationStatus.FAILED.value
+                        metadata["error"] = str(e)
+                        metadata["failed_at"] = datetime.now().isoformat()
+                        metadata_path.write_text(json.dumps(metadata, indent=2))
     
     async def _save_result(self, evaluation_id: str, result: Dict[str, Any]):
         """Save evaluation result to file"""
+        if self.use_unified_storage:
+            # Save to unified storage location
+            run_dir = self.config.find_run_dir(evaluation_id)
+            if run_dir:
+                filepath = run_dir / "result.json"
+                logger.info(f"Saving evaluation result to unified storage: {filepath}")
+                
+                with open(filepath, 'w') as f:
+                    json.dump(result, f, indent=2)
+                
+                logger.info(f"Successfully saved evaluation result ({os.path.getsize(filepath)} bytes)")
+                
+                # Store filepath in evaluation
+                self.evaluations[evaluation_id]["result_file"] = str(filepath)
+                return
+        
+        # Fallback to old storage method
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         test_case_id = result.get('test_case_id', evaluation_id[:8])
         filename = f"{test_case_id}_{timestamp}.json"

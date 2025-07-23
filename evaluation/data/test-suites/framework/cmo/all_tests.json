@@ -1,0 +1,142 @@
+[
+  {
+    "id": "simple_001",
+    "agent_type": "cmo",
+    "query": "What is my current blood sugar level?",
+    "expected_complexity": "SIMPLE",
+    "expected_specialties": [
+      "endocrinology"
+    ],
+    "key_data_points": [
+      "glucose",
+      "latest_labs"
+    ],
+    "category": "diabetes",
+    "notes": "Simple single data point query",
+    "created_by": "framework",
+    "created_at": "2025-01-01T00:00:00Z"
+  },
+  {
+    "id": "simple_002",
+    "agent_type": "cmo",
+    "query": "Show me my latest blood pressure reading",
+    "expected_complexity": "SIMPLE",
+    "expected_specialties": [
+      "cardiology"
+    ],
+    "key_data_points": [
+      "blood_pressure",
+      "latest_vitals"
+    ],
+    "category": "cardiac",
+    "notes": "Simple vital sign query",
+    "created_by": "framework",
+    "created_at": "2025-01-01T00:00:00Z"
+  },
+  {
+    "id": "standard_001",
+    "agent_type": "cmo",
+    "query": "Show me my blood pressure trends over the last 3 months",
+    "expected_complexity": "STANDARD",
+    "expected_specialties": [
+      "cardiology",
+      "data_analysis"
+    ],
+    "key_data_points": [
+      "blood_pressure",
+      "trends",
+      "3_months"
+    ],
+    "category": "cardiac",
+    "notes": "Standard trend analysis",
+    "created_by": "framework",
+    "created_at": "2025-01-01T00:00:00Z"
+  },
+  {
+    "id": "standard_002",
+    "agent_type": "cmo",
+    "query": "Compare my cholesterol levels before and after starting statins",
+    "expected_complexity": "STANDARD",
+    "expected_specialties": [
+      "cardiology",
+      "pharmacy"
+    ],
+    "key_data_points": [
+      "cholesterol",
+      "statins",
+      "medication_timeline"
+    ],
+    "category": "cardiac",
+    "notes": "Medication effectiveness analysis",
+    "created_by": "framework",
+    "created_at": "2025-01-01T00:00:00Z"
+  },
+  {
+    "id": "complex_001",
+    "agent_type": "cmo",
+    "query": "How has my diabetes management changed since starting the new medication regimen, including A1C trends, glucose variability, and any side effects?",
+    "expected_complexity": "COMPLEX",
+    "expected_specialties": [
+      "endocrinology",
+      "pharmacy",
+      "data_analysis"
+    ],
+    "key_data_points": [
+      "a1c",
+      "glucose_variability",
+      "medications",
+      "side_effects",
+      "trends"
+    ],
+    "category": "diabetes",
+    "notes": "Complex multi-dimensional analysis",
+    "created_by": "framework",
+    "created_at": "2025-01-01T00:00:00Z"
+  },
+  {
+    "id": "complex_002",
+    "agent_type": "cmo",
+    "query": "Analyze my heart health including blood pressure trends, cholesterol levels, exercise data, and medication adherence over the past year",
+    "expected_complexity": "COMPLEX",
+    "expected_specialties": [
+      "cardiology",
+      "pharmacy",
+      "lifestyle",
+      "data_analysis"
+    ],
+    "key_data_points": [
+      "blood_pressure",
+      "cholesterol",
+      "exercise",
+      "medication_adherence",
+      "yearly_trends"
+    ],
+    "category": "cardiac",
+    "notes": "Comprehensive cardiac health analysis",
+    "created_by": "framework",
+    "created_at": "2025-01-01T00:00:00Z"
+  },
+  {
+    "id": "critical_001",
+    "agent_type": "cmo",
+    "query": "I've been experiencing chest pain and shortness of breath. Analyze my recent cardiac markers, ECG results, blood pressure trends, and any relevant risk factors",
+    "expected_complexity": "CRITICAL",
+    "expected_specialties": [
+      "cardiology",
+      "emergency",
+      "diagnostics",
+      "risk_analysis"
+    ],
+    "key_data_points": [
+      "cardiac_markers",
+      "ecg",
+      "blood_pressure",
+      "symptoms",
+      "risk_factors"
+    ],
+    "category": "emergency",
+    "notes": "Critical symptom analysis requiring urgent attention",
+    "created_by": "framework",
+    "created_at": "2025-01-01T00:00:00Z"
+  }
+]

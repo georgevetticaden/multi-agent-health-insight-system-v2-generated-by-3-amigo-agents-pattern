@@ -147,6 +147,12 @@ evaluation/test_runs/*/
 !evaluation/test_runs/saved-runs/
 !evaluation/test_runs/saved-runs/**/
 
+# Evaluation data - unified storage
+# Ignore all runs
+evaluation/data/runs/*/
+# Ignore all traces  
+evaluation/data/traces/*/
+
 # Test Coverage
 coverage/
 *.lcov

@@ -1,0 +1,80 @@
+[
+  {
+    "id": "simple_002",
+    "agent_type": "cmo",
+    "query": "Show me my latest blood pressure reading",
+    "expected_complexity": "SIMPLE",
+    "expected_specialties": [
+      "cardiology"
+    ],
+    "key_data_points": [
+      "blood_pressure",
+      "latest_vitals"
+    ],
+    "category": "cardiac",
+    "notes": "Simple vital sign query",
+    "created_by": "framework",
+    "created_at": "2025-01-01T00:00:00Z"
+  },
+  {
+    "id": "standard_001",
+    "agent_type": "cmo",
+    "query": "Show me my blood pressure trends over the last 3 months",
+    "expected_complexity": "STANDARD",
+    "expected_specialties": [
+      "cardiology",
+      "data_analysis"
+    ],
+    "key_data_points": [
+      "blood_pressure",
+      "trends",
+      "3_months"
+    ],
+    "category": "cardiac",
+    "notes": "Standard trend analysis",
+    "created_by": "framework",
+    "created_at": "2025-01-01T00:00:00Z"
+  },
+  {
+    "id": "standard_002",
+    "agent_type": "cmo",
+    "query": "Compare my cholesterol levels before and after starting statins",
+    "expected_complexity": "STANDARD",
+    "expected_specialties": [
+      "cardiology",
+      "pharmacy"
+    ],
+    "key_data_points": [
+      "cholesterol",
+      "statins",
+      "medication_timeline"
+    ],
+    "category": "cardiac",
+    "notes": "Medication effectiveness analysis",
+    "created_by": "framework",
+    "created_at": "2025-01-01T00:00:00Z"
+  },
+  {
+    "id": "complex_002",
+    "agent_type": "cmo",
+    "query": "Analyze my heart health including blood pressure trends, cholesterol levels, exercise data, and medication adherence over the past year",
+    "expected_complexity": "COMPLEX",
+    "expected_specialties": [
+      "cardiology",
+      "pharmacy",
+      "lifestyle",
+      "data_analysis"
+    ],
+    "key_data_points": [
+      "blood_pressure",
+      "cholesterol",
+      "exercise",
+      "medication_adherence",
+      "yearly_trends"
+    ],
+    "category": "cardiac",
+    "notes": "Comprehensive cardiac health analysis",
+    "created_by": "framework",
+    "created_at": "2025-01-01T00:00:00Z"
+  }
+]

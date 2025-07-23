@@ -1,0 +1,25 @@
+[
+  {
+    "id": "critical_001",
+    "agent_type": "cmo",
+    "query": "I've been experiencing chest pain and shortness of breath. Analyze my recent cardiac markers, ECG results, blood pressure trends, and any relevant risk factors",
+    "expected_complexity": "CRITICAL",
+    "expected_specialties": [
+      "cardiology",
+      "emergency",
+      "diagnostics",
+      "risk_analysis"
+    ],
+    "key_data_points": [
+      "cardiac_markers",
+      "ecg",
+      "blood_pressure",
+      "symptoms",
+      "risk_factors"
+    ],
+    "category": "emergency",
+    "notes": "Critical symptom analysis requiring urgent attention",
+    "created_by": "framework",
+    "created_at": "2025-01-01T00:00:00Z"
+  }
+]

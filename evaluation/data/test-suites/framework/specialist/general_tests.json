@@ -1,0 +1,54 @@
+[
+  {
+    "id": "specialist_001",
+    "agent_type": "specialist",
+    "specialist_type": "CARDIOLOGY",
+    "task": {
+      "objective": "Analyze blood pressure trends",
+      "context": "Patient on lisinopril for 6 months",
+      "expected_output": "Trend analysis with medication correlation",
+      "priority": "high",
+      "max_tool_calls": 5
+    },
+    "expected_tools": [
+      "execute_health_query_v2"
+    ],
+    "expected_data_points": [
+      "systolic_bp",
+      "diastolic_bp",
+      "medication_dates"
+    ],
+    "validation_criteria": {
+      "must_identify_trend": true,
+      "must_correlate_medication": true
+    },
+    "created_by": "framework",
+    "created_at": "2025-01-01T00:00:00Z"
+  },
+  {
+    "id": "specialist_002",
+    "agent_type": "specialist",
+    "specialist_type": "ENDOCRINOLOGY",
+    "task": {
+      "objective": "Evaluate diabetes control",
+      "context": "Type 2 diabetes patient with recent medication change",
+      "expected_output": "A1C trend analysis and glucose variability assessment",
+      "priority": "high",
+      "max_tool_calls": 5
+    },
+    "expected_tools": [
+      "execute_health_query_v2"
+    ],
+    "expected_data_points": [
+      "a1c",
+      "glucose_readings",
+      "medication_changes"
+    ],
+    "validation_criteria": {
+      "must_analyze_a1c": true,
+      "must_assess_variability": true
+    },
+    "created_by": "framework",
+    "created_at": "2025-01-01T00:00:00Z"
+  }
+]

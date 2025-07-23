@@ -185,13 +185,17 @@ class FileSystemTraceStorage(TraceStorage):
         """Get the file path for a trace"""
         if start_time:
             # Use start time to organize by date
-            date = datetime.fromisoformat(start_time).date()
+            dt = datetime.fromisoformat(start_time)
+            date = dt.date()
             date_dir = self.base_dir / date.strftime("%Y-%m-%d")
+            # Include timestamp in filename for easier sorting: HHMMSS_trace_id
+            time_prefix = dt.strftime("%H%M%S")
+            return date_dir / f"{time_prefix}_{trace_id}.json"
         else:
             # Search across all date directories
             date_dir = self.base_dir
-            
-        return date_dir / f"{trace_id}.json"
+            # When searching, we need to handle both old and new naming patterns
+            return date_dir / f"*_{trace_id}.json"
     
     async def store_trace(self, trace: CompleteTrace) -> bool:
         """Store trace to filesystem"""
@@ -236,6 +240,16 @@ class FileSystemTraceStorage(TraceStorage):
             # Search for trace file across date directories
             for date_dir in self.base_dir.iterdir():
                 if date_dir.is_dir() and date_dir.name.count('-') == 2:  # YYYY-MM-DD format
+                    # Try new naming pattern first (HHMMSS_trace_id.json)
+                    for trace_file in date_dir.glob(f"*_{trace_id}.json"):
+                        async with self._lock:
+                            with open(trace_file, 'r', encoding='utf-8') as f:
+                                data = json.load(f)
+                        
+                        # Convert back to CompleteTrace
+                        return self._dict_to_trace(data)
+                    
+                    # Fallback to old naming pattern (trace_id.json)
                     trace_path = date_dir / f"{trace_id}.json"
                     if trace_path.exists():
                         async with self._lock:
@@ -265,7 +279,9 @@ class FileSystemTraceStorage(TraceStorage):
             date_dirs.sort(reverse=True)
             
             for date_dir in date_dirs:
-                for trace_file in date_dir.glob("*.json"):
+                # Get all JSON files, sort by filename to get time order (newest first)
+                trace_files = sorted(date_dir.glob("*.json"), reverse=True)
+                for trace_file in trace_files:
                     try:
                         async with self._lock:
                             with open(trace_file, 'r', encoding='utf-8') as f:

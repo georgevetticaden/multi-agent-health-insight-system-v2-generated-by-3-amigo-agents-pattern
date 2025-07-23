@@ -53,7 +53,12 @@ MODEL_CONFIGS: Dict[str, ModelConfig] = {
         supports_tools=True,
         supports_streaming=True
     ),
-    
+    "claude-3-7-sonnet-20250219": ModelConfig(
+        max_tokens=8192,
+        context_window=200000,
+        supports_tools=True,
+        supports_streaming=True
+    ),
     # Claude Opus 4 models
     "claude-opus-4-20250514": ModelConfig(
         max_tokens=8192,

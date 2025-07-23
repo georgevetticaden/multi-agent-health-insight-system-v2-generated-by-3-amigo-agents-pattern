@@ -23,9 +23,9 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 # Import from backend modules  
-from evaluation.mock_agents import MockCMOAgent
-from evaluation.trace_parser import TraceDataExtractor
-from evaluation.subprocess_evaluator import run_evaluation_subprocess
+from eval_integration.mock_agents import MockCMOAgent
+from eval_integration.trace_parser import TraceDataExtractor
+from eval_integration.subprocess_evaluator import run_evaluation_subprocess
 from services.tracing.trace_models import CompleteTrace, TraceEvent, TraceEventType
 from services.agents.models import QueryComplexity, MedicalSpecialty
 

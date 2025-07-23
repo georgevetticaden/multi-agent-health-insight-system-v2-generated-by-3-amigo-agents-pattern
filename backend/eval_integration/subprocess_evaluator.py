@@ -41,7 +41,7 @@ def run_evaluation_subprocess(
     # Use the new subprocess evaluation script
     backend_dir = Path(__file__).parent.parent
     project_root = backend_dir.parent  # Define project_root
-    eval_script = backend_dir / "evaluation" / "run_subprocess_eval.py"
+    eval_script = backend_dir / "eval_integration" / "run_subprocess_eval.py"
     
     if not eval_script.exists():
         logger.error(f"Evaluation script not found at {eval_script}")

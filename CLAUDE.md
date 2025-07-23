@@ -633,6 +633,110 @@ async def test_new_specialist():
 - Consider implementation impact
 - Suggest testing approach
 
+---
+
+# Part 3: Next Phase - Test Case Management UI Design
+
+## Current Status: QE Agent Evaluation System Complete ✅
+- QE Agent fully operational with "run" and "details" commands
+- Evaluation engine working with comprehensive scoring across 5 dimensions
+- HTML report generation with CLI-style drill-downs and LLM Judge analysis
+- Report URLs clickable and served via HTTP API
+- Score display fixed (showing actual percentages, not 0%)
+
+## Next Phase: Rich Test Case Management UI
+
+### Vision: Three-Panel Layout Similar to Health Insight System
+
+The goal is to create a comprehensive test case management interface that mirrors the successful three-panel layout of the Health Insight System:
+
+#### **Left Panel: QE/Evaluation Agent Interface**
+- Similar to the current Medical Team panel
+- QE Agent chat interface for test case creation and evaluation commands
+- Real-time status of running evaluations
+- Agent conversation history and context
+- Quick actions (run evaluation, view details, reset)
+
+#### **Middle Panel: Test Case & Trace Viewer**
+- Similar to the current chat interface but focused on test management
+- **Primary View**: List/grid of test cases with:
+  - Test case ID, query preview, complexity, expected vs actual specialists
+  - Status indicators (created, evaluated, passed/failed)
+  - Quick action buttons (run, view report, edit, duplicate)
+- **Detail View**: When a test case is selected:
+  - Full test case details with all parameters
+  - Trace viewer integration (if trace_id exists)
+  - Evaluation history for that test case
+  - Side-by-side expected vs actual comparisons
+
+#### **Right Panel: Multi-Tab Information Panel**
+Similar to current visualization panel but with evaluation-focused tabs:
+- **📊 Evaluation Reports** - Interactive HTML reports with drill-downs
+- **📈 Performance Analytics** - Charts and metrics across test cases
+- **🔍 Test Case Details** - Detailed breakdown of selected test case
+- **📋 Evaluation History** - Timeline of all evaluations
+- **⚙️ Test Management** - Bulk operations, import/export, templates
+
+### Key Design Principles
+
+#### **Consistency with Current System**
+- Reuse existing UI components and patterns from Health Insight System
+- Maintain the same three-panel responsive layout
+- Use consistent styling, colors, and interaction patterns
+- Preserve the familiar user experience
+
+#### **Test Case Lifecycle Management**
+- **Creation**: Generate test cases via QE Agent or manual input
+- **Organization**: Categories, tags, complexity grouping
+- **Execution**: Run single or batch evaluations
+- **Analysis**: View results, compare runs, identify patterns
+- **Iteration**: Edit, refine, and re-run test cases
+
+#### **Advanced Features to Consider**
+- **Test Case Templates** - Predefined test structures for different scenarios
+- **Batch Operations** - Run multiple evaluations, bulk edit, mass actions
+- **Comparison Views** - Side-by-side test case comparisons, A/B testing
+- **Performance Tracking** - Historical trends, regression detection
+- **Export/Import** - CSV, JSON, integration with external systems
+
+### Technical Architecture Considerations
+
+#### **Backend Extensions Needed**
+- **Test Case Storage**: Database or file-based persistence
+- **Batch Evaluation API**: Handle multiple test cases concurrently  
+- **Analytics API**: Aggregate statistics and performance metrics
+- **Test Management API**: CRUD operations, search, filtering
+
+#### **Frontend Components to Develop**
+- **TestCaseGrid**: Sortable, filterable list of test cases
+- **TestCaseDetail**: Rich detail view with editing capabilities
+- **EvaluationDashboard**: Analytics and performance visualization
+- **BatchOperations**: Multi-select and bulk action interface
+
+#### **Integration Points**
+- Reuse existing **QE Agent** for test case generation and evaluation
+- Integrate with **Trace Viewer** for test cases with associated traces  
+- Connect to **Report System** for displaying HTML evaluation reports
+- Maintain **SSE Streaming** for real-time evaluation progress
+
+### Discussion Points for Design Session
+
+When you return, let's discuss:
+
+1. **UI Layout Priorities**: Which panel should be most prominent? Should test case list be the primary focus?
+
+2. **Test Case Data Model**: What additional fields do we need beyond current test case structure?
+
+3. **User Workflows**: Primary use cases - are users mostly creating new tests, analyzing results, or managing existing tests?
+
+4. **Filtering & Search**: What criteria are most important for finding test cases? (complexity, status, score, date, category)
+
+5. **Real-time Updates**: Should test case status update in real-time during evaluations? How to handle concurrent users?
+
+6. **Performance Considerations**: How many test cases should we optimize for? Pagination vs infinite scroll?
+
+This design will create a comprehensive test management system that maintains the familiar three-panel experience while providing powerful evaluation and analysis capabilities.
+
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.
 NEVER create files unless they're absolutely necessary for achieving your goal.

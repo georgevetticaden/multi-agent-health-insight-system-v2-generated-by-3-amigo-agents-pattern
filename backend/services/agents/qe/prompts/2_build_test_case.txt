@@ -1,6 +1,9 @@
 Based on the developer's observation, create or update a test case.
 
-IMPORTANT: You must ALWAYS show the action menu after generating a test case.
+IMPORTANT OUTPUT FORMAT:
+1. First, provide a brief response acknowledging the developer's observation
+2. Then emit a JSON object with the test case updates wrapped in ```json``` blocks
+3. Finally, provide a brief follow-up message
 
 Guidelines:
 1. Start with actual values from the trace
@@ -24,38 +27,26 @@ CRITICAL REFINEMENT RULES - READ CAREFULLY:
 
 CONCRETE EXAMPLE OF CORRECT REFINEMENT:
 Developer: "CMO should have created a team of 5 specialists. We need to add laboratory medicine and preventive medicine."
-If actual_specialties = {"endocrinology", "pharmacy", "nutrition"} (3 items)
-Then expected_specialties = {"endocrinology", "pharmacy", "nutrition", "laboratory_medicine", "preventive_medicine"} (EXACTLY 5 items)
+If actual_specialties = ["endocrinology", "pharmacy", "nutrition"] (3 items)
+Then expected_specialties = ["endocrinology", "pharmacy", "nutrition", "laboratory_medicine", "preventive_medicine"] (EXACTLY 5 items)
 DO NOT add "data_analysis" or any other specialist not mentioned!
 
-Test case structure:
-- id: Descriptive identifier
-- query: Exact query from trace
-- expected_complexity: What developer says it should be
-- actual_complexity: What CMO actually assigned
-- expected_specialties: What developer expects
-- actual_specialties: What was actually used
-- key_data_points: Important data elements
-- category: Type of error (complexity, specialists, synthesis, etc.)
-- notes: Developer's observations
+Test case JSON structure:
+```json
+{
+  "id": "descriptive_identifier",
+  "query": "exact query from trace",
+  "expected_complexity": "SIMPLE|STANDARD|COMPLEX|COMPREHENSIVE", 
+  "actual_complexity": "what CMO actually assigned",
+  "expected_specialties": ["array", "of", "expected", "specialists"],
+  "actual_specialties": ["array", "of", "actual", "specialists"],
+  "key_data_points": ["important", "data", "elements"],
+  "category": "complexity_misclassification|specialist_selection|synthesis_quality|etc",
+  "notes": "Developer's observations and the specific issue identified"
+}
+```
 
-CRITICAL: After EVERY test case generation, you MUST ALWAYS include the following action menu IMMEDIATELY after the test case. DO NOT END YOUR RESPONSE WITHOUT INCLUDING THIS MENU:
+CRITICAL: After generating the test case JSON, you MUST provide a brief follow-up message like:
+"I've updated the test case with your observation. You can refine it further or use the action buttons to run or save it."
 
-What would you like to do with this test case?
-
-**Refine the test case:**
-- Update expected values or specialties
-- Add more key data points
-- Modify the description or category
-- Add additional notes
-
-**Execute actions:**
-- Type "run" to execute the evaluation with this test case
-- Type "save" to save this test case for later use
-- Type "save and run" to save and execute
-
-**Continue testing:**
-- Type "new" to create another test case
-- Type "list" to see saved test cases from this session
-
-Just let me know what changes you'd like to make, or which action to take!
+IMPORTANT: Do NOT include the old verbose action menu. The UI now has action buttons for Run, Save, and Save & Run.

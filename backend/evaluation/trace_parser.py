@@ -16,8 +16,8 @@ from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass
 
-from services.tracing.models import CompleteTrace, TraceEvent, TraceEventType
-from services.agents.cmo.models import QueryComplexity, MedicalSpecialty
+from services.tracing.trace_models import CompleteTrace, TraceEvent, TraceEventType
+from services.agents.models import QueryComplexity, MedicalSpecialty
 
 logger = logging.getLogger(__name__)
 
@@ -116,10 +116,10 @@ class TraceDataExtractor:
                             complexity_str = match.group(1).upper()
                             break
         
-        # Convert to enum
+        # Convert to enum - QueryComplexity enum values are lowercase
         try:
-            return QueryComplexity[complexity_str]
-        except KeyError:
+            return QueryComplexity(complexity_str.lower())
+        except (KeyError, ValueError):
             logger.warning(f"Unknown complexity: {complexity_str}, defaulting to SIMPLE")
             return QueryComplexity.SIMPLE
     
@@ -130,7 +130,8 @@ class TraceDataExtractor:
             if (event.event_type == TraceEventType.LLM_RESPONSE and
                 event.stage == "query_analysis" and
                 event.data.get("prompt_file") == "2_define_analytical_approach.txt"):
-                content = event.data.get("content", "")
+                # Try both 'content' and 'response_text' fields
+                content = event.data.get("response_text", event.data.get("content", ""))
                 if "<approach>" in content:
                     match = re.search(r'<approach>(.*?)</approach>', content, re.DOTALL)
                     if match:
@@ -140,7 +141,8 @@ class TraceDataExtractor:
         for event in trace.events:
             if (event.event_type == TraceEventType.LLM_RESPONSE and
                 event.stage == "query_analysis"):
-                content = event.data.get("content", "")
+                # Try both 'content' and 'response_text' fields
+                content = event.data.get("response_text", event.data.get("content", ""))
                 if "<approach>" in content:
                     match = re.search(r'<approach>(.*?)</approach>', content, re.DOTALL)
                     if match:
@@ -169,7 +171,7 @@ class TraceDataExtractor:
         tool_calls_in_stage = []
         
         for i, event in enumerate(trace.events):
-            if (event.event_type == TraceEventType.TOOL_CALL and
+            if (event.event_type == TraceEventType.TOOL_INVOCATION and
                 event.stage == "query_analysis"):
                 
                 tool_call = {
@@ -203,35 +205,41 @@ class TraceDataExtractor:
         """Extract specialist tasks as MockSpecialistTask objects."""
         tasks = []
         
-        # Look for task creation events
+        # Look for LLM response in task_creation stage
         for event in trace.events:
-            if event.event_type == TraceEventType.TASK_CREATED:
-                task_data = event.data
-                try:
-                    specialty = MedicalSpecialty[task_data.get("specialty", "GENERAL").upper()]
-                except KeyError:
-                    logger.warning(f"Unknown specialty: {task_data.get('specialty')}")
-                    specialty = MedicalSpecialty.GENERAL
-                
-                task = MockSpecialistTask(
-                    specialist=specialty,
-                    objective=task_data.get("objective", ""),
-                    context=task_data.get("context", ""),
-                    expected_output=task_data.get("expected_output", ""),
-                    priority=task_data.get("priority", "MEDIUM"),
-                    max_tool_calls=task_data.get("max_tool_calls", 3)
-                )
-                tasks.append(task)
+            if (event.event_type == TraceEventType.LLM_RESPONSE and
+                event.stage == "task_creation"):
+                # Try both 'response_text' and 'content' fields
+                content = event.data.get("response_text", event.data.get("content", ""))
+                tasks = self._parse_tasks_from_xml_as_objects(content)
+                if tasks:
+                    break
         
-        # Fallback: parse from LLM response
+        # Fallback: check STAGE_END event for specialists list
         if not tasks:
             for event in trace.events:
-                if (event.event_type == TraceEventType.LLM_RESPONSE and
-                    event.stage == "specialist_tasks"):
-                    content = event.data.get("content", "")
-                    tasks = self._parse_tasks_from_xml_as_objects(content)
-                    if tasks:
-                        break
+                if (event.event_type == TraceEventType.STAGE_END and
+                    event.stage == "task_creation"):
+                    specialists = event.data.get("specialists", [])
+                    # Convert specialist names to tasks (basic fallback)
+                    for spec in specialists:
+                        try:
+                            # MedicalSpecialty enum values are lowercase
+                            specialty = MedicalSpecialty(spec.lower())
+                        except (KeyError, ValueError):
+                            logger.warning(f"Unknown specialty: {spec}, using laboratory_medicine as default")
+                            specialty = MedicalSpecialty.LABORATORY_MEDICINE
+                        
+                        task = MockSpecialistTask(
+                            specialist=specialty,
+                            objective=f"Analyze data for {spec}",
+                            context="Extracted from stage end event",
+                            expected_output="Analysis results",
+                            priority="MEDIUM",
+                            max_tool_calls=3
+                        )
+                        tasks.append(task)
+                    break
         
         return tasks
     
@@ -239,35 +247,73 @@ class TraceDataExtractor:
         """Parse specialist tasks from XML response as objects."""
         tasks = []
         
-        task_pattern = re.compile(
-            r'<specialist_task>.*?'
-            r'<specialty>(.*?)</specialty>.*?'
-            r'<priority>(.*?)</priority>.*?'
-            r'<objective>(.*?)</objective>.*?'
-            r'<context>(.*?)</context>.*?'
-            r'<expected_output>(.*?)</expected_output>.*?'
-            r'</specialist_task>',
-            re.DOTALL
-        )
-        
-        for match in task_pattern.finditer(xml_content):
-            specialty_str, priority, objective, context, expected_output = match.groups()
-            
-            try:
-                specialty = MedicalSpecialty[specialty_str.strip().upper()]
-            except KeyError:
-                logger.warning(f"Unknown specialty in XML: {specialty_str}")
-                specialty = MedicalSpecialty.GENERAL
-            
-            task = MockSpecialistTask(
-                specialist=specialty,
-                objective=objective.strip(),
-                context=context.strip(),
-                expected_output=expected_output.strip(),
-                priority=priority.strip(),
-                max_tool_calls=3
+        # Try both <task> and <specialist_task> formats
+        patterns = [
+            # New format: <task>
+            re.compile(
+                r'<task>.*?'
+                r'<specialist>(.*?)</specialist>.*?'
+                r'<objective>(.*?)</objective>.*?'
+                r'<context>(.*?)</context>.*?'
+                r'<expected_output>(.*?)</expected_output>.*?'
+                r'<priority>(.*?)</priority>.*?'
+                r'</task>',
+                re.DOTALL
+            ),
+            # Old format: <specialist_task>
+            re.compile(
+                r'<specialist_task>.*?'
+                r'<specialty>(.*?)</specialty>.*?'
+                r'<priority>(.*?)</priority>.*?'
+                r'<objective>(.*?)</objective>.*?'
+                r'<context>(.*?)</context>.*?'
+                r'<expected_output>(.*?)</expected_output>.*?'
+                r'</specialist_task>',
+                re.DOTALL
             )
-            tasks.append(task)
+        ]
+        
+        for pattern in patterns:
+            matches = list(pattern.finditer(xml_content))
+            if matches:
+                for match in matches:
+                    groups = match.groups()
+                    
+                    # Handle different group orders
+                    if len(groups) == 5:
+                        if pattern == patterns[0]:  # <task> format
+                            specialty_str, objective, context, expected_output, priority = groups
+                        else:  # <specialist_task> format
+                            specialty_str, priority, objective, context, expected_output = groups
+                    else:
+                        logger.warning(f"Unexpected number of groups in XML match: {len(groups)}")
+                        continue
+                    
+                    try:
+                        # Handle both 'specialist' and 'specialty' field names
+                        # MedicalSpecialty enum values are lowercase
+                        specialty_str = specialty_str.strip().lower()
+                        specialty = MedicalSpecialty(specialty_str)
+                    except (KeyError, ValueError):
+                        logger.warning(f"Unknown specialty in XML: {specialty_str}, using laboratory_medicine as default")
+                        specialty = MedicalSpecialty.LABORATORY_MEDICINE
+                    
+                    # Convert priority numbers to text if needed
+                    priority_str = priority.strip()
+                    if priority_str.isdigit():
+                        priority_map = {"1": "HIGH", "2": "MEDIUM", "3": "LOW"}
+                        priority_str = priority_map.get(priority_str, "MEDIUM")
+                    
+                    task = MockSpecialistTask(
+                        specialist=specialty,
+                        objective=objective.strip(),
+                        context=context.strip(),
+                        expected_output=expected_output.strip(),
+                        priority=priority_str,
+                        max_tool_calls=3
+                    )
+                    tasks.append(task)
+                break  # Stop after first successful pattern
         
         return tasks
 

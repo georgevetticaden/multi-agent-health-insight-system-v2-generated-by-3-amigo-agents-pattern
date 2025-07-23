@@ -175,7 +175,11 @@ async def trace_viewer(trace_id: str) -> HTMLResponse:
 
 
 @router.get("/{trace_id}/hierarchical")
-async def hierarchical_trace_viewer(trace_id: str) -> HTMLResponse:
+async def hierarchical_trace_viewer(
+    trace_id: str,
+    embedded: bool = Query(False, description="Whether to return embedded view without QE interface"),
+    hideHeader: bool = Query(False, description="Whether to hide the header")
+) -> HTMLResponse:
     """
     Get hierarchical HTML viewer for a specific trace.
     
@@ -191,20 +195,22 @@ async def hierarchical_trace_viewer(trace_id: str) -> HTMLResponse:
             status_code=503
         )
     
-    # First, try to find pre-generated hierarchical HTML file
-    trace_storage_path = Path(os.environ.get("TRACE_STORAGE_PATH", TRACE_STORAGE_PATH))
-    
-    # Search for hierarchical HTML file in date directories
-    for date_dir in trace_storage_path.iterdir():
-        if date_dir.is_dir() and date_dir.name.count('-') == 2:  # YYYY-MM-DD format
-            hierarchical_path = date_dir / f"{trace_id}.hierarchical.html"
-            if hierarchical_path.exists():
-                # Serve the pre-generated hierarchical HTML file
-                return FileResponse(
-                    path=str(hierarchical_path),
-                    media_type="text/html",
-                    headers={"Cache-Control": "max-age=3600"}  # Cache for 1 hour
-                )
+    # Skip pre-generated files when embedded=true to ensure we get the updated version
+    if not embedded:
+        # First, try to find pre-generated hierarchical HTML file
+        trace_storage_path = Path(os.environ.get("TRACE_STORAGE_PATH", TRACE_STORAGE_PATH))
+        
+        # Search for hierarchical HTML file in date directories
+        for date_dir in trace_storage_path.iterdir():
+            if date_dir.is_dir() and date_dir.name.count('-') == 2:  # YYYY-MM-DD format
+                hierarchical_path = date_dir / f"{trace_id}.hierarchical.html"
+                if hierarchical_path.exists():
+                    # Serve the pre-generated hierarchical HTML file
+                    return FileResponse(
+                        path=str(hierarchical_path),
+                        media_type="text/html",
+                        headers={"Cache-Control": "max-age=3600"}  # Cache for 1 hour
+                    )
     
     # If not found, try to generate it
     try:
@@ -226,7 +232,15 @@ async def hierarchical_trace_viewer(trace_id: str) -> HTMLResponse:
         # Generate hierarchical HTML content dynamically
         html_content = generate_hierarchical_trace_html(trace)
         
-        return HTMLResponse(content=html_content)
+        # Return with no-cache headers to ensure fresh content
+        return HTMLResponse(
+            content=html_content,
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
     except ImportError:
         return HTMLResponse(
             content="<html><body><h1>Hierarchical Viewer Not Available</h1><p>Hierarchical trace viewer is not installed.</p></body></html>",

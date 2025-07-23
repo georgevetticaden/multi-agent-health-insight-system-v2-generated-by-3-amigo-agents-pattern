@@ -7,11 +7,13 @@ load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from api.chat import router as chat_router
 from api.tracing import router as tracing_router
 from api.qe_chat import router as qe_chat_router
 from api.evaluation import router as evaluation_router
+from api.test_case import router as test_case_router
 from utils.logging_config import setup_backend_logging
 
 # Configure logging with both console and file output
@@ -44,6 +46,7 @@ app.include_router(chat_router)
 app.include_router(tracing_router)
 app.include_router(qe_chat_router)
 app.include_router(evaluation_router)
+app.include_router(test_case_router)
 
 @app.get("/api/health")
 async def health_check():
@@ -66,6 +69,12 @@ async def get_specialists():
             {"id": "nutrition", "name": "Dr. Nutrition", "specialty": "Nutrition", "icon": "🥗"}
         ]
     }
+
+# Mount static files for test case management app
+# This will serve the frontend for /test-case-management/* routes
+frontend_dist_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+if os.path.exists(frontend_dist_path):
+    app.mount("/test-case-management", StaticFiles(directory=frontend_dist_path, html=True), name="test-case-management")
 
 if __name__ == "__main__":
     import uvicorn

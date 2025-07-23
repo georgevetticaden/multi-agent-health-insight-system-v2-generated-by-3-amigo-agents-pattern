@@ -117,15 +117,6 @@ class QEPrompts:
                 if example:
                     parts.extend(["\n\n", "---\n\n", example])
             
-            # Add example with action menu if it exists
-            if (self.base_path / "example_test_case_with_menu.txt").exists():
-                parts.extend(["\n\n", "## CRITICAL: Example Response with Action Menu\n\n"])
-                parts.append(self._load_prompt("example_test_case_with_menu.txt"))
-        
-        # Always add action menu reminder
-        if (self.base_path / "3_test_case_actions.txt").exists():
-            parts.extend(["\n\n", "## CRITICAL REMINDER: Always Include Action Menu\n\n"])
-            parts.append(self._load_prompt("3_test_case_actions.txt"))
-            parts.append("\n\nREMEMBER: You MUST include the action menu after EVERY test case. NEVER end without it!")
+            # Don't add action menu examples anymore - UI has buttons
         
         return "".join(parts)

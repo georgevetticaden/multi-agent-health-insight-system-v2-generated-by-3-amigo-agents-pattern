@@ -251,9 +251,10 @@ class ReportService:
             
             "expected_specialties": test_case.get("expected_specialties", []),
             "actual_specialties": dimension_results.get("specialty_selection", {}).get("details", {}).get("actual_specialties", []),
-            "specialty_precision": dimension_results.get("specialty_selection", {}).get("details", {}).get("precision", 0),
+            "specialty_precision": dimension_results.get("specialty_selection", {}).get("components", {}).get("specialist_precision", 
+                                  dimension_results.get("specialty_selection", {}).get("details", {}).get("precision", 0)),
             "specialty_recall": dimension_results.get("specialty_selection", {}).get("details", {}).get("recall", 0),
-            "specialty_f1_score": dimension_results.get("specialty_selection", {}).get("details", {}).get("f1_score", 0),
+            "specialty_f1_score": dimension_results.get("specialty_selection", {}).get("score", 0),
             
             "tool_calls_made": dimension_results.get("tool_usage", {}).get("details", {}).get("tool_calls_made", 0),
             "tool_success_count": dimension_results.get("tool_usage", {}).get("details", {}).get("successful_tool_calls", 0),
@@ -270,14 +271,17 @@ class ReportService:
             "failure_analyses": {}
         }
         
-        # Calculate summary statistics
+        # Calculate summary statistics  
         summary = {
             "total_tests": 1,
             "passed_tests": 1 if individual_result["success"] else 0,
             "failed_tests": 0 if individual_result["success"] else 1,
             "overall_success": individual_result["success"],
-            "overall_success_rate": 1.0 if individual_result["success"] else 0.0,
+            "overall_success_rate": individual_result["weighted_score"],  # Use actual score, not pass/fail rate
             "weighted_average_score": individual_result["weighted_score"],
+            "weighted_score": individual_result["weighted_score"],  # THIS is what the template looks for!
+            "success_rate": individual_result["weighted_score"],  # Alternative field name
+            "overall_score": individual_result["weighted_score"],  # Another common field name
             
             # Performance metrics (expected by template)
             "performance_metrics": {
@@ -321,6 +325,19 @@ class ReportService:
                 "test_case_category": test_case.get("category", "general")
             }
         }
+        
+        # Debug logging for report data
+        logger.info(f"=== CLI FORMAT RESULTS DEBUG ===")
+        logger.info(f"Original overall_score: {evaluation_result.get('overall_score', 'NOT_FOUND')}")
+        logger.info(f"Individual result weighted_score: {individual_result.get('weighted_score', 'NOT_FOUND')}")
+        logger.info(f"Summary weighted_average_score: {summary.get('weighted_average_score', 'NOT_FOUND')}")
+        logger.info(f"Summary overall_success: {summary.get('overall_success', 'NOT_FOUND')}")
+        logger.info(f"Summary overall_success_rate: {summary.get('overall_success_rate', 'NOT_FOUND')}")
+        logger.info(f"Dimension scores:")
+        for dim_name in ['complexity_classification', 'specialty_selection', 'analysis_quality', 'tool_usage', 'response_structure']:
+            score = individual_result.get(f"{dim_name}_score", 'NOT_FOUND')
+            logger.info(f"  {dim_name}: {score}")
+        logger.info(f"=== END CLI FORMAT RESULTS DEBUG ===")
         
         return cli_format_results
     

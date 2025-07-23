@@ -84,6 +84,11 @@ class EvaluationRunner:
                     message=f"Evaluating {dimension_name}"
                 ))
             
+            # Debug logging for evaluation method comparison
+            logger.info(f"  Evaluation method: {criteria.evaluation_method} (type: {type(criteria.evaluation_method)})")
+            logger.info(f"  EvaluationMethod.DETERMINISTIC: {EvaluationMethod.DETERMINISTIC} (type: {type(EvaluationMethod.DETERMINISTIC)})")
+            logger.info(f"  Are they equal? {criteria.evaluation_method == EvaluationMethod.DETERMINISTIC}")
+            
             # Evaluate based on method
             if criteria.evaluation_method == EvaluationMethod.DETERMINISTIC:
                 logger.info(f"  Using deterministic evaluation for {dimension_name}")
@@ -95,7 +100,19 @@ class EvaluationRunner:
                 logger.info(f"  Using hybrid evaluation for {dimension_name}")
                 result = await self._evaluate_hybrid(test_case, criteria, agent_metadata)
             else:
-                raise ValueError(f"Unknown evaluation method: {criteria.evaluation_method}")
+                # Try string comparison as fallback
+                method_str = str(criteria.evaluation_method).split('.')[-1]
+                if method_str == "DETERMINISTIC":
+                    logger.info(f"  Using deterministic evaluation for {dimension_name} (string match)")
+                    result = await self._evaluate_deterministic(test_case, criteria, agent_metadata)
+                elif method_str == "LLM_JUDGE":
+                    logger.info(f"  Using LLM judge evaluation for {dimension_name} (string match)")
+                    result = await self._evaluate_llm_judge(test_case, criteria, agent_metadata)
+                elif method_str == "HYBRID":
+                    logger.info(f"  Using hybrid evaluation for {dimension_name} (string match)")
+                    result = await self._evaluate_hybrid(test_case, criteria, agent_metadata)
+                else:
+                    raise ValueError(f"Unknown evaluation method: {criteria.evaluation_method} (type: {type(criteria.evaluation_method)})")
             
             logger.info(f"  Result: score={result.score:.2f}, normalized={result.normalized_score:.2%}")
             if result.details:

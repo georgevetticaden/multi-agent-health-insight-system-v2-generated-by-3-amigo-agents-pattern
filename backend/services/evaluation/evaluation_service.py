@@ -409,10 +409,15 @@ class EvaluationService:
         This method uses the comprehensive CLI evaluator which includes
         LLM judge and detailed failure analysis.
         """
-        # Import from backend's evaluation module
+        # Import from backend's evaluation module - adjust path
+        import sys
+        import os
+        backend_eval_path = os.path.join(os.path.dirname(__file__), "../..")
+        if backend_eval_path not in sys.path:
+            sys.path.insert(0, backend_eval_path)
+        
         from evaluation.cli_evaluator_adapter import TraceEvaluationService
         from anthropic import Anthropic
-        import os
         
         # Load trace
         trace_path = self._find_trace_file(test_case.trace_id)
@@ -450,10 +455,10 @@ class EvaluationService:
             dimension_results[dim_name] = DimensionResult(
                 dimension_name=dim_name,
                 score=dim_data["score"],
-                normalized_score=dim_data.get("normalized_score", dim_data["score"]),
+                max_score=1.0,
                 components=dim_data.get("components", {}),
                 details=dim_data.get("details", {}),
-                evaluation_method="cli_evaluator"
+                evaluation_method=dim_data.get("evaluation_method", "cli_evaluator")
             )
         
         # Create evaluation result

@@ -61,6 +61,10 @@ async def qe_chat_stream(
                 yield format_sse_message(event)
                 await asyncio.sleep(0.001)  # Force flush
             
+            # Send done event to properly close the stream
+            yield format_sse_message({"type": "done"})
+            await asyncio.sleep(0.001)
+            
             logger.info(f"QE chat stream completed successfully after {event_count} events")
                 
         except Exception as e:

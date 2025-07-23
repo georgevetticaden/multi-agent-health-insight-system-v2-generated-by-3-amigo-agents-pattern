@@ -180,6 +180,12 @@ class QEAnalystService:
                             "copyable": True
                         }
                     }
+                elif chunk["type"] == "test_case_update":
+                    # Pass through test case update event
+                    yield {
+                        "type": "test_case_update",
+                        "content": chunk["content"]
+                    }
                 elif chunk["type"] == "action_menu":
                     # Pass through action menu events
                     yield {

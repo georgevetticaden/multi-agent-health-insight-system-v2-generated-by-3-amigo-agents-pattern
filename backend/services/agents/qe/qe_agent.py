@@ -37,16 +37,28 @@ class QEAgent:
         self.current_trace_context = trace_context
         logger.info(f"QE Agent initialized with trace context for query: {trace_context.get('query', 'Unknown')}")
     
-    def _extract_test_case_from_response(self, response: str) -> Optional[str]:
-        """Extract TestCase code block from agent response"""
-        # Look for ```python blocks
+    def _extract_test_case_from_response(self, response: str) -> Optional[Dict[str, Any]]:
+        """Extract test case JSON from agent response"""
+        # Look for ```json blocks
+        if "```json" in response:
+            start = response.find("```json") + 7
+            end = response.find("```", start)
+            if end > start:
+                json_str = response[start:end].strip()
+                try:
+                    return json.loads(json_str)
+                except json.JSONDecodeError as e:
+                    logger.error(f"Failed to parse JSON test case: {e}")
+                    return None
+        
+        # Fallback: Look for ```python blocks (legacy)
         if "```python" in response:
             start = response.find("```python") + 9
             end = response.find("```", start)
             if end > start:
-                return response[start:end].strip()
+                return {"raw": response[start:end].strip(), "legacy": True}
         
-        # Look for TestCase( pattern
+        # Fallback: Look for TestCase( pattern (legacy)
         if "TestCase(" in response:
             start = response.find("TestCase(")
             # Find the matching closing parenthesis
@@ -59,7 +71,7 @@ class QEAgent:
                     depth -= 1
                 i += 1
             if depth == 0:
-                return response[start:i]
+                return {"raw": response[start:i], "legacy": True}
         
         return None
     
@@ -152,8 +164,7 @@ Key Stages Executed:
         if stage_context:
             current_message = f"{user_message}\n\nContext: User is looking at stage '{stage_context.get('stage_name', 'unknown')}'"
         
-        # Add explicit instruction in the user message
-        current_message += "\n\nIMPORTANT: After creating the test case, you MUST show the action menu with options (refine, run, save, new, list)."
+        # No need for action menu instruction anymore - UI has buttons
         
         messages.append({"role": "user", "content": current_message})
         
@@ -192,10 +203,10 @@ Key Stages Executed:
                     content = chunk.delta.text
                     response_text += content
                     
-                    # Check if we should stop streaming text (when we hit the Python code block)
-                    if "```python" in response_text and not stop_streaming_text:
+                    # Check if we should stop streaming text (when we hit the JSON code block)
+                    if "```json" in response_text and not stop_streaming_text:
                         # Find where the code block starts
-                        pre_code_text = response_text[:response_text.find("```python")]
+                        pre_code_text = response_text[:response_text.find("```json")]
                         # Calculate how much of current chunk is before the code block
                         already_sent = len(response_text) - len(content)
                         if already_sent < len(pre_code_text):
@@ -207,7 +218,7 @@ Key Stages Executed:
                                     "content": remaining
                                 }
                         stop_streaming_text = True
-                        logger.info(f"Stopped streaming text at code block in chunk {chunk_count}")
+                        logger.info(f"Stopped streaming text at JSON block in chunk {chunk_count}")
                     
                     # Stream content only if we haven't hit the code block
                     if not stop_streaming_text:
@@ -217,8 +228,8 @@ Key Stages Executed:
                         }
                     
                     # Check if we're generating a test case
-                    if "TestCase(" in response_text and not test_case_generated:
-                        logger.debug(f"Detected TestCase in response at chunk {chunk_count}")
+                    if ("TestCase(" in response_text or "```json" in response_text) and not test_case_generated:
+                        logger.debug(f"Detected test case in response at chunk {chunk_count}")
                         test_case_generated = True
                 
                 # Handle message stop
@@ -238,33 +249,36 @@ Key Stages Executed:
                 logger.info(f"Response ends with: ...{response_text[-100:]}")
             
             # Extract and yield test case after streaming is complete
-            if test_case_generated and "TestCase(" in response_text:
+            if test_case_generated and ("```json" in response_text or "TestCase(" in response_text):
                 test_case = self._extract_test_case_from_response(response_text)
                 if test_case:
-                    # Parse and save the test case
+                    # Handle different test case formats
                     try:
-                        self.current_test_case = {
-                            "raw": test_case,
-                            "iteration": self.test_case_iteration
-                        }
-                        self.test_case_iteration += 1
-                        
-                        # Yield the test case event
-                        yield {
-                            "type": "test_case",
-                            "content": test_case
-                        }
-                        
-                        # Extract and yield the action menu if present
-                        action_menu_start = response_text.find("What would you like to do")
-                        if action_menu_start != -1:
-                            action_menu = response_text[action_menu_start:]
+                        if isinstance(test_case, dict) and not test_case.get("legacy"):
+                            # New JSON format
+                            self.current_test_case = test_case
+                            self.current_test_case["iteration"] = self.test_case_iteration
+                            self.test_case_iteration += 1
+                            
+                            # Yield the test case update event for frontend
                             yield {
-                                "type": "action_menu",
-                                "content": action_menu
+                                "type": "test_case_update",
+                                "content": test_case
                             }
                         else:
-                            logger.warning("Action menu not found in response after test case")
+                            # Legacy Python format
+                            self.current_test_case = {
+                                "raw": test_case.get("raw") if isinstance(test_case, dict) else test_case,
+                                "iteration": self.test_case_iteration,
+                                "legacy": True
+                            }
+                            self.test_case_iteration += 1
+                            
+                            # Yield the legacy test case event
+                            yield {
+                                "type": "test_case",
+                                "content": test_case.get("raw") if isinstance(test_case, dict) else test_case
+                            }
                     except Exception as e:
                         logger.error(f"Error parsing test case: {e}")
             

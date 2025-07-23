@@ -29,7 +29,7 @@ def generate_hierarchical_trace_html(trace: CompleteTrace) -> str:
     # Build hierarchy
     sections, summary = build_trace_hierarchy(trace)
     
-    # Generate HTML
+    # Generate HTML without QE panel
     html = f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -39,29 +39,99 @@ def generate_hierarchical_trace_html(trace: CompleteTrace) -> str:
     <title>Trace Analysis - {trace.trace_id}</title>
     <style>
         {_generate_css()}
-        {_generate_qe_css()}
+        /* Remove QE-specific styles and adjust layout */
+        body {{
+            margin: 0;
+            padding: 0;
+        }}
+        .main-layout {{
+            display: block !important;
+        }}
+        .trace-panel {{
+            width: 100% !important;
+            border-left: none !important;
+        }}
+        .container {{
+            max-width: 100%;
+        }}
     </style>
     <script>
         console.log('[TIMELINE NAV DEBUGGING] Head script starting...');
         const TRACE_ID = '{trace.trace_id}';
         
-        // Initialize trace viewer JavaScript
+        // Initialize trace viewer JavaScript only
         {_generate_javascript()}
-        
-        // Initialize QE Agent JavaScript
-        {_generate_qe_javascript()}
         console.log('[TIMELINE NAV DEBUGGING] Head script completed.');
     </script>
 </head>
 <body>
+    <div class="container">
+        {_generate_header(trace, summary)}
+        {_generate_filter_panel()}
+        {_generate_summary_cards(sections, summary)}
+        {_generate_timeline(sections)}
+        {_generate_agent_analysis_section(sections)}
+    </div>
+</body>
+</html>
+    """
+    
+    return html
+
+
+def generate_hierarchical_trace_html_embedded(trace: CompleteTrace, hideHeader: bool = False) -> str:
+    """
+    Generate embedded hierarchical HTML view of trace without QE interface.
+    
+    Args:
+        trace: Complete trace object
+        hideHeader: Whether to hide the header section
+        
+    Returns:
+        Self-contained HTML string for embedding
+    """
+    # Build hierarchy
+    sections, summary = build_trace_hierarchy(trace)
+    
+    # Generate HTML without QE panel
+    html = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trace Analysis - {trace.trace_id}</title>
+    <style>
+        {_generate_css()}
+        /* Embedded-specific styles */
+        body {{
+            background-color: white;
+        }}
+        .main-layout {{
+            display: block !important;
+        }}
+        .trace-panel {{
+            width: 100% !important;
+            border-left: none !important;
+        }}
+        .container {{
+            max-width: 100%;
+            padding: 10px;
+        }}
+        {'' if not hideHeader else '.header { display: none; }'}
+    </style>
+    <script>
+        const TRACE_ID = '{trace.trace_id}';
+        
+        // Initialize trace viewer JavaScript (without QE functionality)
+        {_generate_javascript()}
+    </script>
+</head>
+<body>
     <div class="main-layout">
-        <div class="qe-panel">
-            {_generate_qe_chat_panel(trace)}
-        </div>
-        <div class="resizer" id="resizer"></div>
         <div class="trace-panel">
             <div class="container">
-                {_generate_header(trace, summary)}
+                {_generate_header(trace, summary) if not hideHeader else ''}
                 {_generate_filter_panel()}
                 {_generate_summary_cards(sections, summary)}
                 {_generate_timeline(sections)}
@@ -127,18 +197,95 @@ def _generate_css() -> str:
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
         
-        /* Filter Panel */
-        .filter-panel {
+        /* Compact Header for Embedded View */
+        .compact-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            padding: 8px 20px;
+            margin-bottom: 20px;
+        }
+        
+        .trace-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.875rem;
+        }
+        
+        .trace-id {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .trace-meta {
+            color: #6c757d;
+        }
+        
+        /* Filter Panel Container */
+        .filter-panel-container {
             background: white;
-            padding: 20px;
             border-radius: 8px;
             margin-bottom: 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+        
+        .filter-panel-header {
+            padding: 15px 20px;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            transition: background-color 0.2s;
+        }
+        
+        .filter-panel-header:hover {
+            background: #e9ecef;
+        }
+        
+        .filter-panel-title {
+            font-weight: 600;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .collapse-icon {
+            transition: transform 0.3s;
+            display: inline-block;
+        }
+        
+        .collapse-icon.rotated {
+            transform: rotate(-90deg);
+        }
+        
+        .filter-panel-summary {
+            font-size: 14px;
+            color: #6c757d;
+        }
+        
+        /* Filter Panel */
+        .filter-panel {
+            padding: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
             gap: 15px;
+            transition: max-height 0.3s ease-out, opacity 0.3s;
+            max-height: 500px;
+            opacity: 1;
+        }
+        
+        .filter-panel.collapsed {
+            max-height: 0;
+            opacity: 0;
+            padding: 0 20px;
+            overflow: hidden;
         }
         
         .filter-group {
@@ -2539,6 +2686,25 @@ def _generate_javascript() -> str:
             document.body.appendChild(label);
         }
         
+        // Toggle filter panel
+        function toggleFilterPanel() {
+            const panel = document.getElementById('filter-panel');
+            const icon = document.getElementById('filter-collapse-icon');
+            const summary = document.getElementById('filter-panel-summary');
+            
+            if (panel.classList.contains('collapsed')) {
+                panel.classList.remove('collapsed');
+                icon.classList.remove('rotated');
+                icon.textContent = '▼';
+                summary.textContent = '(Click to collapse)';
+            } else {
+                panel.classList.add('collapsed');
+                icon.classList.add('rotated');
+                icon.textContent = '▼';
+                summary.textContent = '(Click to expand)';
+            }
+        }
+        
         // Filter functions
         function filterAgents() {
             const showCMO = document.getElementById('filter-cmo').checked;
@@ -2855,49 +3021,60 @@ def _generate_javascript() -> str:
 def _generate_filter_panel() -> str:
     """Generate filter configuration panel"""
     return """
-    <div class="filter-panel">
-        <div class="filter-group">
-            <span class="filter-label">Show Agents:</span>
-            <div class="filter-checkbox">
-                <input type="checkbox" id="filter-cmo" checked onchange="filterAgents()">
-                <label for="filter-cmo">CMO</label>
+    <div class="filter-panel-container">
+        <div class="filter-panel-header" onclick="toggleFilterPanel()">
+            <span class="filter-panel-title">
+                <span class="collapse-icon" id="filter-collapse-icon">▼</span>
+                Filters & View Options
+            </span>
+            <span class="filter-panel-summary" id="filter-panel-summary">
+                (Click to expand)
+            </span>
+        </div>
+        <div class="filter-panel collapsed" id="filter-panel">
+            <div class="filter-group">
+                <span class="filter-label">Show Agents:</span>
+                <div class="filter-checkbox">
+                    <input type="checkbox" id="filter-cmo" checked onchange="filterAgents()">
+                    <label for="filter-cmo">CMO</label>
+                </div>
+                <div class="filter-checkbox">
+                    <input type="checkbox" id="filter-specialists" checked onchange="filterAgents()">
+                    <label for="filter-specialists">Specialists</label>
+                </div>
+                <div class="filter-checkbox">
+                    <input type="checkbox" id="filter-visualization" checked onchange="filterAgents()">
+                    <label for="filter-visualization">Visualization</label>
+                </div>
             </div>
-            <div class="filter-checkbox">
-                <input type="checkbox" id="filter-specialists" checked onchange="filterAgents()">
-                <label for="filter-specialists">Specialists</label>
+            
+            <div class="filter-group">
+                <span class="filter-label">Min Duration:</span>
+                <select id="duration-filter" onchange="filterByDuration()">
+                    <option value="0">All</option>
+                    <option value="1000">≥ 1s</option>
+                    <option value="5000">≥ 5s</option>
+                    <option value="10000">≥ 10s</option>
+                    <option value="30000">≥ 30s</option>
+                </select>
             </div>
-            <div class="filter-checkbox">
-                <input type="checkbox" id="filter-visualization" checked onchange="filterAgents()">
-                <label for="filter-visualization">Visualization</label>
+            
+            <div class="filter-group">
+                <span class="filter-label">Presets:</span>
+                <button class="filter-preset" onclick="applyPreset('all')">All</button>
+                <button class="filter-preset" onclick="applyPreset('critical')">Critical Path</button>
+                <button class="filter-preset" onclick="applyPreset('errors')">Errors Only</button>
+                <button class="filter-preset reset" onclick="resetFilters()">↺ Reset</button>
             </div>
-        </div>
-        
-        <div class="filter-group">
-            <span class="filter-label">Min Duration:</span>
-            <select id="duration-filter" onchange="filterByDuration()">
-                <option value="0">All</option>
-                <option value="1000">≥ 1s</option>
-                <option value="5000">≥ 5s</option>
-                <option value="10000">≥ 10s</option>
-                <option value="30000">≥ 30s</option>
-            </select>
-        </div>
-        
-        <div class="filter-group">
-            <span class="filter-label">Presets:</span>
-            <button class="filter-preset" onclick="applyPreset('all')">All</button>
-            <button class="filter-preset" onclick="applyPreset('critical')">Critical Path</button>
-            <button class="filter-preset" onclick="applyPreset('errors')">Errors Only</button>
-            <button class="filter-preset reset" onclick="resetFilters()">↺ Reset</button>
-        </div>
-        
-        <div class="view-toggle">
-            <button class="active" onclick="setView('detailed')">Detailed</button>
-            <button onclick="setView('simplified')">Simplified</button>
-        </div>
-        
-        <div class="filter-status" id="filter-status">
-            Showing all items
+            
+            <div class="view-toggle">
+                <button class="active" onclick="setView('detailed')">Detailed</button>
+                <button onclick="setView('simplified')">Simplified</button>
+            </div>
+            
+            <div class="filter-status" id="filter-status">
+                Showing all items
+            </div>
         </div>
     </div>
     """
@@ -2907,25 +3084,12 @@ def _generate_header(trace: CompleteTrace, summary: Dict[str, Any]) -> str:
     """Generate header section"""
     total_cost = estimate_api_cost(summary.get('total_tokens', 0))
     
+    # For embedded view, just show minimal trace info
     return f"""
-    <div class="header">
-        <h1>🔍 Trace Analysis Report</h1>
-        <div class="header-meta">
-            <div>
-                <strong>Trace ID:</strong> {trace.trace_id}
-            </div>
-            <div>
-                <strong>Duration:</strong> {format_duration(trace.total_duration_ms)}
-            </div>
-            <div>
-                <strong>Start Time:</strong> {trace.start_time}
-            </div>
-            <div>
-                <strong>Cost:</strong> {format_cost(total_cost)}
-            </div>
-        </div>
-        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2);">
-            <strong>Query:</strong> {truncate_text(trace.initial_input, 200)}
+    <div class="compact-header">
+        <div class="trace-info">
+            <span class="trace-id">Trace: {trace.trace_id[:8]}...</span>
+            <span class="trace-meta">Duration: {format_duration(trace.total_duration_ms)} • Cost: {format_cost(total_cost)}</span>
         </div>
     </div>
     """

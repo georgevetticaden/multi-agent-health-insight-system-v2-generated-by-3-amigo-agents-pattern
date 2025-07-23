@@ -360,6 +360,133 @@ The 3 Amigo Agents created comprehensive documentation:
 - **[Technical Patterns](./requirements/technical-patterns/)** - Implementation guides
 - **[CLAUDE.md](./CLAUDE.md)** - Development guidelines for AI assistants
 
+## 🧪 Evaluation Framework
+
+The system includes a comprehensive evaluation framework implementing Anthropic's best practices for AI agent evaluation, with special support for multi-agent systems.
+
+### 🎯 Evaluation Overview
+
+The framework follows the **Analyze-Measure-Improve** lifecycle:
+
+- **📋 Test Case Management**: QE Agent generates test cases from health queries
+- **📏 5 Evaluation Dimensions**: Complexity, Specialists, Analysis, Tools, Structure
+- **🤖 LLM-as-Judge**: Semantic evaluation for nuanced scoring
+- **📊 Hybrid Scoring**: Combines deterministic and LLM-based evaluation
+- **💡 Diagnostic Engine**: Provides actionable improvement recommendations
+
+### 🏗️ Evaluation Architecture
+
+```
+/evaluation                    # Main evaluation framework
+├── agents/                   # Agent evaluators
+│   └── cmo/                 # CMO agent evaluation
+│       ├── evaluator.py     # Core evaluation logic
+│       ├── dimensions.py    # 5 evaluation dimensions
+│       └── llm_judge.py     # LLM-as-Judge implementation
+├── test_cases/              # Pre-defined test scenarios
+└── reports/                 # HTML report generation
+
+/backend/eval_integration     # Backend integration layer
+├── subprocess_evaluator.py  # Runs evaluation in subprocess
+├── cli_evaluator_adapter.py # Adapts traces for evaluation
+├── trace_parser.py         # Extracts data from traces
+└── mock_agents/            # Replay agents for evaluation
+```
+
+### 🚀 Using the Evaluation Framework
+
+**1. Via Eval Development Studio (Web UI):**
+```bash
+# Run a health query
+# Click "Create Test Case" after completion
+# Use QE Agent to generate and refine test case
+# Click "Run Evaluation" to see results
+```
+
+**2. Via Command Line:**
+```bash
+cd evaluation
+python -m evaluation.cli evaluate-cmo \
+  --test-cases test_cases/specialist_selection.json \
+  --output-dir results/
+```
+
+**3. Via API:**
+```python
+POST /api/evaluation/run
+{
+  "test_case": {
+    "query": "What are my recent lab results?",
+    "expected_complexity": "SIMPLE",
+    "expected_specialties": ["laboratory_medicine"]
+  }
+}
+```
+
+### 📊 Evaluation Dimensions
+
+1. **Complexity Classification** (20%)
+   - Correctly categorizes query complexity
+   - SIMPLE → STANDARD → COMPLEX → COMPREHENSIVE
+
+2. **Specialist Selection** (25%)
+   - Precision: Right specialists selected
+   - Recall: All needed specialists included
+   - Rationale: Medical reasoning quality
+
+3. **Analysis Quality** (25%)
+   - Data gathering effectiveness
+   - Context awareness
+   - Comprehensive approach
+   - Risk identification
+
+4. **Tool Usage** (15%)
+   - Appropriate tool selection
+   - Success rate
+   - Efficiency
+
+5. **Response Structure** (15%)
+   - Valid XML format
+   - Complete specialist tasks
+   - Error handling
+
+### 🤖 LLM-as-Judge Features
+
+The framework uses Claude to evaluate subjective aspects:
+
+```python
+# Example: Evaluating specialist selection rationale
+"Rate how well the CMO justified each specialist selection..."
+Score: 0.90
+Reasoning: "Clear medical justification for each specialist..."
+```
+
+### 📈 Evaluation Reports
+
+HTML reports include:
+- **Overall Score**: Weighted average across dimensions
+- **Dimension Breakdown**: Detailed scoring with components
+- **Failure Analysis**: LLM Judge diagnosis of issues
+- **Improvement Recommendations**: Specific fixes to implement
+- **Trace Integration**: Links to full execution traces
+
+### 🔄 Evaluation Lifecycle Events
+
+During ~30 second evaluations, the system reports progress:
+
+```javascript
+// Poll for events during evaluation
+GET /api/evaluation/events/{evaluation_id}
+
+// Event types:
+- 🔍 Loading execution trace
+- 📋 Test case prepared
+- 📊 Evaluating dimensions
+- 🤖 LLM-as-Judge scoring
+- 💡 Generating recommendations
+- ✅ Evaluation complete
+```
+
 ## 🔍 Execution Tracing and Debugging
 
 The system includes comprehensive execution tracing capabilities for debugging and performance analysis across both production usage and evaluation framework testing.

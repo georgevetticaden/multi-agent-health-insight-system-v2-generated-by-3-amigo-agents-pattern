@@ -64,6 +64,15 @@ class CLIEvaluatorAdapter:
         test_case: Dict[str, Any],
         trace: CompleteTrace
     ) -> Dict[str, Any]:
+        """Evaluate from trace without event callbacks"""
+        return await self.evaluate_from_trace_with_events(test_case, trace, None)
+    
+    async def evaluate_from_trace_with_events(
+        self,
+        test_case: Dict[str, Any],
+        trace: CompleteTrace,
+        event_callback: Optional[callable] = None
+    ) -> Dict[str, Any]:
         """
         Evaluate a test case using trace data with the FULL evaluation framework.
         
@@ -146,7 +155,14 @@ class CLIEvaluatorAdapter:
         # Run evaluation in subprocess
         logger.info("Running evaluation in subprocess...")
         try:
-            result = run_evaluation_subprocess(test_case, trace_data, api_key)
+            result = run_evaluation_subprocess(test_case, trace_data, api_key, event_callback)
+            
+            # Events are now processed in real-time by the subprocess reader threads
+            # Just remove the collected_events from the result if present
+            collected_events = result.pop('collected_events', [])
+            if collected_events:
+                logger.info(f"Subprocess collected {len(collected_events)} events (already processed in real-time)")
+            
             logger.info(f"=== FULL EVALUATION COMPLETE ===")
             logger.info(f"Overall score: {result.get('overall_score', 0):.3f}")
             return result
@@ -276,7 +292,9 @@ class TraceEvaluationService:
     async def evaluate_test_case_from_trace(
         self,
         test_case: Dict[str, Any],
-        trace_path: str
+        trace_path: str,
+        evaluation_id: str = None,
+        evaluations: Dict[str, Any] = None
     ) -> Dict[str, Any]:
         """
         Evaluate a test case from a trace file.
@@ -284,6 +302,8 @@ class TraceEvaluationService:
         Args:
             test_case: Test case from QE Agent
             trace_path: Path to the trace file
+            evaluation_id: ID of the evaluation for event tracking
+            evaluations: Dict to store evaluation events
             
         Returns:
             Evaluation results in dict format
@@ -292,19 +312,58 @@ class TraceEvaluationService:
         logger.info(f"Test case: {test_case.get('id', 'unknown')}")
         logger.info(f"Trace path: {trace_path}")
         
+        # Create event callback if evaluation tracking is enabled
+        event_callback = None
+        if evaluation_id and evaluations:
+            def store_event(event: Dict[str, Any]):
+                """Store evaluation event in the evaluations dict"""
+                logger.info(f"Attempting to store event for evaluation {evaluation_id}")
+                logger.info(f"Available evaluations in dict: {list(evaluations.keys())}")
+                
+                if evaluation_id in evaluations:
+                    events = evaluations[evaluation_id].get("events", [])
+                    event["timestamp"] = datetime.now().isoformat()
+                    events.append(event)
+                    evaluations[evaluation_id]["events"] = events
+                    logger.info(f"✅ Stored event: {event.get('type', 'unknown')} - {event.get('message', '')}")
+                    logger.info(f"Total events now: {len(events)}")
+                else:
+                    logger.error(f"❌ Evaluation {evaluation_id} not found in evaluations dict!")
+                    logger.error(f"Cannot store event: {event.get('type', 'unknown')} - {event.get('message', '')}")
+            
+            event_callback = store_event
+        
         # Load the trace
         logger.info("Loading trace from file...")
         trace = self._load_trace(trace_path)
         logger.info(f"Loaded trace with ID: {trace.trace_id}")
         logger.info(f"Trace has {len(trace.events)} events")
         
+        # Store initial event
+        if event_callback:
+            event_callback({
+                "type": "trace_load",
+                "message": "🔍 Loading execution trace",
+                "trace_id": trace.trace_id,
+                "event_count": len(trace.events),
+                "timestamp": datetime.now().isoformat()
+            })
+        
         # Run evaluation
         logger.info("Running evaluation using CLI evaluator adapter...")
-        result = await self.adapter.evaluate_from_trace(test_case, trace)
+        result = await self.adapter.evaluate_from_trace_with_events(test_case, trace, event_callback)
         
         logger.info(f"Evaluation result:")
         logger.info(f"  - Overall score: {result.get('overall_score', 0):.2%}")
         logger.info(f"  - Test case ID: {result.get('test_case_id', 'unknown')}")
+        
+        # Store final event
+        if event_callback:
+            event_callback({
+                "type": "evaluation_complete",
+                "message": "✅ Evaluation analysis finished",
+                "overall_score": result.get('overall_score', 0)
+            })
         
         logger.info(f"=== TRACE EVALUATION SERVICE COMPLETE ===")
         return result

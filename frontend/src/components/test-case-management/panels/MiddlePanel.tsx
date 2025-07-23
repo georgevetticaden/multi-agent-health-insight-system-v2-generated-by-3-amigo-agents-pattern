@@ -8,6 +8,7 @@ interface MiddlePanelProps {
   traceId: string;
   evaluationReport: EvaluationReport | null;
   isEvaluating: boolean;
+  evaluationEvents?: any[];
   onEventSelect?: (eventId: string) => void;
   selectedEvent?: string | null;
   switchToReportTab?: boolean;
@@ -18,6 +19,7 @@ const MiddlePanel: React.FC<MiddlePanelProps> = ({
   traceId,
   evaluationReport,
   isEvaluating,
+  evaluationEvents = [],
   onEventSelect,
   selectedEvent,
   switchToReportTab,
@@ -109,16 +111,104 @@ const MiddlePanel: React.FC<MiddlePanelProps> = ({
         ) : (
           <div className="h-full">
             {isEvaluating ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <div className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-2">
-                    <svg className="w-full h-full" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
+              <div className="flex flex-col h-full">
+                {/* Header */}
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Evaluation in Progress</h3>
+                      <p className="text-sm text-gray-600 mt-1">Following the Analyze → Measure → Improve lifecycle</p>
+                    </div>
+                    <div className="w-8 h-8 animate-spin text-blue-600">
+                      <svg className="w-full h-full" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    </div>
                   </div>
-                  <p className="text-gray-900 font-medium">Running Evaluation...</p>
-                  <p className="text-sm text-gray-600 mt-1">This may take up to 30 seconds</p>
+                </div>
+                
+                {/* Events List */}
+                <div className="flex-1 overflow-y-auto px-6 py-4 bg-gradient-to-b from-gray-50 to-white">
+                  <div className="space-y-3">
+                    {evaluationEvents.map((event, index) => {
+                      // Determine event style based on type
+                      const isComplete = event.type === 'evaluation_complete' || event.type === 'overall_score';
+                      const isDimension = event.type === 'dimension_result';
+                      const isDiagnostic = event.type === 'diagnostic' || event.type === 'diagnostic_complete';
+                      const isLLMJudge = event.type === 'llm_judge_eval' || event.type === 'llm_judge_result';
+                      
+                      const bgColor = isComplete ? 'bg-green-50 border-green-200' : 
+                                    isDimension ? (event.passed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200') :
+                                    isDiagnostic ? 'bg-purple-50 border-purple-200' :
+                                    isLLMJudge ? 'bg-blue-50 border-blue-200' :
+                                    'bg-white border-gray-200';
+                                    
+                      const iconBg = isComplete ? 'bg-green-100' :
+                                   isDimension ? (event.passed ? 'bg-green-100' : 'bg-red-100') :
+                                   isDiagnostic ? 'bg-purple-100' :
+                                   isLLMJudge ? 'bg-blue-100' :
+                                   'bg-gray-100';
+                                   
+                      const iconColor = isComplete ? 'text-green-600' :
+                                      isDimension ? (event.passed ? 'text-green-600' : 'text-red-600') :
+                                      isDiagnostic ? 'text-purple-600' :
+                                      isLLMJudge ? 'text-blue-600' :
+                                      'text-gray-600';
+                      
+                      return (
+                        <div key={index} className={`flex items-start gap-3 p-3 rounded-lg border ${bgColor} transition-all duration-300 animate-fadeIn`}>
+                          <div className={`flex-shrink-0 w-10 h-10 ${iconBg} rounded-full flex items-center justify-center ${iconColor}`}>
+                            <span className="text-xl">{event.message?.charAt(0) || '•'}</span>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">{event.message}</p>
+                            {event.timestamp && (
+                              <p className="text-xs text-gray-500 mt-0.5">
+                                {new Date(event.timestamp).toLocaleTimeString()}
+                              </p>
+                            )}
+                            {event.dimension && (
+                              <p className="text-xs text-gray-600 mt-1">
+                                <span className="font-medium">Dimension:</span> {event.dimension.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                              </p>
+                            )}
+                            {event.score !== undefined && (
+                              <div className="mt-2">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                                    <div 
+                                      className={`h-full transition-all duration-500 ${event.passed ? 'bg-green-500' : 'bg-red-500'}`}
+                                      style={{ width: `${event.score * 100}%` }}
+                                    />
+                                  </div>
+                                  <span className={`text-xs font-medium ${event.passed ? 'text-green-600' : 'text-red-600'}`}>
+                                    {(event.score * 100).toFixed(1)}%
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {evaluationEvents.length === 0 && (
+                      <div className="text-center py-12">
+                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Activity className="w-8 h-8 text-gray-400" />
+                        </div>
+                        <p className="text-sm text-gray-500">Waiting for evaluation to start...</p>
+                        <p className="text-xs text-gray-400 mt-1">Events will appear here as the evaluation progresses</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Footer */}
+                <div className="px-6 py-3 border-t border-gray-200 bg-gray-50">
+                  <p className="text-xs text-gray-600 text-center">
+                    Evaluation typically takes 30-60 seconds to complete
+                  </p>
                 </div>
               </div>
             ) : evaluationReport ? (

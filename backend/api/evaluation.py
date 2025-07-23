@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from typing import Dict, Any, Optional, List
 import json
@@ -58,39 +57,6 @@ async def run_evaluation(request: RunEvaluationRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail="Failed to start evaluation")
 
 
-@router.get("/api/evaluation/stream/{evaluation_id}")
-async def stream_evaluation_progress(evaluation_id: str):
-    """
-    Stream evaluation progress updates using SSE
-    """
-    logger.info(f"Starting evaluation stream for ID: {evaluation_id}")
-    
-    async def generate():
-        try:
-            update_count = 0
-            async for update in evaluation_service.stream_evaluation_progress(evaluation_id):
-                update_count += 1
-                logger.info(f"Streaming update #{update_count} for {evaluation_id}: type={update.get('type')}, content={update.get('content', '')[:100]}")
-                # Format as SSE
-                yield f"data: {json.dumps(update)}\n\n"
-            logger.info(f"Evaluation stream completed for {evaluation_id} after {update_count} updates")
-        except Exception as e:
-            logger.error(f"Error streaming evaluation progress: {e}")
-            error_update = {
-                "type": "error",
-                "content": f"Stream error: {str(e)}"
-            }
-            yield f"data: {json.dumps(error_update)}\n\n"
-    
-    return StreamingResponse(
-        generate(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no"
-        }
-    )
-
 
 @router.get("/api/evaluation/status/{evaluation_id}")
 async def get_evaluation_status(evaluation_id: str) -> Dict[str, Any]:
@@ -105,11 +71,11 @@ async def get_evaluation_status(evaluation_id: str) -> Dict[str, Any]:
     return {
         "evaluation_id": evaluation_id,
         "status": evaluation["status"].value,
-        "test_case_id": evaluation["test_case"].id,
+        "test_case_id": evaluation["test_case_data"].get("id", "unknown"),
         "agent_type": evaluation["agent_type"],
         "started_at": evaluation["started_at"].isoformat(),
         "completed_at": evaluation.get("completed_at", "").isoformat() if evaluation.get("completed_at") else None,
-        "progress_count": len(evaluation["progress"])
+        "event_count": len(evaluation.get("events", []))
     }
 
 
@@ -163,3 +129,29 @@ async def list_test_cases(
     except Exception as e:
         logger.error(f"Failed to list test cases: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to list test cases")
+
+
+@router.get("/api/evaluation/events/{evaluation_id}")
+async def get_evaluation_events(
+    evaluation_id: str,
+    start_index: int = Query(0, description="Start index for events")
+) -> Dict[str, Any]:
+    """
+    Get evaluation lifecycle events
+    
+    Returns events that occurred during the evaluation process,
+    allowing the UI to show progress during the ~30 second evaluation.
+    """
+    logger.info(f"=== GET EVALUATION EVENTS ===")
+    logger.info(f"Evaluation ID: {evaluation_id}")
+    logger.info(f"Start index: {start_index}")
+    logger.info(f"Available evaluations: {list(evaluation_service.evaluations.keys())}")
+    
+    events_data = evaluation_service.get_evaluation_events(evaluation_id, start_index)
+    
+    if "error" in events_data:
+        logger.error(f"Events not found for evaluation {evaluation_id}")
+        raise HTTPException(status_code=404, detail=events_data["error"])
+    
+    logger.info(f"Returning {len(events_data.get('events', []))} events")
+    return events_data

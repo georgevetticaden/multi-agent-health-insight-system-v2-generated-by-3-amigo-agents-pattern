@@ -1,1 +1,0 @@
-/api/qe/report/report/report.html

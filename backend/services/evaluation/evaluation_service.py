@@ -42,7 +42,6 @@ class EvaluationStatus(Enum):
 
 class EventType(Enum):
     STATUS = "status"
-    PROGRESS = "progress"
     RESULT = "result"
     ERROR = "error"
 
@@ -90,7 +89,7 @@ class EvaluationService:
             "agent_type": agent_type,
             "status": EvaluationStatus.PENDING,
             "started_at": datetime.now(),
-            "progress": []
+            "events": []  # Store evaluation lifecycle events
         }
         logger.info(f"Stored evaluation info in memory")
         
@@ -102,67 +101,6 @@ class EvaluationService:
         
         return evaluation_id
     
-    async def stream_evaluation_progress(
-        self,
-        evaluation_id: str
-    ) -> AsyncIterator[Dict[str, Any]]:
-        """Stream evaluation progress updates"""
-        if evaluation_id not in self.evaluations:
-            yield {
-                "type": EventType.ERROR.value,
-                "content": f"Evaluation {evaluation_id} not found"
-            }
-            return
-        
-        evaluation = self.evaluations[evaluation_id]
-        
-        # Send initial status
-        yield {
-            "type": EventType.STATUS.value,
-            "content": evaluation["status"].value,
-            "data": {
-                "test_case_id": evaluation["test_case_data"].get("id", "unknown"),
-                "agent_type": evaluation["agent_type"]
-            }
-        }
-        
-        # Stream progress updates
-        last_progress_idx = 0
-        while True:
-            # Check for new progress
-            if len(evaluation["progress"]) > last_progress_idx:
-                for progress in evaluation["progress"][last_progress_idx:]:
-                    yield {
-                        "type": EventType.PROGRESS.value,
-                        "content": progress["message"],
-                        "data": progress
-                    }
-                last_progress_idx = len(evaluation["progress"])
-            
-            # Check if completed
-            if evaluation["status"] in [EvaluationStatus.COMPLETED, EvaluationStatus.FAILED]:
-                if evaluation["status"] == EvaluationStatus.COMPLETED:
-                    # Include report URL in result
-                    result_data = evaluation.get("result", {}).copy()  # Make a copy to avoid modifying original
-                    result_data["report_url"] = evaluation.get("report_url")
-                    
-                    logger.info(f"Sending evaluation result with report_url: {result_data.get('report_url')}")
-                    
-                    yield {
-                        "type": EventType.RESULT.value,
-                        "content": "Evaluation completed",
-                        "data": result_data
-                    }
-                else:
-                    yield {
-                        "type": EventType.ERROR.value,
-                        "content": evaluation.get("error", "Evaluation failed")
-                    }
-                break
-            
-            # Small delay to prevent busy waiting
-            await asyncio.sleep(0.1)
-    
     async def get_evaluation_result(self, evaluation_id: str) -> Optional[Dict[str, Any]]:
         """Get evaluation result if completed"""
         if evaluation_id not in self.evaluations:
@@ -173,6 +111,30 @@ class EvaluationService:
             return evaluation.get("result")
         
         return None
+    
+    def get_evaluation_events(self, evaluation_id: str, start_index: int = 0) -> Dict[str, Any]:
+        """Get evaluation events since the given index"""
+        logger.info(f"Getting events for evaluation {evaluation_id}")
+        logger.info(f"Available evaluations: {list(self.evaluations.keys())}")
+        
+        if evaluation_id not in self.evaluations:
+            logger.error(f"Evaluation {evaluation_id} not found in evaluations dict")
+            return {"error": "Evaluation not found", "events": []}
+        
+        evaluation = self.evaluations[evaluation_id]
+        all_events = evaluation.get("events", [])
+        logger.info(f"Total events stored: {len(all_events)}")
+        
+        events = all_events[start_index:]
+        logger.info(f"Returning {len(events)} events starting from index {start_index}")
+        
+        return {
+            "evaluation_id": evaluation_id,
+            "status": evaluation["status"].value,
+            "events": events,
+            "total_events": len(all_events),
+            "has_more": len(events) < len(all_events)
+        }
     
     async def save_test_case(
         self,
@@ -234,7 +196,7 @@ class EvaluationService:
         self,
         test_case_data: Dict[str, Any],
         agent_type: str,
-        progress_callback: Optional[Any] = None
+        evaluation_id: str
     ) -> Dict[str, Any]:
         """
         Evaluate using CLI evaluator with trace data.
@@ -267,19 +229,13 @@ class EvaluationService:
         anthropic_client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
         eval_service = TraceEvaluationService(anthropic_client=anthropic_client)
         
-        # Progress updates
-        if progress_callback:
-            await progress_callback({
-                "stage": "loading_trace",
-                "progress": 10.0,
-                "message": "Loading trace data..."
-            })
-        
         # Run evaluation
         logger.info("Running CLI evaluator on trace...")
         result_dict = await eval_service.evaluate_test_case_from_trace(
             test_case_data,
-            trace_path
+            trace_path,
+            evaluation_id,
+            self.evaluations  # Pass evaluations dict to store events
         )
         
         # Return the result dictionary directly
@@ -323,14 +279,6 @@ class EvaluationService:
             logger.info(f"Updating evaluation status to RUNNING...")
             evaluation["status"] = EvaluationStatus.RUNNING
             
-            # Define progress callback
-            async def progress_callback(progress_dict: Dict[str, Any]):
-                logger.info(f"Progress update: {progress_dict}")
-                evaluation["progress"].append({
-                    **progress_dict,
-                    "timestamp": datetime.now().isoformat()
-                })
-            
             # Use CLI evaluator with subprocess
             trace_id = test_case_data.get('trace_id')
             if not trace_id:
@@ -340,7 +288,7 @@ class EvaluationService:
             result = await self._evaluate_with_cli_evaluator(
                 test_case_data,
                 agent_type,
-                progress_callback
+                evaluation_id  # Pass evaluation_id to store events
             )
             
             logger.info(f"Evaluation completed with overall score: {result.get('overall_score', 0):.2%}")

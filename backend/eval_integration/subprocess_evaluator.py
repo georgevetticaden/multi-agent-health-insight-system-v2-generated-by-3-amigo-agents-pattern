@@ -14,16 +14,147 @@ import tempfile
 import threading
 import queue
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
 
+def parse_evaluation_event(line: str) -> Optional[Dict[str, Any]]:
+    """
+    Parse subprocess output line for key evaluation lifecycle events.
+    
+    Returns event dict with type, message, and metadata if line contains a key event.
+    """
+    # Skip empty lines
+    if not line or not line.strip():
+        return None
+        
+    # Key event patterns based on the evaluation lifecycle
+    if "Loading trace from:" in line:
+        return {"type": "trace_load", "message": "🔍 Loading execution trace"}
+    
+    elif "Extracting evaluation data from trace" in line:
+        return {"type": "trace_extract", "message": "📊 Extracting evaluation data from trace"}
+    
+    elif "Test case created:" in line:
+        return {"type": "test_case_ready", "message": "📋 Test case prepared"}
+    
+    elif "Running evaluation in subprocess" in line:
+        return {"type": "subprocess_start", "message": "🚀 Starting evaluation subprocess"}
+    
+    elif "EVALUATION STAGE" in line:
+        # Extract stage info
+        if "Analyzing query" in line:
+            return {"type": "dimension_start", "message": "📏 Evaluating Complexity Classification"}
+        elif "Creating specialist tasks" in line:
+            return {"type": "dimension_start", "message": "👥 Evaluating Specialty Selection"}
+        elif "Evaluating dimensions" in line:
+            return {"type": "dimension_evaluation", "message": "📊 Evaluating all dimensions"}
+        elif "Analyzing failures" in line:
+            return {"type": "diagnostic_start", "message": "🔍 LLM-as-Judge analyzing failures"}
+        elif "Finalizing results" in line:
+            return {"type": "finalizing", "message": "📊 Finalizing evaluation results"}
+    
+    # Dimension results
+    elif "PASS" in line and ":" in line and any(dim in line for dim in ["complexity_classification", "specialty_selection", "analysis_quality", "tool_usage", "response_structure"]):
+        # Parse: ✅ PASS analysis_quality: 0.850 (target: 0.80)
+        parts = line.split(":")
+        if len(parts) >= 2:
+            dim_name = parts[0].split()[-1]
+            score_part = parts[1].strip().split()[0]
+            try:
+                score = float(score_part)
+                return {
+                    "type": "dimension_result",
+                    "message": f"✅ {dim_name}: {score:.3f}",
+                    "dimension": dim_name,
+                    "score": score,
+                    "passed": True
+                }
+            except:
+                pass
+    
+    elif "FAIL" in line and ":" in line and any(dim in line for dim in ["complexity_classification", "specialty_selection", "analysis_quality", "tool_usage", "response_structure"]):
+        # Parse: ❌ FAIL complexity_classification: 0.000 (target: 0.90)
+        parts = line.split(":")
+        if len(parts) >= 2:
+            dim_name = parts[0].split()[-1]
+            score_part = parts[1].strip().split()[0]
+            try:
+                score = float(score_part)
+                return {
+                    "type": "dimension_result", 
+                    "message": f"❌ {dim_name}: {score:.3f}",
+                    "dimension": dim_name,
+                    "score": score,
+                    "passed": False
+                }
+            except:
+                pass
+    
+    # LLM-as-Judge events
+    elif "LLM Judge evaluating" in line or "LLM-as-Judge evaluating" in line:
+        if "specialist rationale" in line:
+            return {"type": "llm_judge_eval", "message": "🤖 LLM-as-Judge evaluating specialist rationale..."}
+        elif "context awareness" in line:
+            return {"type": "llm_judge_eval", "message": "🤖 LLM-as-Judge scoring context awareness..."}
+        elif "comprehensive approach" in line:
+            return {"type": "llm_judge_eval", "message": "🤖 LLM-as-Judge assessing comprehensive approach..."}
+    
+    elif "LLM Judge score:" in line or "LLM-as-Judge score:" in line:
+        # Extract score
+        try:
+            score = float(line.split(":")[-1].strip())
+            return {"type": "llm_judge_result", "message": f"✅ LLM-as-Judge score: {score:.3f}"}
+        except:
+            pass
+    
+    # Diagnostic events
+    elif "LLM Judge failure analysis" in line or "diagnosing" in line:
+        if "complexity" in line.lower():
+            return {"type": "diagnostic", "message": "🔍 LLM-as-Judge diagnosing complexity failure..."}
+        elif "specialty" in line.lower() or "specialist" in line.lower():
+            return {"type": "diagnostic", "message": "🔍 LLM-as-Judge diagnosing specialty selection failure..."}
+    
+    elif "recommendations" in line and ("Generated" in line or "items" in line):
+        # Extract count
+        import re
+        match = re.search(r'\d+', line)
+        if match:
+            count = match.group()
+            return {"type": "diagnostic_complete", "message": f"💡 LLM-as-Judge generated {count} improvement recommendations"}
+    
+    # Final results
+    elif "EVALUATION COMPLETE" in line:
+        return {"type": "evaluation_start_complete", "message": "🏁 Evaluation stages complete"}
+    
+    elif "Weighted score:" in line:
+        try:
+            score = float(line.split(":")[-1].strip())
+            return {"type": "overall_score", "message": f"📊 Evaluation complete: Overall Score {score:.3f}"}
+        except:
+            pass
+    
+    elif "Failed dimensions:" in line:
+        try:
+            count = int(line.split(":")[-1].strip())
+            return {"type": "failed_dimensions", "count": count}
+        except:
+            pass
+    
+    elif "Evaluation complete!" in line:
+        return {"type": "evaluation_complete", "message": "✅ Evaluation analysis finished"}
+    
+    return None
+
+
 def run_evaluation_subprocess(
     test_case_data: Dict[str, Any], 
     trace_data: Dict[str, Any],
-    anthropic_api_key: Optional[str] = None
+    anthropic_api_key: Optional[str] = None,
+    event_callback: Optional[callable] = None
 ) -> Dict[str, Any]:
     """
     Run evaluation in a subprocess using the CLI evaluation framework.
@@ -32,11 +163,15 @@ def run_evaluation_subprocess(
         test_case_data: Test case dict from QE Agent
         trace_data: Extracted trace data (complexity, approach, etc.)
         anthropic_api_key: API key for LLM judge evaluation
+        event_callback: Callback for storing events (will be called in parent process)
         
     Returns:
-        Evaluation results dictionary
+        Evaluation results dictionary with events
     """
     logger.info("=== SUBPROCESS EVALUATOR START ===")
+    
+    # Collect events locally
+    collected_events = []
     
     # Use the new subprocess evaluation script
     backend_dir = Path(__file__).parent.parent
@@ -94,6 +229,21 @@ def run_evaluation_subprocess(
                         if line.strip():  # Only log non-empty lines
                             logger.info(f"{prefix}: {line}")
                             output_queue.put(line)
+                            
+                            # Parse and collect evaluation events from both STDOUT and STDERR
+                            event = parse_evaluation_event(line)
+                            if event:
+                                # Add timestamp to event
+                                event['timestamp'] = datetime.now().isoformat()
+                                collected_events.append(event)
+                                # Call the event callback in real-time
+                                # This runs in the parent process thread, so it CAN modify parent process memory!
+                                if event_callback:
+                                    try:
+                                        logger.info(f"Real-time event callback for: {event.get('type', 'unknown')}")
+                                        event_callback(event)
+                                    except Exception as e:
+                                        logger.error(f"Error in event callback: {e}")
                 pipe.close()
             except Exception as e:
                 logger.error(f"Error reading {prefix}: {e}")
@@ -172,6 +322,11 @@ def run_evaluation_subprocess(
         
         # Parse output
         output = json.loads(json_output)
+        
+        # Add collected events to the output
+        output['collected_events'] = collected_events
+        logger.info(f"Collected {len(collected_events)} events during evaluation")
+        
         logger.info("=== SUBPROCESS EVALUATOR COMPLETE ===")
         return output
         

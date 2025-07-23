@@ -25,11 +25,80 @@ const TestCaseThreePanelLayout: React.FC<TestCaseThreePanelLayoutProps> = ({ tra
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [selectedTraceEvent, setSelectedTraceEvent] = useState<string | null>(null);
   const [switchToReportTab, setSwitchToReportTab] = useState(false);
+  const [evaluationId, setEvaluationId] = useState<string | null>(null);
+  const [evaluationEvents, setEvaluationEvents] = useState<any[]>([]);
 
   // Load initial test case from trace
   useEffect(() => {
     loadTestCaseFromTrace();
   }, [traceId]);
+
+  // Poll for evaluation events
+  useEffect(() => {
+    if (!evaluationId || !isEvaluating) return;
+    
+    console.log(`🔄 Starting event polling for evaluation ${evaluationId}`);
+    
+    let intervalId: NodeJS.Timeout;
+    let eventIndex = 0;
+    
+    const pollEvents = async () => {
+      try {
+        console.log(`📡 Polling events for ${evaluationId} from index ${eventIndex}`);
+        const response = await fetch(`/api/evaluation/events/${evaluationId}?start_index=${eventIndex}`);
+        
+        if (!response.ok) {
+          console.error(`❌ Failed to fetch events: ${response.status} ${response.statusText}`);
+          const errorText = await response.text();
+          console.error('Error response:', errorText);
+          return;
+        }
+        
+        const data = await response.json();
+        console.log(`✅ Received events response:`, data);
+        
+        if (data.events && data.events.length > 0) {
+          console.log(`📥 Got ${data.events.length} new events`);
+          // Append new events
+          setEvaluationEvents(prev => [...prev, ...data.events]);
+          eventIndex = data.total_events;
+          
+          // Check if evaluation is complete
+          const completeEvent = data.events.find((e: any) => 
+            e.type === 'evaluation_complete' || e.type === 'overall_score'
+          );
+          
+          if (completeEvent || data.status === 'completed') {
+            console.log('✅ Evaluation completed!');
+            setIsEvaluating(false);
+            clearInterval(intervalId);
+          }
+        }
+        
+        // Also check if status is failed
+        if (data.status === 'failed') {
+          console.error('❌ Evaluation failed');
+          setIsEvaluating(false);
+          clearInterval(intervalId);
+        }
+      } catch (error) {
+        console.error('❌ Error polling evaluation events:', error);
+      }
+    };
+    
+    // Start polling immediately
+    pollEvents();
+    
+    // Poll every second
+    intervalId = setInterval(pollEvents, 1000);
+    console.log(`⏱️ Started polling interval`);
+    
+    // Cleanup
+    return () => {
+      console.log(`🛑 Stopping event polling for evaluation ${evaluationId}`);
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [evaluationId, isEvaluating]);
 
   const loadTestCaseFromTrace = async () => {
     try {
@@ -98,8 +167,12 @@ const TestCaseThreePanelLayout: React.FC<TestCaseThreePanelLayoutProps> = ({ tra
   const handleRunEvaluation = async () => {
     if (!testCase) return;
     
+    console.log('🚀 Starting evaluation for test case:', testCase.id);
+    
     setIsEvaluating(true);
     setSwitchToReportTab(true);
+    setEvaluationEvents([]); // Clear previous events
+    
     try {
       const response = await fetch(`/api/test-cases/${testCase.id}/evaluate`, {
         method: 'POST'
@@ -110,6 +183,11 @@ const TestCaseThreePanelLayout: React.FC<TestCaseThreePanelLayoutProps> = ({ tra
       }
 
       const result = await response.json();
+      console.log('✅ Evaluation started:', result);
+      
+      // Store evaluation ID for event polling
+      setEvaluationId(result.evaluation_id);
+      console.log('📝 Evaluation ID set:', result.evaluation_id);
       
       // Set the evaluation report with the data we have
       setEvaluationReport({
@@ -124,7 +202,6 @@ const TestCaseThreePanelLayout: React.FC<TestCaseThreePanelLayoutProps> = ({ tra
     } catch (error) {
       console.error('Evaluation error:', error);
       alert('Error running evaluation. Please try again.');
-    } finally {
       setIsEvaluating(false);
     }
   };
@@ -293,6 +370,7 @@ const TestCaseThreePanelLayout: React.FC<TestCaseThreePanelLayoutProps> = ({ tra
             traceId={traceId}
             evaluationReport={evaluationReport}
             isEvaluating={isEvaluating}
+            evaluationEvents={evaluationEvents}
             onEventSelect={setSelectedTraceEvent}
             selectedEvent={selectedTraceEvent}
             switchToReportTab={switchToReportTab}

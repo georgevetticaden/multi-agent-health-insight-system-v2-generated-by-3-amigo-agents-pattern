@@ -11,6 +11,13 @@ The Multi-Agent Health Insight System has been successfully implemented based on
 
 ## Recent Enhancements
 
+### Evaluation Framework Architecture Cleanup (Completed)
+- **Resolved module conflicts** between `/evaluation` (main framework) and `/backend/evaluation` by renaming to `/backend/eval_integration`
+- **Removed redundant code** - Deleted outdated `backend/evaluation/agents/` and `backend/evaluation/core/` directories
+- **Subprocess execution pattern** - Uses subprocess to run evaluations from main framework, avoiding import conflicts
+- **Event-driven evaluation progress** - Replaced streaming with lifecycle event capture for ~30 second evaluation process
+- **LLM-as-Judge terminology** - Aligned event messages with Analyze-Measure-Improve lifecycle from blog post
+
 ### Trace Viewer Improvements (Completed)
 - **Fixed text overflow issue** in hierarchical trace viewer where LLM responses were getting cut off
 - **Added non-XML task format parsing** to handle plain text task assignments  
@@ -736,6 +743,99 @@ When you return, let's discuss:
 6. **Performance Considerations**: How many test cases should we optimize for? Pagination vs infinite scroll?
 
 This design will create a comprehensive test management system that maintains the familiar three-panel experience while providing powerful evaluation and analysis capabilities.
+
+# Part 4: Evaluation Framework Architecture
+
+## Current Architecture Overview
+
+The evaluation framework is split into two separate but integrated systems:
+
+### 1. Main Evaluation Framework (`/evaluation`)
+The comprehensive evaluation system implementing Anthropic's best practices:
+- **Core Components**: CMOEvaluator, test cases, dimensions, LLM Judge implementation
+- **Location**: Root `/evaluation` directory
+- **Purpose**: Full evaluation engine with all scoring logic and analysis capabilities
+- **Access**: Run directly via CLI or imported for standalone use
+
+### 2. Backend Evaluation Integration (`/backend/eval_integration`)
+Integration layer for the Eval Development Studio:
+- **Core Components**: subprocess_evaluator.py, cli_evaluator_adapter.py, trace_parser.py, mock_agents/
+- **Location**: `/backend/eval_integration` (renamed from `/backend/evaluation` to avoid conflicts)
+- **Purpose**: Bridges the web UI with the main evaluation framework
+- **Access**: Called by backend services when evaluating from the Studio
+
+## Why Subprocess Execution?
+
+The evaluation framework uses subprocess execution to avoid Python import path conflicts:
+
+```python
+# Problem: Direct imports cause module name conflicts
+from evaluation.agents.cmo.evaluator import CMOEvaluator  # Conflicts with backend paths
+
+# Solution: Run evaluation in subprocess with clean environment
+result = run_evaluation_subprocess(test_case, trace_data, api_key, event_callback)
+```
+
+This approach:
+- Maintains clean separation between systems
+- Avoids "module not found" and circular import issues
+- Allows each system to have its own dependencies
+- Enables real-time event streaming from subprocess
+
+## Evaluation Lifecycle Events
+
+During the ~30 second evaluation process, the system captures and reports key lifecycle events:
+
+### Event Types and Flow
+1. **trace_load** - "🔍 Loading execution trace"
+2. **test_case_ready** - "📋 Test case prepared"
+3. **dimension_start** - "📏 Evaluating [Dimension Name]"
+4. **dimension_evaluation** - "📊 Evaluating all dimensions"
+5. **llm_judge_eval** - "🤖 LLM-as-Judge evaluating..."
+6. **dimension_result** - "✅/❌ [dimension]: [score]"
+7. **diagnostic** - "🔍 LLM-as-Judge diagnosing..."
+8. **diagnostic_complete** - "💡 LLM-as-Judge generated N recommendations"
+9. **overall_score** - "📊 Evaluation complete: Overall Score X.XXX"
+10. **evaluation_complete** - "✅ Evaluation analysis finished"
+
+### Event API
+```python
+# Frontend polls for events during evaluation
+GET /api/evaluation/events/{evaluation_id}?start_index=0
+
+# Response
+{
+    "evaluation_id": "...",
+    "status": "running",
+    "events": [
+        {
+            "type": "trace_load",
+            "message": "🔍 Loading execution trace",
+            "timestamp": "2025-01-07T..."
+        },
+        ...
+    ],
+    "total_events": 15,
+    "has_more": false
+}
+```
+
+## Key Integration Points
+
+### 1. Test Case Flow
+```
+QE Agent → Test Case JSON → Backend Service → Subprocess → Main Evaluator
+```
+
+### 2. Trace Processing
+```
+Health Query → Trace File → TraceDataExtractor → MockCMOAgent → Evaluation
+```
+
+### 3. Event Streaming
+```
+Subprocess Output → Event Parser → Backend Storage → API Endpoint → Frontend
+```
 
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.

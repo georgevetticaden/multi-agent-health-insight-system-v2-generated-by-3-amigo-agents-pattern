@@ -642,20 +642,72 @@ async def test_new_specialist():
 
 ---
 
-# Part 3: Next Phase - Test Case Management UI Design
+# Part 3: Evaluation Storage Architecture Refactor
 
-## Current Status: QE Agent Evaluation System Complete ✅
+## Current Status: Evaluation System Working ✅
 - QE Agent fully operational with "run" and "details" commands
 - Evaluation engine working with comprehensive scoring across 5 dimensions
 - HTML report generation with CLI-style drill-downs and LLM Judge analysis
 - Report URLs clickable and served via HTTP API
-- Score display fixed (showing actual percentages, not 0%)
+- Eval Dev Studio UI implemented with three-panel layout
 
-## Next Phase: Rich Test Case Management UI
+## Active Refactor: Unified Evaluation Storage Architecture
 
-### Vision: Three-Panel Layout Similar to Health Insight System
+### Problem Being Solved
+- **Event Loss**: Evaluation lifecycle events lost on server reload (stored in-memory)
+- **Data Fragmentation**: Traces, results, and test cases scattered across different locations
+- **Format Divergence**: CLI uses Python test cases, Studio generates JSON
+- **Result Duplication**: Same evaluation data stored in 3 different files
 
-The goal is to create a comprehensive test case management interface that mirrors the successful three-panel layout of the Health Insight System:
+### Solution Architecture
+
+```
+evaluation/
+├── agents/                       # Framework code only
+├── cli/                          # CLI interface
+├── core/                         # Core logic
+├── framework/                    # Framework components
+│
+└── data/                         # NEW: All evaluation data
+    ├── config.py                 # Central configuration
+    ├── test_loader.py            # Multi-agent test loader
+    ├── schemas/                  # Agent-specific test schemas
+    │   ├── cmo_schema.json
+    │   ├── specialist_schema.json
+    │   └── visualization_schema.json
+    ├── traces/                   # Health query traces
+    ├── test-suites/              # ALL test cases in JSON
+    │   ├── framework/            # Organized by agent type
+    │   │   ├── cmo/
+    │   │   ├── specialist/
+    │   │   └── visualization/
+    │   └── studio-generated/     # Organized by agent type
+    │       ├── cmo/
+    │       ├── specialist/
+    │       └── visualization/
+    └── runs/                     # Evaluation results
+        └── [date]/eval_[id]/
+            ├── metadata.json     # Includes agent_type
+            ├── events/*.json     # Persistent events
+            ├── result.json       # Single source
+            └── report/index.html
+```
+
+### Key Changes
+1. **Multi-Agent Test Format**: Each agent type has its own JSON schema
+2. **File-Based Event Storage**: Events persist across server reloads
+3. **Single Result File**: No more duplication
+4. **Configurable Storage**: Can redirect via environment variables
+5. **Agent-Type Organization**: Tests organized by agent type for clarity
+
+### Implementation Status
+- [ ] Phase 1: Foundation & Configuration
+- [ ] Phase 2: Convert Python tests to JSON
+- [ ] Phase 3: Refactor all storage operations
+- [ ] Phase 4: Update CLI framework
+- [ ] Phase 5: Cleanup & Testing
+
+See `evaluation/data/REFACTOR_PLAN.md` for complete implementation details.
 
 #### **Left Panel: QE/Evaluation Agent Interface**
 - Similar to the current Medical Team panel

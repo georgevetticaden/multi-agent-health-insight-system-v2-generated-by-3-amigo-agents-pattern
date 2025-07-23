@@ -47,9 +47,18 @@ class TraceCollector:
             from evaluation.data.config import EvaluationDataConfig
             EvaluationDataConfig.init_directories()
             storage_path = EvaluationDataConfig.TRACES_DIR
+            print(f"[TraceCollector] Using unified trace storage: {storage_path}")
         except ImportError:
             # Fallback to environment variable or default
-            storage_path = Path(os.getenv("TRACE_STORAGE_PATH", "./traces"))
+            # Use absolute path to evaluation/data/traces if it exists
+            project_root = Path(__file__).parent.parent.parent.parent
+            eval_traces_dir = project_root / "evaluation" / "data" / "traces"
+            if eval_traces_dir.exists():
+                storage_path = eval_traces_dir
+                print(f"[TraceCollector] Using evaluation traces dir: {storage_path}")
+            else:
+                storage_path = Path(os.getenv("TRACE_STORAGE_PATH", "./traces"))
+                print(f"[TraceCollector] Using fallback trace storage: {storage_path}")
         
         if storage_type == "filesystem":
             return FileSystemTraceStorage(storage_path)

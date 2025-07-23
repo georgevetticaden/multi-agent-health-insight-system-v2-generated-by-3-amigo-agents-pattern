@@ -332,11 +332,31 @@ class EvaluationService:
         if self.use_unified_storage:
             trace_path = self.config.find_trace(trace_id)
             if trace_path:
+                logger.info(f"Found trace in unified storage: {trace_path}")
                 return str(trace_path)
+            else:
+                logger.warning(f"Trace not found via config.find_trace for ID: {trace_id}")
         
-        # Look in standard trace directories
+        # If unified storage available, also check the traces directory directly
+        if self.use_unified_storage and self.config.TRACES_DIR.exists():
+            logger.info(f"Searching in unified traces directory: {self.config.TRACES_DIR}")
+            # Search in date directories
+            for date_dir in self.config.TRACES_DIR.iterdir():
+                if date_dir.is_dir():
+                    # Try new naming pattern (HHMMSS_trace_id.json)
+                    for trace_file in date_dir.glob(f"*_{trace_id}.json"):
+                        if trace_file.exists():
+                            logger.info(f"Found trace with new naming pattern: {trace_file}")
+                            return str(trace_file)
+                    # Try old naming pattern
+                    trace_file = date_dir / f"{trace_id}.json"
+                    if trace_file.exists():
+                        logger.info(f"Found trace with old naming pattern: {trace_file}")
+                        return str(trace_file)
+        
+        # Fallback to old trace directories
+        logger.info("Falling back to old trace directories")
         trace_dirs = [
-            Path("backend/traces"),
             Path("traces"),
             Path(".")
         ]
@@ -347,9 +367,11 @@ class EvaluationService:
                 
             # Search for trace file
             for trace_file in base_dir.rglob(f"*{trace_id}*.json"):
-                if trace_file.is_file():
+                if trace_file.is_file() and not trace_file.name.endswith('.hierarchical.json'):
+                    logger.info(f"Found trace in fallback directory: {trace_file}")
                     return str(trace_file)
         
+        logger.error(f"Trace file not found for ID: {trace_id}")
         return None
     
     async def _run_evaluation_async(

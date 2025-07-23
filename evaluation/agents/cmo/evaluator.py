@@ -236,7 +236,7 @@ class CMOEvaluator(BaseEvaluator):
             Exception: If agent execution fails (returns result with error)
         """
         # Import test case type
-        from evaluation.agents.cmo.test_cases import TestCase
+        from evaluation.cli.test_case_converter import CMOTestCase as TestCase
         
         logger.info(f"Evaluating test case: {test_case.id} - {test_case.query[:50]}...")
         

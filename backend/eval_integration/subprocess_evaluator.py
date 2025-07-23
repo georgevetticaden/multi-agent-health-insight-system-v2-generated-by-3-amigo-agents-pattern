@@ -360,7 +360,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Import evaluation framework
 from evaluation.agents.cmo.evaluator import CMOEvaluator, CMOEvaluationResult
-from evaluation.agents.cmo.test_cases import TestCase as CMOTestCase
+from evaluation.cli.test_case_converter import CMOTestCase
 from evaluation.agents.cmo.dimensions import DimensionResult
 from services.agents.models import QueryComplexity, MedicalSpecialty
 from services.agents.cmo.cmo_agent import SpecialistTask

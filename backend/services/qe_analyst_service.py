@@ -20,8 +20,11 @@ class QEAnalystService:
     
     def __init__(self):
         self.agents: Dict[str, QEAgent] = {}  # Store agents by trace_id
-        # Use absolute path or relative to current working directory
-        self.traces_dir = Path("traces") if Path("traces").exists() else Path("backend/traces")
+        
+        # Use unified evaluation data config
+        from evaluation.data.config import EvaluationDataConfig
+        self.traces_dir = EvaluationDataConfig.TRACES_DIR
+        logger.info(f"Using unified trace storage: {self.traces_dir}")
         
     def _get_trace_file_path(self, trace_id: str) -> Optional[Path]:
         """Find the trace file for a given trace ID"""
@@ -30,7 +33,12 @@ class QEAnalystService:
         today_dir = self.traces_dir / today
         
         if today_dir.exists():
-            # Look for the trace data file (try both naming conventions)
+            # Try new naming pattern first (HHMMSS_trace_id.json)
+            for trace_file in today_dir.glob(f"*_{trace_id}.json"):
+                if trace_file.exists():
+                    return trace_file
+            
+            # Look for the trace data file (try old naming conventions)
             trace_file = today_dir / f"{trace_id}.json"
             if trace_file.exists():
                 return trace_file
@@ -42,6 +50,11 @@ class QEAnalystService:
         # Search in all date folders
         for date_dir in sorted(self.traces_dir.iterdir(), reverse=True):
             if date_dir.is_dir():
+                # Try new naming pattern first
+                for trace_file in date_dir.glob(f"*_{trace_id}.json"):
+                    if trace_file.exists():
+                        return trace_file
+                
                 trace_file = date_dir / f"{trace_id}.json"
                 if trace_file.exists():
                     return trace_file

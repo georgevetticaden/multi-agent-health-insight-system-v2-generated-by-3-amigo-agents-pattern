@@ -1,6 +1,12 @@
 import os
+import sys
 import logging
+from pathlib import Path
 from dotenv import load_dotenv
+
+# Add project root to Python path to enable evaluation module imports
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
 
 # Load environment variables before any other imports
 load_dotenv()

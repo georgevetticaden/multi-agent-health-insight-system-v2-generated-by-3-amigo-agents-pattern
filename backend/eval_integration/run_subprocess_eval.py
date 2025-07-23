@@ -40,7 +40,7 @@ try:
     
     # Evaluation framework imports
     from evaluation.agents.cmo.evaluator import CMOEvaluator, CMOEvaluationResult
-    from evaluation.agents.cmo.test_cases import TestCase as CMOTestCase
+    from evaluation.cli.test_case_converter import CMOTestCase
     
     # Other imports
     from anthropic import Anthropic

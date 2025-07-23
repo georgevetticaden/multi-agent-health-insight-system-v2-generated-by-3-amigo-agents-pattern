@@ -32,6 +32,15 @@ const TestCaseThreePanelLayout: React.FC<TestCaseThreePanelLayoutProps> = ({ tra
   useEffect(() => {
     loadTestCaseFromTrace();
   }, [traceId]);
+  
+  // Clear any stale evaluation state on mount
+  useEffect(() => {
+    // If we have an evaluationId but we're not evaluating, clear it
+    if (evaluationId && !isEvaluating) {
+      console.log('🧹 Clearing stale evaluation ID on mount:', evaluationId);
+      setEvaluationId(null);
+    }
+  }, []);
 
   // Poll for evaluation events
   useEffect(() => {
@@ -41,8 +50,11 @@ const TestCaseThreePanelLayout: React.FC<TestCaseThreePanelLayoutProps> = ({ tra
     
     let intervalId: NodeJS.Timeout;
     let eventIndex = 0;
+    let shouldStop = false;
     
     const pollEvents = async () => {
+      if (shouldStop) return;
+      
       try {
         console.log(`📡 Polling events for ${evaluationId} from index ${eventIndex}`);
         const response = await fetch(`/api/evaluation/events/${evaluationId}?start_index=${eventIndex}`);
@@ -51,6 +63,14 @@ const TestCaseThreePanelLayout: React.FC<TestCaseThreePanelLayoutProps> = ({ tra
           console.error(`❌ Failed to fetch events: ${response.status} ${response.statusText}`);
           const errorText = await response.text();
           console.error('Error response:', errorText);
+          
+          // If evaluation not found (404), stop polling and clear state
+          if (response.status === 404 || errorText.includes('not found')) {
+            console.log('🛑 Evaluation not found, stopping polling and clearing state');
+            shouldStop = true;
+            setIsEvaluating(false);
+            setEvaluationId(null);
+          }
           return;
         }
         
@@ -70,16 +90,16 @@ const TestCaseThreePanelLayout: React.FC<TestCaseThreePanelLayoutProps> = ({ tra
           
           if (completeEvent || data.status === 'completed') {
             console.log('✅ Evaluation completed!');
+            shouldStop = true;
             setIsEvaluating(false);
-            clearInterval(intervalId);
           }
         }
         
         // Also check if status is failed
         if (data.status === 'failed') {
           console.error('❌ Evaluation failed');
+          shouldStop = true;
           setIsEvaluating(false);
-          clearInterval(intervalId);
         }
       } catch (error) {
         console.error('❌ Error polling evaluation events:', error);
@@ -90,12 +110,19 @@ const TestCaseThreePanelLayout: React.FC<TestCaseThreePanelLayoutProps> = ({ tra
     pollEvents();
     
     // Poll every second
-    intervalId = setInterval(pollEvents, 1000);
+    intervalId = setInterval(() => {
+      if (shouldStop) {
+        clearInterval(intervalId);
+        return;
+      }
+      pollEvents();
+    }, 1000);
     console.log(`⏱️ Started polling interval`);
     
     // Cleanup
     return () => {
       console.log(`🛑 Stopping event polling for evaluation ${evaluationId}`);
+      shouldStop = true;
       if (intervalId) clearInterval(intervalId);
     };
   }, [evaluationId, isEvaluating]);

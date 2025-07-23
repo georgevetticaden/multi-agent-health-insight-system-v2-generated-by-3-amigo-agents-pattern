@@ -4,8 +4,22 @@ Test Case Converter
 Converts JSON test cases to the expected test case objects for CLI evaluation.
 """
 
-from typing import List, Dict, Any, Set
-from evaluation.agents.cmo.test_cases import TestCase as CMOTestCase
+from typing import List, Dict, Any, Set, Optional
+from dataclasses import dataclass
+
+
+@dataclass
+class CMOTestCase:
+    """Simple test case class for CMO evaluation"""
+    id: str
+    query: str
+    expected_complexity: str
+    expected_specialties: Set[str]
+    key_data_points: List[str]
+    description: str = ""
+    category: str = "general"
+    notes: Optional[str] = None
+    based_on_real_query: bool = False
 
 
 def convert_json_to_cmo_test_case(test_dict: Dict[str, Any]) -> CMOTestCase:

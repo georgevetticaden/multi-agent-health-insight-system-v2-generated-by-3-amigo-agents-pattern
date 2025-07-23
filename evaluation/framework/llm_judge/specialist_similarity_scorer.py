@@ -26,7 +26,7 @@ class SpecialistSimilarityScorer:
     SPECIALIST_GROUPS = {
         "primary_care": ["general_practice", "family_medicine", "internal_medicine"],
         "metabolic": ["endocrinology", "diabetes_care", "metabolic_medicine"],
-        "heart": ["cardiology", "cardiovascular", "cardiac_care"],
+        "heart": ["cardiology", "cardiovascular", "cardiac_care" ],
         "lab": ["laboratory_medicine", "pathology", "clinical_laboratory"],
         "prevention": ["preventive_medicine", "wellness", "health_screening"]
     }

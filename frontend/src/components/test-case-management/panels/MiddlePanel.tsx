@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Activity, ClipboardCheck, Maximize2, Minimize2 } from 'lucide-react';
 import TraceViewerPanel from './TraceViewerPanel';
 import EvalReportViewer from '../components/EvalReportViewer';
@@ -27,6 +27,96 @@ const MiddlePanel: React.FC<MiddlePanelProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'trace' | 'report'>('trace');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const eventsContainerRef = useRef<HTMLDivElement>(null);
+
+  // Group events by lifecycle phase
+  const groupedEvents = React.useMemo(() => {
+    const groups = {
+      analyze: [] as any[],
+      measure: [] as any[],
+      improve: [] as any[]
+    };
+
+    evaluationEvents.forEach(event => {
+      if (event.type === 'trace_load' || event.type === 'test_case_ready') {
+        groups.analyze.push(event);
+      } else if (event.type === 'dimension_start' || event.type === 'dimension_evaluation' || 
+                 event.type === 'dimension_result' || event.type === 'llm_judge_eval') {
+        groups.measure.push(event);
+      } else if (event.type === 'diagnostic' || event.type === 'diagnostic_complete' || 
+                 event.type === 'overall_score' || event.type === 'evaluation_complete') {
+        groups.improve.push(event);
+      } else {
+        // Default to measure phase for unknown events
+        groups.measure.push(event);
+      }
+    });
+
+    return groups;
+  }, [evaluationEvents]);
+
+  // Helper function to render individual events
+  const renderEvent = (event: any, key: string) => {
+    // Determine event style based on type
+    const isComplete = event.type === 'evaluation_complete' || event.type === 'overall_score';
+    const isDimension = event.type === 'dimension_result';
+    const isDiagnostic = event.type === 'diagnostic' || event.type === 'diagnostic_complete';
+    const isLLMJudge = event.type === 'llm_judge_eval' || event.type === 'llm_judge_result';
+    
+    const bgColor = isComplete ? 'bg-green-50 border-green-200' : 
+                  isDimension ? (event.passed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200') :
+                  isDiagnostic ? 'bg-purple-50 border-purple-200' :
+                  isLLMJudge ? 'bg-blue-50 border-blue-200' :
+                  'bg-white border-gray-200';
+                  
+    const iconBg = isComplete ? 'bg-green-100' :
+                 isDimension ? (event.passed ? 'bg-green-100' : 'bg-red-100') :
+                 isDiagnostic ? 'bg-purple-100' :
+                 isLLMJudge ? 'bg-blue-100' :
+                 'bg-gray-100';
+                 
+    const iconColor = isComplete ? 'text-green-600' :
+                    isDimension ? (event.passed ? 'text-green-600' : 'text-red-600') :
+                    isDiagnostic ? 'text-purple-600' :
+                    isLLMJudge ? 'text-blue-600' :
+                    'text-gray-600';
+    
+    return (
+      <div key={key} className={`flex items-start gap-3 p-3 rounded-lg border ${bgColor} transition-all duration-300 animate-fadeIn`}>
+        <div className={`flex-shrink-0 w-10 h-10 ${iconBg} rounded-full flex items-center justify-center ${iconColor}`}>
+          <span className="text-xl">{event.message?.charAt(0) || '•'}</span>
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-medium text-gray-900">{event.message}</p>
+          {event.timestamp && (
+            <p className="text-xs text-gray-500 mt-0.5">
+              {new Date(event.timestamp).toLocaleTimeString()}
+            </p>
+          )}
+          {event.dimension && (
+            <p className="text-xs text-gray-600 mt-1">
+              <span className="font-medium">Dimension:</span> {event.dimension.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            </p>
+          )}
+          {event.score !== undefined && (
+            <div className="mt-2">
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                  <div 
+                    className={`h-full transition-all duration-500 ${event.passed ? 'bg-green-500' : 'bg-red-500'}`}
+                    style={{ width: `${event.score * 100}%` }}
+                  />
+                </div>
+                <span className={`text-xs font-medium ${event.passed ? 'text-green-600' : 'text-red-600'}`}>
+                  {(event.score * 100).toFixed(1)}%
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   // Switch to report tab when requested OR when evaluation starts
   useEffect(() => {
@@ -34,6 +124,17 @@ const MiddlePanel: React.FC<MiddlePanelProps> = ({
       setActiveTab('report');
     }
   }, [switchToReportTab, isEvaluating]);
+
+  // Auto-scroll to bottom when new events are added
+  useEffect(() => {
+    if (eventsContainerRef.current && evaluationEvents.length > 0) {
+      // Smooth scroll to bottom
+      eventsContainerRef.current.scrollTo({
+        top: eventsContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  }, [evaluationEvents]);
 
   const handleTabChange = (tab: 'trace' | 'report') => {
     setActiveTab(tab);
@@ -134,72 +235,136 @@ const MiddlePanel: React.FC<MiddlePanelProps> = ({
                       </svg>
                     </div>
                   </div>
+                  
+                  {/* Visual Timeline */}
+                  <div className="mt-4 px-8">
+                    <div className="relative">
+                      {/* Progress line */}
+                      <div className="absolute top-5 left-0 right-0 h-1 bg-gray-200 rounded-full"></div>
+                      <div 
+                        className="absolute top-5 left-0 h-1 bg-blue-600 rounded-full transition-all duration-500"
+                        style={{ 
+                          width: groupedEvents.improve.length > 0 ? '100%' :
+                                 groupedEvents.measure.length > 0 ? '66%' :
+                                 groupedEvents.analyze.length > 0 ? '33%' : '0%'
+                        }}
+                      ></div>
+                      
+                      {/* Phase markers */}
+                      <div className="relative flex justify-between">
+                        {/* Analyze Phase */}
+                        <div className="flex flex-col items-center">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold transition-all duration-300 ${
+                            groupedEvents.analyze.length > 0 ? 'bg-blue-600 scale-110' : 'bg-gray-300'
+                          }`}>
+                            1
+                          </div>
+                          <div className="mt-2 text-center">
+                            <p className={`text-xs font-semibold ${
+                              groupedEvents.analyze.length > 0 ? 'text-blue-600' : 'text-gray-400'
+                            }`}>Analyze</p>
+                            <p className="text-xs text-gray-500 mt-0.5">Loading trace</p>
+                          </div>
+                        </div>
+                        
+                        {/* Measure Phase */}
+                        <div className="flex flex-col items-center">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold transition-all duration-300 ${
+                            groupedEvents.measure.length > 0 ? 'bg-purple-600 scale-110' : 'bg-gray-300'
+                          }`}>
+                            2
+                          </div>
+                          <div className="mt-2 text-center">
+                            <p className={`text-xs font-semibold ${
+                              groupedEvents.measure.length > 0 ? 'text-purple-600' : 'text-gray-400'
+                            }`}>Measure</p>
+                            <p className="text-xs text-gray-500 mt-0.5">Evaluating dimensions</p>
+                          </div>
+                        </div>
+                        
+                        {/* Improve Phase */}
+                        <div className="flex flex-col items-center">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold transition-all duration-300 ${
+                            groupedEvents.improve.length > 0 ? 'bg-green-600 scale-110' : 'bg-gray-300'
+                          }`}>
+                            3
+                          </div>
+                          <div className="mt-2 text-center">
+                            <p className={`text-xs font-semibold ${
+                              groupedEvents.improve.length > 0 ? 'text-green-600' : 'text-gray-400'
+                            }`}>Improve</p>
+                            <p className="text-xs text-gray-500 mt-0.5">Generating insights</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 
                 {/* Events List */}
-                <div className="flex-1 overflow-y-auto px-6 py-4 bg-gradient-to-b from-gray-50 to-white">
-                  <div className="space-y-3">
-                    {evaluationEvents.map((event, index) => {
-                      // Determine event style based on type
-                      const isComplete = event.type === 'evaluation_complete' || event.type === 'overall_score';
-                      const isDimension = event.type === 'dimension_result';
-                      const isDiagnostic = event.type === 'diagnostic' || event.type === 'diagnostic_complete';
-                      const isLLMJudge = event.type === 'llm_judge_eval' || event.type === 'llm_judge_result';
-                      
-                      const bgColor = isComplete ? 'bg-green-50 border-green-200' : 
-                                    isDimension ? (event.passed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200') :
-                                    isDiagnostic ? 'bg-purple-50 border-purple-200' :
-                                    isLLMJudge ? 'bg-blue-50 border-blue-200' :
-                                    'bg-white border-gray-200';
-                                    
-                      const iconBg = isComplete ? 'bg-green-100' :
-                                   isDimension ? (event.passed ? 'bg-green-100' : 'bg-red-100') :
-                                   isDiagnostic ? 'bg-purple-100' :
-                                   isLLMJudge ? 'bg-blue-100' :
-                                   'bg-gray-100';
-                                   
-                      const iconColor = isComplete ? 'text-green-600' :
-                                      isDimension ? (event.passed ? 'text-green-600' : 'text-red-600') :
-                                      isDiagnostic ? 'text-purple-600' :
-                                      isLLMJudge ? 'text-blue-600' :
-                                      'text-gray-600';
-                      
-                      return (
-                        <div key={index} className={`flex items-start gap-3 p-3 rounded-lg border ${bgColor} transition-all duration-300 animate-fadeIn`}>
-                          <div className={`flex-shrink-0 w-10 h-10 ${iconBg} rounded-full flex items-center justify-center ${iconColor}`}>
-                            <span className="text-xl">{event.message?.charAt(0) || '•'}</span>
+                <div ref={eventsContainerRef} className="flex-1 overflow-y-auto px-6 py-4 bg-gradient-to-b from-gray-50 to-white">
+                  <div className="space-y-6">
+                    {/* Analyze Phase */}
+                    {groupedEvents.analyze.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            <span className="text-blue-600 font-bold">1</span>
                           </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">{event.message}</p>
-                            {event.timestamp && (
-                              <p className="text-xs text-gray-500 mt-0.5">
-                                {new Date(event.timestamp).toLocaleTimeString()}
-                              </p>
-                            )}
-                            {event.dimension && (
-                              <p className="text-xs text-gray-600 mt-1">
-                                <span className="font-medium">Dimension:</span> {event.dimension.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                              </p>
-                            )}
-                            {event.score !== undefined && (
-                              <div className="mt-2">
-                                <div className="flex items-center gap-2">
-                                  <div className="flex-1 bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                                    <div 
-                                      className={`h-full transition-all duration-500 ${event.passed ? 'bg-green-500' : 'bg-red-500'}`}
-                                      style={{ width: `${event.score * 100}%` }}
-                                    />
-                                  </div>
-                                  <span className={`text-xs font-medium ${event.passed ? 'text-green-600' : 'text-red-600'}`}>
-                                    {(event.score * 100).toFixed(1)}%
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
+                          <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Analyze</h4>
+                          {groupedEvents.measure.length === 0 && groupedEvents.improve.length === 0 && (
+                            <div className="w-4 h-4 animate-spin text-blue-600 ml-2">
+                              <svg className="w-full h-full" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                            </div>
+                          )}
                         </div>
-                      );
-                    })}
+                        <div className="space-y-2 pl-10">
+                          {groupedEvents.analyze.map((event, index) => renderEvent(event, `analyze-${index}`))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Measure Phase */}
+                    {groupedEvents.measure.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                            <span className="text-purple-600 font-bold">2</span>
+                          </div>
+                          <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Measure</h4>
+                          {groupedEvents.improve.length === 0 && groupedEvents.analyze.length > 0 && (
+                            <div className="w-4 h-4 animate-spin text-purple-600 ml-2">
+                              <svg className="w-full h-full" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                        <div className="space-y-2 pl-10">
+                          {groupedEvents.measure.map((event, index) => renderEvent(event, `measure-${index}`))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Improve Phase */}
+                    {groupedEvents.improve.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                            <span className="text-green-600 font-bold">3</span>
+                          </div>
+                          <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Improve</h4>
+                        </div>
+                        <div className="space-y-2 pl-10">
+                          {groupedEvents.improve.map((event, index) => renderEvent(event, `improve-${index}`))}
+                        </div>
+                      </div>
+                    )}
+
                     {evaluationEvents.length === 0 && (
                       <div className="text-center py-12">
                         <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">

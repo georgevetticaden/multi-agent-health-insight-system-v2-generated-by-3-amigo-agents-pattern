@@ -144,8 +144,8 @@ const TestCaseDisplay: React.FC<TestCaseDisplayProps> = ({
           <div className="text-sm text-gray-900">
             <span className="font-medium">Test Name:</span> {generateTestName(testCase.query)}
           </div>
-          <div className="text-xs text-gray-600 mt-1">
-            <span className="font-medium">Health Query:</span> <span className="line-clamp-2">{testCase.query}</span>
+          <div className="text-sm text-gray-800 mt-1">
+            <span className="font-semibold">Health Query:</span> <span className="font-medium line-clamp-2">{testCase.query}</span>
           </div>
         </div>
       </div>
@@ -154,9 +154,12 @@ const TestCaseDisplay: React.FC<TestCaseDisplayProps> = ({
       <div className="flex-1 overflow-y-scroll p-4 space-y-4" style={{ overscrollBehavior: 'contain' }}>
         {/* Complexity Comparison Card */}
       <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-        <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-          <Target className="w-4 h-4 text-indigo-600" />
-          Complexity Classification
+        <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Target className="w-4 h-4 text-indigo-600" />
+            Complexity Classification
+          </div>
+          <span className="text-xs font-normal text-gray-500">Accuracy in query complexity assessment</span>
         </h4>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -209,9 +212,12 @@ const TestCaseDisplay: React.FC<TestCaseDisplayProps> = ({
 
       {/* Specialists Comparison Card */}
       <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-        <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-          <Activity className="w-4 h-4 text-green-600" />
-          Specialty Selection
+        <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4 text-green-600" />
+            Specialty Selection
+          </div>
+          <span className="text-xs font-normal text-gray-500">Precision in choosing medical specialists</span>
         </h4>
         
         {/* Expected vs Actual Grid */}
@@ -276,9 +282,12 @@ const TestCaseDisplay: React.FC<TestCaseDisplayProps> = ({
 
       {/* Analysis Quality Card */}
       <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-        <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-          <CheckCircle className="w-4 h-4 text-blue-600" />
-          Analysis Quality
+        <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-blue-600" />
+            Analysis Quality
+          </div>
+          <span className="text-xs font-normal text-gray-500">Comprehensiveness of medical analysis</span>
         </h4>
         
         {/* Keywords Section */}
@@ -366,9 +375,12 @@ const TestCaseDisplay: React.FC<TestCaseDisplayProps> = ({
       {/* Cost Efficiency Card - Only show if we have cost data */}
       {(testCase.actual_total_cost !== undefined || testCase.expected_cost_threshold !== undefined) && (
         <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-          <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <DollarSign className="w-4 h-4 text-green-600" />
-            Cost Efficiency
+          <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-green-600" />
+              Cost Efficiency
+            </div>
+            <span className="text-xs font-normal text-gray-500">Token usage optimization</span>
           </h4>
           
           {/* Cost Threshold Section */}

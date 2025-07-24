@@ -12,7 +12,7 @@ const TestCaseHeader: React.FC = () => {
 
   return (
     <header className="bg-gradient-to-r from-blue-400 to-blue-500 text-white shadow-lg">
-      <div className="px-6 py-4">
+      <div className="px-4 py-3">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Evaluation Studio</h1>

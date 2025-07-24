@@ -62,7 +62,7 @@ I transform execution traces into powerful test cases and insightful evaluation 
 • 📝 **Created** an initial test case (see right panel)
 • ⚠️ **Note:** Expected values currently match actual results—let's fix that together!
 
-**🚀 Let's Work Through the Analyze → Measure → Improve Workflow:**
+**🚀 Let's Work Through the Workflow:**
 
 **1. 🔍 Analyze** - Share what went wrong:
    • Misclassified complexity level?

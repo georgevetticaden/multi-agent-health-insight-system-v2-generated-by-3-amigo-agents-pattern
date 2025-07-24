@@ -15,7 +15,7 @@ const TestCaseHeader: React.FC = () => {
       <div className="px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Evaluation Development Studio</h1>
+            <h1 className="text-2xl font-bold">Evaluation Studio</h1>
             <p className="text-blue-100 text-sm mt-1">Create and manage test cases for continuous agent improvement</p>
           </div>
 

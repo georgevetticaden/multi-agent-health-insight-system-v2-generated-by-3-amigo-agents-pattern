@@ -838,7 +838,7 @@ class CMOAgent:
             CMO_DIMENSIONS["cost_efficiency"]: [
                 QualityComponent(
                     name="cost_threshold",
-                    description="Staying below cost threshold ($0.50 for standard)",
+                    description="Staying below cost threshold (Complex Queries: $1.20)",
                     weight=0.5,
                     evaluation_method=EvaluationMethod.DETERMINISTIC
                 ),

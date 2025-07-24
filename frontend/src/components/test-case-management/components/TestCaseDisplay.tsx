@@ -441,28 +441,6 @@ const TestCaseDisplay: React.FC<TestCaseDisplayProps> = ({
             </div>
             </div>
           </div>
-          
-          {/* Cost Analysis Summary */}
-          {testCase.actual_total_cost !== undefined && testCase.actual_total_cost !== null && 
-           testCase.expected_cost_threshold !== undefined && testCase.expected_cost_threshold !== null && (
-            <div className={`mt-3 pt-3 border-t text-xs ${
-              testCase.actual_total_cost <= testCase.expected_cost_threshold
-                ? 'text-green-600 border-green-200'
-                : 'text-red-600 border-red-200'
-            }`}>
-              {testCase.actual_total_cost <= testCase.expected_cost_threshold ? (
-                <div className="flex items-center gap-1">
-                  <CheckCircle className="w-3 h-3" />
-                  <span>Cost within threshold (saved ${(testCase.expected_cost_threshold - testCase.actual_total_cost).toFixed(2)})</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  <span>Cost exceeded threshold by ${(testCase.actual_total_cost - testCase.expected_cost_threshold).toFixed(2)}</span>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       )}
 

@@ -178,7 +178,8 @@ async def trace_viewer(trace_id: str) -> HTMLResponse:
 async def hierarchical_trace_viewer(
     trace_id: str,
     embedded: bool = Query(False, description="Whether to return embedded view without QE interface"),
-    hideHeader: bool = Query(False, description="Whether to hide the header")
+    hideHeader: bool = Query(False, description="Whether to hide the header"),
+    hideFilters: bool = Query(False, description="Whether to hide the filters panel")
 ) -> HTMLResponse:
     """
     Get hierarchical HTML viewer for a specific trace.
@@ -214,7 +215,10 @@ async def hierarchical_trace_viewer(
     
     # If not found, try to generate it
     try:
-        from services.tracing.hierarchical_html_generator import generate_hierarchical_trace_html
+        if embedded:
+            from services.tracing.hierarchical_html_generator import generate_hierarchical_trace_html_embedded
+        else:
+            from services.tracing.hierarchical_html_generator import generate_hierarchical_trace_html
         
         trace_collector = get_trace_collector()
         
@@ -230,7 +234,10 @@ async def hierarchical_trace_viewer(
             )
         
         # Generate hierarchical HTML content dynamically
-        html_content = generate_hierarchical_trace_html(trace)
+        if embedded:
+            html_content = generate_hierarchical_trace_html_embedded(trace, hideHeader=hideHeader, hideFilters=hideFilters)
+        else:
+            html_content = generate_hierarchical_trace_html(trace)
         
         # Return with no-cache headers to ensure fresh content
         return HTMLResponse(

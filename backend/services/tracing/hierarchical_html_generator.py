@@ -79,13 +79,14 @@ def generate_hierarchical_trace_html(trace: CompleteTrace) -> str:
     return html
 
 
-def generate_hierarchical_trace_html_embedded(trace: CompleteTrace, hideHeader: bool = False) -> str:
+def generate_hierarchical_trace_html_embedded(trace: CompleteTrace, hideHeader: bool = False, hideFilters: bool = False) -> str:
     """
     Generate embedded hierarchical HTML view of trace without QE interface.
     
     Args:
         trace: Complete trace object
         hideHeader: Whether to hide the header section
+        hideFilters: Whether to hide the filters panel
         
     Returns:
         Self-contained HTML string for embedding
@@ -132,7 +133,7 @@ def generate_hierarchical_trace_html_embedded(trace: CompleteTrace, hideHeader: 
         <div class="trace-panel">
             <div class="container">
                 {_generate_header(trace, summary) if not hideHeader else ''}
-                {_generate_filter_panel()}
+                {_generate_filter_panel() if not hideFilters else ''}
                 {_generate_summary_cards(sections, summary)}
                 {_generate_timeline(sections)}
                 {_generate_agent_analysis_section(sections)}
@@ -2398,6 +2399,23 @@ def _generate_javascript() -> str:
         }
         
         function loadFilterPreferences() {
+            // Check URL parameters first
+            const urlParams = new URLSearchParams(window.location.search);
+            const hideFilters = urlParams.get('hideFilters') === 'true';
+            
+            if (hideFilters) {
+                // If hideFilters is true, keep the panel collapsed and don't show it
+                const filterPanel = document.getElementById('filter-panel');
+                const filterContainer = document.querySelector('.filter-panel-container');
+                if (filterPanel) {
+                    filterPanel.classList.add('collapsed');
+                }
+                if (filterContainer) {
+                    filterContainer.style.display = 'none';
+                }
+                return; // Don't load saved preferences if filters are hidden
+            }
+            
             const saved = localStorage.getItem('traceViewerFilters');
             if (saved) {
                 try {

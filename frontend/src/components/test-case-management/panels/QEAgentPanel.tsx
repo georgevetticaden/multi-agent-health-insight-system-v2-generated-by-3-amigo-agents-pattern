@@ -77,9 +77,22 @@ What issues do you see in this trace?`,
     }
   }, [messages]);
 
-  const connectToQEAgent = (message: string) => {
+  const connectToQEAgent = async (message: string) => {
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
+    }
+
+    // Sync test case state before sending message
+    if (testCase) {
+      try {
+        await fetch(`/api/qe/sync-test-case/${traceId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(testCase)
+        });
+      } catch (error) {
+        console.error('Failed to sync test case:', error);
+      }
     }
 
     // Build URL with proper query parameters matching the backend API
@@ -303,7 +316,7 @@ What issues do you see in this trace?`,
       }
     } else {
       // Regular conversation with QE Agent
-      connectToQEAgent(inputValue.trim());
+      await connectToQEAgent(inputValue.trim());
     }
   };
 

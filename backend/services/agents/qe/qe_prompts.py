@@ -112,7 +112,8 @@ class QEPrompts:
                 parts.extend(["\n\n", "## CRITICAL: Refinement Example\n\n", refinement_example])
             
             # Add other relevant examples
-            for error_type in ["complexity", "specialist"]:
+            # Temporarily disable complexity example as it's causing unwanted key_data_points updates
+            for error_type in ["specialist"]:  # removed "complexity" 
                 example = self.get_example_for_error_type(error_type)
                 if example:
                     parts.extend(["\n\n", "---\n\n", example])

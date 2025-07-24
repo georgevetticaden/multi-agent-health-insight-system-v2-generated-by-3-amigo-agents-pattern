@@ -82,6 +82,11 @@ class QEAgent:
         
         self.current_test_case.update(updates)
         self.test_case_iteration += 1
+    
+    def sync_test_case(self, test_case: Dict[str, Any]):
+        """Sync the current test case with frontend state"""
+        self.current_test_case = test_case.copy()
+        logger.info(f"Synced test case for trace {self.trace_id}, key_data_points: {test_case.get('key_data_points', [])}")
         
     def save_current_test_case(self):
         """Save the current test case to the saved list"""
@@ -159,12 +164,14 @@ Key Stages Executed:
                 yield event
             return
         
-        # Add current message with explicit reminder about action menu
+        # Add current message with current test case context
         current_message = user_message
         if stage_context:
             current_message = f"{user_message}\n\nContext: User is looking at stage '{stage_context.get('stage_name', 'unknown')}'"
         
-        # No need for action menu instruction anymore - UI has buttons
+        # Include current test case state if it exists
+        if self.current_test_case:
+            current_message += f"\n\nCurrent test case state:\n{json.dumps(self.current_test_case, indent=2)}\n\nIMPORTANT: Only update the fields mentioned in the user's message. Preserve all other existing values."
         
         messages.append({"role": "user", "content": current_message})
         
@@ -256,14 +263,22 @@ Key Stages Executed:
                     try:
                         if isinstance(test_case, dict) and not test_case.get("legacy"):
                             # New JSON format
-                            self.current_test_case = test_case
+                            # IMPORTANT: Merge updates with existing test case, don't replace entirely
+                            if self.current_test_case:
+                                # Preserve existing values and only update what's in the response
+                                for key, value in test_case.items():
+                                    self.current_test_case[key] = value
+                            else:
+                                # First time - use the full test case
+                                self.current_test_case = test_case
+                            
                             self.current_test_case["iteration"] = self.test_case_iteration
                             self.test_case_iteration += 1
                             
-                            # Yield the test case update event for frontend
+                            # Yield only the updates that were provided (not the full test case)
                             yield {
                                 "type": "test_case_update",
-                                "content": test_case
+                                "content": test_case  # This should only contain changed fields
                             }
                         else:
                             # Legacy Python format

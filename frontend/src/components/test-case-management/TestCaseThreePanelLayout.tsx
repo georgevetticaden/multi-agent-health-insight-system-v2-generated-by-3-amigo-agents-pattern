@@ -193,7 +193,8 @@ const TestCaseThreePanelLayout: React.FC<TestCaseThreePanelLayoutProps> = ({ tra
       ...updates,
       // Preserve actual values - don't let them be overwritten by expected values
       actual_complexity: testCase.actual_complexity,
-      actual_specialties: testCase.actual_specialties
+      actual_specialties: testCase.actual_specialties,
+      actual_key_data_points: testCase.actual_key_data_points
     };
     setTestCase(localUpdate);
 
@@ -213,7 +214,8 @@ const TestCaseThreePanelLayout: React.FC<TestCaseThreePanelLayoutProps> = ({ tra
       setTestCase({
         ...updatedTestCase,
         actual_complexity: testCase.actual_complexity,
-        actual_specialties: testCase.actual_specialties
+        actual_specialties: testCase.actual_specialties,
+        actual_key_data_points: testCase.actual_key_data_points
       });
     } catch (error) {
       console.error('Error updating test case:', error);

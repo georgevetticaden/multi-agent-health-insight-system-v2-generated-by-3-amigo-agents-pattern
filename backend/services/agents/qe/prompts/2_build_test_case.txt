@@ -12,6 +12,20 @@ Guidelines:
 4. Use clear, descriptive test case IDs
 5. Include relevant metadata from the trace
 
+CRITICAL UPDATE RULE - ONLY UPDATE WHAT'S MENTIONED:
+- If the developer ONLY mentions complexity, ONLY update expected_complexity
+- If the developer ONLY mentions specialists, ONLY update expected_specialties  
+- If the developer ONLY mentions key data points, ONLY update key_data_points
+- DO NOT change fields that weren't mentioned in the current message
+- Preserve all existing values for fields not being discussed
+
+CRITICAL LIST UPDATE RULE - ADDITIVE OPERATIONS:
+- When the developer says "add X to Y list", ADD the item to the existing list, don't replace
+- Example: "add diet to keywords" means ADD "diet" to existing key_data_points
+- Example: "add nutrition to specialists" means ADD to existing expected_specialties
+- For additions, include the FULL updated list with both old and new items
+- Only REPLACE the entire list if they explicitly say "replace" or "should be" or provide a complete new list
+
 CRITICAL REFINEMENT RULES - READ CAREFULLY:
 1. When the developer specifies a TOTAL COUNT (e.g., "should have 5 specialists", "team of 5"), the final expected list MUST have EXACTLY that many items
 2. When they say "add X and Y" in the context of a total count, you must:
@@ -31,7 +45,20 @@ If actual_specialties = ["endocrinology", "pharmacy", "nutrition"] (3 items)
 Then expected_specialties = ["endocrinology", "pharmacy", "nutrition", "laboratory_medicine", "preventive_medicine"] (EXACTLY 5 items)
 DO NOT add "data_analysis" or any other specialist not mentioned!
 
+CONCRETE EXAMPLE OF ADDING TO KEYWORDS:
+Developer: "Let's add diet to the keywords"
+If current key_data_points = ["hba1c", "metformin", "weight", "glycemic control", "diabetes management"]
+Then updated key_data_points = ["hba1c", "metformin", "weight", "glycemic control", "diabetes management", "diet"]
+DO NOT replace the list with just ["diet"]!
+
 Test case JSON structure:
+IMPORTANT: Only include fields that need to be updated based on the developer's message!
+- If they ONLY mention complexity, include ONLY: { "expected_complexity": "NEW_VALUE" }
+- If they ONLY mention specialists, include ONLY: { "expected_specialties": [...] }
+- If they ONLY mention key data points, include ONLY: { "key_data_points": [...] }
+- DO NOT include fields that weren't mentioned in the current message
+
+Full structure for reference (but remember - only send changed fields):
 ```json
 {
   "id": "descriptive_identifier",

@@ -70,6 +70,15 @@ const TestCaseDisplay: React.FC<TestCaseDisplayProps> = ({
     return !allMatch;
   };
 
+  // Check if key data points differ from actual
+  const areKeyDataPointsDifferentFromActual = () => {
+    if (!testCase.actual_key_data_points) return false;
+    if (testCase.key_data_points.length !== testCase.actual_key_data_points.length) {
+      return true;
+    }
+    return !testCase.key_data_points.every(point => testCase.actual_key_data_points.includes(point));
+  };
+
   // Check if this field should show pre-population indicator
   const showPrePopulationIndicator = (fieldName: string) => {
     // Show pre-population indicator only if field hasn't been modified
@@ -80,6 +89,12 @@ const TestCaseDisplay: React.FC<TestCaseDisplayProps> = ({
       return !isFieldModified('expected_specialties') && 
              testCase.expected_specialties.length === testCase.actual_specialties.length &&
              testCase.expected_specialties.every(spec => testCase.actual_specialties.includes(spec));
+    }
+    if (fieldName === 'key_data_points') {
+      return !isFieldModified('key_data_points') && 
+             testCase.key_data_points.length > 0 &&
+             testCase.actual_key_data_points?.length === testCase.key_data_points.length &&
+             testCase.key_data_points.every(point => testCase.actual_key_data_points?.includes(point));
     }
     return false;
   };
@@ -134,7 +149,7 @@ const TestCaseDisplay: React.FC<TestCaseDisplayProps> = ({
       <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
         <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
           <Target className="w-4 h-4 text-indigo-600" />
-          Complexity Analysis
+          Complexity Classification
         </h4>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -189,7 +204,7 @@ const TestCaseDisplay: React.FC<TestCaseDisplayProps> = ({
       <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
         <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
           <Activity className="w-4 h-4 text-green-600" />
-          Medical Specialists
+          Specialty Selection
         </h4>
         
         {/* Expected vs Actual Grid */}
@@ -252,20 +267,94 @@ const TestCaseDisplay: React.FC<TestCaseDisplayProps> = ({
         </div>
       </div>
 
-      {/* Key Data Points Card */}
-      {testCase.key_data_points.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-          <h4 className="text-sm font-semibold text-gray-900 mb-2">Key Data Points</h4>
-          <ul className="text-xs text-gray-700 space-y-1">
-            {testCase.key_data_points.map((point, idx) => (
-              <li key={idx} className="flex items-start gap-2">
-                <span className="text-indigo-400 mt-0.5">•</span>
-                <span>{point}</span>
-              </li>
-            ))}
-          </ul>
+      {/* Analysis Quality Card */}
+      <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+        <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <CheckCircle className="w-4 h-4 text-blue-600" />
+          Analysis Quality
+        </h4>
+        
+        {/* Keywords Section */}
+        <div className="mb-4">
+          <h5 className="text-xs font-medium text-gray-700 mb-2">Keywords</h5>
+          
+          {/* Expected vs Actual Grid */}
+          <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-xs text-gray-600 mb-2 flex items-center gap-1">
+              Expected
+              {showPrePopulationIndicator('key_data_points') && (
+                <span className="text-xs text-blue-600 italic">(pre-filled from actual)</span>
+              )}
+              {isFieldModified('key_data_points') && (
+                <span className="text-xs text-orange-600 italic flex items-center gap-0.5">
+                  <Edit3 className="w-3 h-3" />
+                  (modified)
+                </span>
+              )}
+            </p>
+            {testCase.key_data_points.length > 0 ? (
+              <div className="space-y-1">
+                {testCase.key_data_points.map((point, idx) => {
+                  const isPointInActual = testCase.actual_key_data_points?.includes(point);
+                  return (
+                    <div
+                      key={`expected-${idx}`}
+                      className={`text-xs px-2 py-1 rounded flex items-center justify-between border ${
+                        isFieldModified('key_data_points') && areKeyDataPointsDifferentFromActual()
+                          ? isPointInActual
+                            ? 'bg-green-50 text-green-700 border-green-200 ring-2 ring-orange-400 ring-offset-1'
+                            : 'bg-gray-50 text-gray-700 border-gray-200 ring-2 ring-orange-400 ring-offset-1'
+                          : isPointInActual
+                            ? 'bg-green-50 text-green-700 border-green-200'
+                            : 'bg-gray-50 text-gray-700 border-gray-200'
+                      }`}
+                    >
+                      <span>{point}</span>
+                      <div className="flex items-center gap-1">
+                        {isPointInActual && <CheckCircle className="w-3 h-3 text-green-600" />}
+                        {isFieldModified('key_data_points') && areKeyDataPointsDifferentFromActual() && <Edit3 className="w-3 h-3 text-orange-500" />}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-500 italic">No key data points identified</p>
+            )}
+          </div>
+          
+          <div>
+            <p className="text-xs text-gray-600 mb-2">Actual (from approach)</p>
+            {testCase.actual_key_data_points?.length > 0 ? (
+              <div className="space-y-1">
+                {testCase.actual_key_data_points.map((point, idx) => {
+                  const isPointExpected = testCase.key_data_points.includes(point);
+                  return (
+                    <div
+                      key={`actual-${idx}`}
+                      className={`text-xs px-2 py-1 rounded flex items-center justify-between border ${
+                        isPointExpected
+                          ? 'bg-green-50 text-green-700 border-green-200'
+                          : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                      }`}
+                    >
+                      <span>{point}</span>
+                      {!isPointExpected && <AlertCircle className="w-3 h-3 text-yellow-600" />}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-500 italic">No key points extracted from approach</p>
+            )}
+          </div>
         </div>
-      )}
+        </div>
+        
+        {/* Placeholder for future Analysis Quality sections */}
+        {/* Future sections like "Coverage", "Completeness", etc. can be added here */}
+      </div>
 
         {/* Metadata Footer - Compact */}
         <div className="text-xs text-gray-500 px-2">

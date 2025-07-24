@@ -7,6 +7,7 @@ export interface TestCase {
   expected_specialties: string[];
   actual_specialties: string[];
   key_data_points: string[];
+  actual_key_data_points: string[];
   notes: string;
   created_at: string;
   updated_at: string;

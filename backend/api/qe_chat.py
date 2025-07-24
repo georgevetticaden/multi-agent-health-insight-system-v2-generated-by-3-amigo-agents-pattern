@@ -120,6 +120,24 @@ async def reset_conversation(trace_id: str):
     qe_service.reset_agent(trace_id)
     return {"status": "success", "message": "Conversation reset"}
 
+@router.post("/api/qe/sync-test-case/{trace_id}")
+async def sync_test_case(trace_id: str, test_case: Dict[str, Any]):
+    """Sync the test case state with QE Agent
+    
+    This ensures the QE Agent has the current test case state from frontend
+    """
+    agent = qe_service.agents.get(trace_id)
+    if not agent:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No QE Agent found for trace {trace_id}. Start a chat first."
+        )
+    
+    agent.sync_test_case(test_case)
+    logger.info(f"Synced test case for trace {trace_id}")
+    
+    return {"status": "success", "message": "Test case synced"}
+
 @router.post("/api/qe/evaluation-result/{trace_id}")
 async def update_evaluation_result(trace_id: str, result: Dict[str, Any]):
     """Update QE Agent with evaluation results from frontend

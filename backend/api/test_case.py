@@ -52,6 +52,7 @@ class TestCaseResponse(BaseModel):
     expected_specialties: list[str]
     actual_specialties: list[str]
     key_data_points: list[str]
+    actual_key_data_points: list[str] = []  # Key data points from synthesis
     notes: str
     created_at: datetime
     updated_at: datetime
@@ -109,14 +110,31 @@ async def create_test_case_from_trace(request: TestCaseCreate):
         if not query:
             raise HTTPException(status_code=400, detail="No query found in trace")
         
-        # Extract complexity from trace
+        # Extract complexity and approach from trace
         complexity_str = "SIMPLE"
+        approach = ""
         for event in trace.events:
             event_type_str = event.event_type.value if hasattr(event.event_type, 'value') else str(event.event_type)
             if (event_type_str == "stage_end" and 
                 event.stage == "query_analysis"):
                 complexity_str = event.data.get("complexity", "SIMPLE")
+                approach = event.data.get("approach", "")
                 break
+        
+        # Also check LLM response for approach if not found
+        if not approach:
+            for event in trace.events:
+                event_type_str = event.event_type.value if hasattr(event.event_type, 'value') else str(event.event_type)
+                if (event_type_str == "llm_response" and 
+                    event.stage == "query_analysis"):
+                    response_text = event.data.get("response_text", "")
+                    # Extract approach from XML
+                    import re
+                    approach_match = re.search(r'<approach>(.*?)</approach>', response_text, re.DOTALL)
+                    if approach_match:
+                        approach = approach_match.group(1).strip()
+                        logger.info(f"Found approach in LLM response, length: {len(approach)}")
+                    break
         
         # Extract actual specialties from task creation LLM response
         actual_specialties = []
@@ -147,6 +165,23 @@ async def create_test_case_from_trace(request: TestCaseCreate):
         
         logger.info(f"Total specialties found: {len(actual_specialties)} - {actual_specialties}")
         
+        # Extract key data points from approach if available
+        key_data_points = []
+        if approach:
+            try:
+                logger.info("Extracting key data points from CMO approach...")
+                extract_request = ExtractKeyDataPointsRequest(approach=approach)
+                key_points_response = await extract_key_data_points(extract_request)
+                key_data_points = key_points_response.get("key_data_points", [])
+                logger.info(f"Extracted key data points: {key_data_points}")
+            except Exception as e:
+                logger.error(f"Failed to extract key data points: {e}")
+                # Continue without key data points
+        
+        # For actual key data points, initially use the same as expected (from approach)
+        # This matches the pattern of other dimensions where expected values are pre-populated from actual
+        actual_key_data_points = key_data_points.copy()
+        
         # Create test case
         test_case_id = str(uuid4())
         test_case = {
@@ -157,7 +192,8 @@ async def create_test_case_from_trace(request: TestCaseCreate):
             "actual_complexity": complexity_str,  # Store the actual complexity from trace
             "expected_specialties": actual_specialties.copy(),  # Pre-populate with actual for user to verify/modify
             "actual_specialties": actual_specialties,
-            "key_data_points": [],  # To be filled by user
+            "key_data_points": key_data_points,  # Pre-populated from approach
+            "actual_key_data_points": actual_key_data_points,  # Extracted from synthesis
             "notes": request.user_notes or f"Auto-generated from trace {request.trace_id}. Expected values pre-populated from actual execution.",
             "created_at": datetime.now(),
             "updated_at": datetime.now(),
@@ -184,7 +220,12 @@ async def get_test_case(test_case_id: str):
     if test_case_id not in test_cases_db:
         raise HTTPException(status_code=404, detail=f"Test case {test_case_id} not found")
     
-    return TestCaseResponse(**test_cases_db[test_case_id])
+    test_case = test_cases_db[test_case_id]
+    # Ensure actual_key_data_points exists for backward compatibility
+    if "actual_key_data_points" not in test_case:
+        test_case["actual_key_data_points"] = []
+    
+    return TestCaseResponse(**test_case)
 
 
 @router.put("/{test_case_id}", response_model=TestCaseResponse)
@@ -255,6 +296,10 @@ async def update_test_case(test_case_id: str, update: TestCaseUpdate):
     
     test_case["updated_at"] = datetime.now()
     
+    # Ensure actual_key_data_points exists for backward compatibility
+    if "actual_key_data_points" not in test_case:
+        test_case["actual_key_data_points"] = []
+    
     logger.info(f"Updated test case {test_case_id}")
     
     return TestCaseResponse(**test_case)
@@ -283,7 +328,7 @@ async def evaluate_test_case(test_case_id: str):
             "query": test_case["query"],
             "expected_complexity": test_case["expected_complexity"],
             "expected_specialties": test_case["expected_specialties"],
-            "key_data_points": test_case["key_data_points"],
+            "key_data_points": test_case.get("key_data_points", []),
             "notes": test_case["notes"],
             "category": test_case["category"],
             "based_on_real_query": test_case["based_on_real_query"],
@@ -332,4 +377,52 @@ async def evaluate_test_case(test_case_id: str):
         
     except Exception as e:
         logger.error(f"Error evaluating test case: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class ExtractKeyDataPointsRequest(BaseModel):
+    """Request model for extracting key data points from CMO approach"""
+    approach: str
+
+
+@router.post("/extract-key-data-points")
+async def extract_key_data_points(request: ExtractKeyDataPointsRequest):
+    """Extract top 5 key data points from CMO approach using LLM"""
+    try:
+        from anthropic import AsyncAnthropic
+        import os
+        from dotenv import load_dotenv
+        
+        load_dotenv()
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Anthropic API key not configured")
+        
+        client = AsyncAnthropic(api_key=api_key)
+        
+        prompt = f"""Based on the CMO's approach below, identify the top 5 keywords or key data points.
+        
+CMO Approach:
+{request.approach}
+
+Respond with ONLY the 5 keywords, one per line. No explanations or additional text."""
+        
+        response = await client.messages.create(
+            model="claude-3-haiku-20240307",  # Use Haiku for fast, simple extraction
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=100,
+            temperature=0.0
+        )
+        
+        # Parse response into list of keywords
+        keywords = [line.strip() for line in response.content[0].text.strip().split('\n') if line.strip()]
+        # Ensure we have exactly 5 keywords
+        keywords = keywords[:5]
+        
+        logger.info(f"Extracted key data points: {keywords}")
+        
+        return {"key_data_points": keywords}
+        
+    except Exception as e:
+        logger.error(f"Error extracting key data points: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

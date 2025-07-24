@@ -671,8 +671,10 @@ User: "Yes, please apply the changes"
 
 Claude: "Changes applied successfully! To re-run the hba1c_metformin_weight_test:
 
-cd evaluation
-python -m evaluation.cli.run_evaluation --test-id f31fc246-c1cc-48e1-9386-49d1868dd6c1
+cd /path/to/project/root
+python -m evaluation.cli.run_evaluation --agent cmo --test all --test-ids hba1c_metformin_weight_test
+
+Note: Use the test's 'id' field value from the JSON file, not the filename.
 ```
 
 ## System Overview
@@ -717,6 +719,24 @@ evaluation/
 5. **Configurable Storage**: Redirect paths via environment variables
 6. **Clean Separation**: Framework code vs data storage
 7. **LLM Judge Analysis**: Automatic failure diagnosis with specific improvement recommendations
+
+### Running Evaluation Tests
+
+#### Framework Tests (Built-in)
+```bash
+# Run a specific framework test by its ID
+python -m evaluation.cli.run_evaluation --agent cmo --test all --test-ids demo_test_1
+```
+
+#### Studio-Generated Tests
+```bash
+# Run a studio-generated test using the 'id' field from the JSON file
+python -m evaluation.cli.run_evaluation --agent cmo --test all --test-ids hba1c_metformin_weight_test
+
+# Important: Use the test's 'id' field value from inside the JSON file, NOT the filename
+# Example: For file f31fc246-c1cc-48e1-9386-49d1868dd6c1.json with "id": "hba1c_metformin_weight_test"
+# Use: --test-ids hba1c_metformin_weight_test
+```
 
 ## Eval Dev Studio UI
 

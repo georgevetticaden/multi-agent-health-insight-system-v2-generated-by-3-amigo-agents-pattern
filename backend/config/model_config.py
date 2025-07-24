@@ -21,12 +21,6 @@ class ModelConfig:
 # Model configurations
 MODEL_CONFIGS: Dict[str, ModelConfig] = {
     # Claude 3 models
-    "claude-3-opus-20240229": ModelConfig(
-        max_tokens=4096,
-        context_window=200000,
-        supports_tools=True,
-        supports_streaming=True
-    ),
     "claude-3-sonnet-20240229": ModelConfig(
         max_tokens=4096,
         context_window=200000,

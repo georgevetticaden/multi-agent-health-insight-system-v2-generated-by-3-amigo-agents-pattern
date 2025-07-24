@@ -264,7 +264,7 @@ Output only the number."""
     
     # Generally best practice to use a different model to evaluate than the one being evaluated
     response = client.messages.create(
-        model="claude-3-opus-20240229",
+        model="claude-opus-4-20250514",
         max_tokens=10,
         messages=[{"role": "user", "content": tone_prompt}]
     )
@@ -322,7 +322,7 @@ Output only 'yes' or 'no'."""
     
     # Generally best practice to use a different model to evaluate than the one being evaluated
     response = client.messages.create(
-        model="claude-3-opus-20240229",
+        model="claude-opus-4-20250514",
         max_tokens=10,
         messages=[{"role": "user", "content": binary_prompt}]
     )
@@ -385,7 +385,7 @@ def evaluate_ordinal(model_output, conversation):
 Output only the number."""
     
     response = client.messages.create(
-        model="claude-3-opus-20240229",
+        model="claude-opus-4-20250514",
         max_tokens=10,
         messages=[{"role": "user", "content": ordinal_prompt}]
     )
@@ -435,7 +435,7 @@ Think through your reasoning in <thinking> tags, then output 'correct' or 'incor
 
 def grade_completion(output, golden_answer):
     grader_response = client.messages.create(
-        model="claude-3-opus-20240229",
+        model="claude-opus-4-20250514",
         max_tokens=2048,
         messages=[{"role": "user", "content": build_grader_prompt(output, golden_answer)}]
     ).content[0].text

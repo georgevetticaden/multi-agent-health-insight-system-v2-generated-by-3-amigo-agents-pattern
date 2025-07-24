@@ -191,7 +191,7 @@ Key Stages Executed:
             
             # Use the streaming client like CMO does with create_message_with_retry_async
             stream = await self.streaming_client.create_message_with_retry_async(
-                model="claude-3-opus-20240229",
+                model="claude-opus-4-20250514",
                 messages=messages,
                 system=system_prompt,
                 max_tokens=4000,

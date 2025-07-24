@@ -229,7 +229,7 @@ class EvaluationRunner:
         cmo_agent = CMOAgent(
             anthropic_client=self.anthropic_client,
             tool_registry=self.tool_registry,
-            model="claude-3-opus-20240229",  # Use Opus for evaluation
+            model="claude-opus-4-20250514",  # Use Opus for evaluation
             max_tokens_analysis=3000,  # Reduced for Opus limit
             max_tokens_planning=4000,   # Reduced for Opus limit (max 4096)
             enable_tracing=True  # Enable tracing for evaluation		
@@ -242,7 +242,7 @@ class EvaluationRunner:
         specialist_agent = SpecialistAgent(
             anthropic_client=self.anthropic_client,
             tool_registry=self.tool_registry,
-            model="claude-3-opus-20240229",  # Use Opus for evaluation
+            model="claude-opus-4-20250514",  # Use Opus for evaluation
             max_tokens=3500,  # Reduced for Opus limit
             enable_tracing=True  # Enable tracing for evaluation
         )
@@ -253,7 +253,7 @@ class EvaluationRunner:
         specialist_agent = SpecialistAgent(
             anthropic_client=self.anthropic_client,
             tool_registry=self.tool_registry,
-            model="claude-3-opus-20240229",  # Use Opus for evaluation
+            model="claude-opus-4-20250514",  # Use Opus for evaluation
             max_tokens=3500,  # Reduced for Opus limit
             enable_tracing=True  # Enable tracing for evaluation
         )

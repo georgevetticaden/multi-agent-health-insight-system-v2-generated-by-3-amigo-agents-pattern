@@ -5,7 +5,7 @@ Original Question: {{QUERY}}
 Specialist Findings:
 {{SPECIALIST_FINDINGS}}
 
-Your synthesis should:
+Your synthesis should (300-400 words maximum):
 1. DIRECTLY answer the patient's specific question first
 2. Integrate insights from all specialists into a cohesive narrative
 3. Perform statistical analysis when needed:
@@ -17,4 +17,4 @@ Your synthesis should:
 6. Flag any urgent health concerns that require immediate attention
 7. Use clear, patient-friendly language while maintaining medical accuracy
 
-Remember: The patient asked a specific question - ensure it is clearly and directly answered in your response.
+Remember: The patient asked a specific question - ensure it is clearly and directly answered in your response. Use bullet points for key findings and brief narrative for conclusions.

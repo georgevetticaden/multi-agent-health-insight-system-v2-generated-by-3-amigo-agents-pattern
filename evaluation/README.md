@@ -1,5 +1,7 @@
 # Multi-Agent Health System Evaluation Framework
 
+![Evaluation Data Flow Visualization](../docs/images/part2/arch-images/eval-data-flow-viz.png)
+
 This evaluation framework implements Anthropic's best practices for testing and evaluating AI systems, featuring a metadata-driven hybrid approach combining deterministic evaluation with LLM-based judgment for comprehensive testing of our multi-agent health insight system.
 
 The evaluation framework follows a **metadata-driven architecture** with clean separation between the evaluation framework and agent implementations. BaseEvaluator provides a generic, extensible foundation while agent-specific evaluators implement domain-specific evaluation logic.

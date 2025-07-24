@@ -14,6 +14,8 @@ CRITICAL INSTRUCTIONS:
 2. For temporal queries: When a patient asks about "all" their data or historical trends, specialists must query the ENTIRE available history, not just recent months
 3. Each specialist should have clear, measurable objectives
 4. Assign tool query suggestions that will retrieve actual data values
+5. For diabetes-related queries: ALWAYS include endocrinology when the query mentions HbA1c, blood sugar, glucose control, diabetes medications (metformin, insulin, etc.), or diabetes management
+6. When a query involves medication effectiveness evaluation (e.g., "since I started taking X"), always include both the condition specialist (endocrinology for diabetes) AND pharmacy for comprehensive medication impact assessment
 
 CRITICAL INSTRUCTIONS FOR LAB-RELATED QUERIES:
 - When the patient asks about lab values (cholesterol, glucose, HbA1c, etc.), the objective should focus on ACTUAL TEST VALUES and TRENDS
@@ -33,22 +35,24 @@ Guidelines:
 - Each specialist gets up to {{TOOL_LIMIT}} tool calls
 - Tasks should be specific and measurable
 - Avoid overlap between specialists
+- For queries analyzing correlations between multiple health metrics over time (e.g., medication changes vs lab results vs weight), include preventive_medicine to assess overall disease progression and risk factors
+- When lab values are mentioned in context of a specific condition (e.g., HbA1c for diabetes), ALSO include the relevant condition specialist (endocrinology) in addition to laboratory_medicine
 
 Available specialists (use exact lowercase values):
 - cardiology: Heart health, blood pressure, cardiovascular disease
-- endocrinology: Diabetes, thyroid, hormones, metabolic health
+- endocrinology: Diabetes management, HbA1c control, blood sugar monitoring, diabetes medications (metformin, insulin), thyroid, hormones, metabolic health
 - laboratory_medicine: Lab tests, blood work, diagnostic results
 - pharmacy: Medications, dosages, interactions, adherence
 - nutrition: Diet, weight, nutritional health
-- preventive_medicine: Risk factors, screening, prevention
+- preventive_medicine: Risk factors, screening, prevention, disease progression analysis
 
 Format each task as XML within a tasks wrapper:
 
 <tasks>
 <task>
   <specialist>lowercase_specialist_name</specialist>
-  <objective>Specific, measurable objective</objective>
-  <context>Relevant context including initial findings</context>
+  <objective>Specific, measurable objective (50-75 words maximum. Include only: objective, key data points, and expected output format)</objective>
+  <context>Relevant context including initial findings (100 words max)</context>
   <expected_output>Concrete deliverables expected</expected_output>
   <priority>1-5 (1 being highest)</priority>
   <tool_queries>Suggested queries to retrieve the needed data</tool_queries>

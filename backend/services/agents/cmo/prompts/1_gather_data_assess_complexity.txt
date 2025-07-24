@@ -13,7 +13,7 @@ IMPORTANT INSTRUCTIONS:
 
 After gathering initial data, provide your assessment:
 - SIMPLE: Basic lookups, single values, straightforward questions
-- STANDARD: Trend analysis, 2-3 related metrics, moderate complexity
+- STANDARD: Trend analysis, 3-5 related metrics
 - COMPLEX: Multi-system analysis, correlations, deeper investigation needed
 - COMPREHENSIVE: Full health assessment, multiple domains, extensive analysis required
 

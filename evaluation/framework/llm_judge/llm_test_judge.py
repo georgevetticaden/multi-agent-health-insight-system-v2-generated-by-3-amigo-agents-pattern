@@ -1256,7 +1256,8 @@ class LLMTestJudge:
         complexity: str,
         cost_breakdown: Dict[str, float],
         actual_score: float,
-        target_score: float
+        target_score: float,
+        trace_data: Optional[Dict[str, Any]] = None
     ) -> FailureAnalysis:
         """
         Analyze cost efficiency issues when token usage or cost is inefficient.
@@ -1274,7 +1275,10 @@ class LLMTestJudge:
         Returns:
             FailureAnalysis with cost optimization recommendations
         """
-        # Define cost thresholds by complexity
+        # Load the prompt template
+        prompt_template = self._load_prompt(agent_type, "failure_analysis", "cost_efficiency_issues")
+        
+        # Define cost thresholds by complexity (handle case insensitivity)
         cost_thresholds = {
             'SIMPLE': 0.25,
             'STANDARD': 0.50,
@@ -1282,89 +1286,166 @@ class LLMTestJudge:
             'COMPREHENSIVE': 2.00
         }
         
-        expected_threshold = cost_thresholds.get(complexity, 0.50)
+        # Normalize complexity to uppercase for lookup
+        normalized_complexity = complexity.upper() if isinstance(complexity, str) else 'STANDARD'
+        expected_threshold = cost_thresholds.get(normalized_complexity, 0.50)
         cost_exceeded = total_cost > expected_threshold
         
-        # Build a prompt for cost efficiency analysis
-        prompt = f"""Analyze the cost efficiency failure for this health query evaluation.
-
-Query: {query}
-Complexity: {complexity}
-Total Cost: ${total_cost:.2f}
-Expected Threshold: ${expected_threshold:.2f}
-Tokens Used: {tokens_used:,}
-Actual Score: {actual_score:.2f} (Target: {target_score:.2f})
-
-Component Breakdown:
-{json.dumps(cost_breakdown, indent=2)}
-
-The evaluation failed the cost efficiency criteria. Analyze why the system used excessive tokens or incurred high costs.
-
-Consider:
-1. Was the query complexity assessment accurate?
-2. Were there redundant or inefficient tool calls?
-3. Did the agent responses contain unnecessary verbosity?
-4. Could the same results be achieved with fewer tokens?
-
-Respond with a JSON object containing:
-{{
-    "issue_description": "Clear description of why cost efficiency failed",
-    "specific_inefficiencies": [
-        "List of specific areas where tokens were wasted"
-    ],
-    "recommendations": [
-        {{
-            "recommendation": "Specific actionable improvement",
-            "expected_savings": "Estimated token/cost reduction"
-        }}
-    ],
-    "priority": "high|medium|low",
-    "prompt_improvements": {{
-        "prompt_file.txt": {{
-            "needs_update": true,
-            "suggestions": ["Specific prompt improvements to reduce token usage"]
-        }}
-    }}
-}}"""
+        # Extract token usage breakdown from trace data if available
+        token_breakdown = ""
+        if trace_data and isinstance(trace_data, dict):
+            # Extract token usage by stage/agent from trace events
+            stage_tokens = {}
+            
+            # Check if we have detailed trace events
+            if 'trace_events' in trace_data:
+                for event in trace_data.get('trace_events', []):
+                    if event.get('tokens_used'):
+                        agent = event.get('metadata', {}).get('agent_type', 'unknown')
+                        stage = event.get('stage', 'unknown')
+                        tokens = event.get('tokens_used', 0)
+                        key = f"{agent}_{stage}"
+                        if key not in stage_tokens:
+                            stage_tokens[key] = 0
+                        stage_tokens[key] += tokens
+            
+            # Build breakdown text
+            if stage_tokens:
+                token_breakdown = "\n\nDetailed Token Usage Breakdown:"
+                for key, tokens in sorted(stage_tokens.items(), key=lambda x: x[1], reverse=True):
+                    agent, stage = key.rsplit('_', 1)
+                    token_breakdown += f"\n- {agent} ({stage}): {tokens:,} tokens"
+        
+        # For the LLM to analyze token efficiency based on actual content
+        efficiency_status = f"Total tokens used: {tokens_used:,}{token_breakdown}"
+        
+        # Determine primary failure reason
+        cost_threshold_score = cost_breakdown.get('cost_threshold', 1.0)
+        token_efficiency_score = cost_breakdown.get('token_efficiency', 0.5)
+        
+        if token_efficiency_score < cost_threshold_score:
+            failure_reason = "inefficient token usage"
+        else:
+            failure_reason = "exceeding cost threshold"
+        
+        # Build the prompt
+        prompt = prompt_template.format(
+            query=query,
+            complexity=complexity,
+            total_cost=total_cost,
+            expected_threshold=expected_threshold,
+            tokens_used=tokens_used,
+            actual_score=actual_score,
+            target_score=target_score,
+            cost_threshold_score=cost_threshold_score,
+            token_efficiency_score=token_efficiency_score,
+            efficiency_status=efficiency_status,
+            failure_reason=failure_reason
+        )
+        
+        # Log the key parameters being passed to the LLM
+        logger.info(f"=== COST EFFICIENCY FAILURE ANALYSIS ===")
+        logger.info(f"Tokens Used: {tokens_used:,}")
+        logger.info(f"Total Cost: ${total_cost:.2f}")
+        logger.info(f"Expected Threshold: ${expected_threshold:.2f}")
+        logger.info(f"Complexity: {complexity}")
+        logger.info(f"Actual Score: {actual_score:.2f} (Target: {target_score:.2f})")
+        logger.info(f"Cost Threshold Score: {cost_threshold_score:.2f}")
+        logger.info(f"Token Efficiency Score: {token_efficiency_score:.2f}")
+        logger.info(f"Failure Reason: {failure_reason}")
+        logger.info(f"Has trace data: {bool(trace_data)}")
+        if token_breakdown:
+            logger.info(f"Token breakdown available: {token_breakdown}")
+        
+        logger.info(f"=== COST EFFICIENCY PROMPT (with filled placeholders) ===")
+        logger.info(f"Prompt length: {len(prompt)} characters")
+        logger.info(f"First 1500 chars: {prompt[:1500]}")
+        if len(prompt) > 1500:
+            logger.info(f"Chars 1500-3000: {prompt[1500:3000]}")
+        if len(prompt) > 3000:
+            logger.info(f"Last 1000 chars: ...{prompt[-1000:]}")
         
         try:
             response = self.client.messages.create(
                 model=self.model,
-                max_tokens=1000,
+                max_tokens=4000,  # Match other failure analysis methods
                 messages=[{"role": "user", "content": prompt}]
             )
             
             response_text = response.content[0].text.strip()
+            logger.info(f"=== COST EFFICIENCY LLM RESPONSE ===")
+            logger.info(f"Response length: {len(response_text)} characters")
+            logger.info(f"First 1500 chars: {response_text[:1500]}")
+            if len(response_text) > 1500:
+                logger.info(f"Chars 1500-3000: {response_text[1500:3000]}")
+            if len(response_text) > 3000:
+                logger.info(f"Last 1000 chars: ...{response_text[-1000:]}")
+            
+            # Try to extract JSON from response
             import re
             json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', response_text, re.DOTALL)
             if json_match:
-                result = json.loads(json_match.group())
+                logger.info(f"Found JSON match at position {json_match.start()}-{json_match.end()}")
+                json_str = json_match.group()
+                logger.info(f"Extracted JSON length: {len(json_str)} chars")
+                try:
+                    result = json.loads(json_str)
+                    logger.info(f"Successfully parsed JSON from regex match")
+                except json.JSONDecodeError as e:
+                    logger.error(f"Failed to parse JSON from regex match: {e}")
+                    logger.error(f"JSON string that failed: {json_str[:500]}...")
+                    raise
             else:
-                result = json.loads(response_text)
+                logger.info(f"No JSON match found with regex, attempting direct parse")
+                try:
+                    result = json.loads(response_text)
+                    logger.info(f"Successfully parsed entire response as JSON")
+                except json.JSONDecodeError as e:
+                    logger.error(f"Failed to parse response as JSON: {e}")
+                    logger.error(f"Response that failed to parse: {response_text[:500]}...")
+                    raise
+                
+            logger.info(f"=== PARSED JSON RESULT ===")
+            logger.info(f"Result keys: {list(result.keys())}")
+            logger.info(f"Issue description: {result.get('issue_description', 'N/A')}")
+            logger.info(f"Primary inefficiency: {result.get('primary_inefficiency', 'N/A')}")
+            logger.info(f"Number of recommendations: {len(result.get('recommendations', []))}")
+            logger.info(f"Full parsed result: {json.dumps(result, indent=2)[:2000]}...")  # Log first 2000 chars
+            
+            if len(result.get('recommendations', [])) == 0:
+                logger.warning(f"No recommendations returned by LLM")
             
             # Extract specific issues
-            specific_issues = result.get('specific_inefficiencies', [])
-            if cost_exceeded:
-                specific_issues.insert(0, f"Cost ${total_cost:.2f} exceeded threshold ${expected_threshold:.2f}")
+            specific_issues = []
             
-            # Extract recommendations
+            # Add primary inefficiency
+            if result.get('primary_inefficiency'):
+                specific_issues.append(result['primary_inefficiency'])
+            
+            # Add cost threshold issue if applicable
+            if cost_exceeded:
+                specific_issues.append(f"Cost ${total_cost:.2f} exceeded threshold ${expected_threshold:.2f}")
+            
+            # Add token efficiency issue if applicable
+            if token_efficiency_score < 0.8:
+                specific_issues.append(f"Token efficiency score {token_efficiency_score:.2f} below expected threshold")
+            
+            # Extract recommendations in a format consistent with other failure analyses
             recommendations = []
             for rec in result.get('recommendations', []):
                 if isinstance(rec, dict):
-                    rec_text = rec.get('recommendation', '')
-                    savings = rec.get('expected_savings', '')
-                    if savings:
-                        recommendations.append(f"{rec_text} (Est. savings: {savings})")
-                    else:
-                        recommendations.append(rec_text)
+                    category = rec.get('category', '')
+                    recommendation = rec.get('recommendation', '')
+                    expected_impact = rec.get('expected_impact', '')
+                    
+                    # Format like other failure analysis recommendations
+                    if category and recommendation:
+                        if expected_impact:
+                            recommendations.append(f"{recommendation} (Impact: {expected_impact})")
+                        else:
+                            recommendations.append(recommendation)
                 else:
                     recommendations.append(str(rec))
-            
-            # Add prompt improvement suggestions
-            for prompt_file, improvements in result.get('prompt_improvements', {}).items():
-                if improvements.get('needs_update') and improvements.get('suggestions'):
-                    for suggestion in improvements['suggestions']:
-                        recommendations.append(f"{prompt_file}: {suggestion}")
             
             return FailureAnalysis(
                 dimension="cost_efficiency",
@@ -1372,33 +1453,36 @@ Respond with a JSON object containing:
                 specific_issues=specific_issues,
                 recommendations=recommendations,
                 priority=result.get('priority', 'medium'),
-                expected_impact=f"Implementing these changes could reduce costs to below ${expected_threshold:.2f}"
+                prompt_file=result.get('prompt_file', 'backend/services/agents/cmo/prompts/1_gather_data_assess_complexity.txt'),
+                expected_impact=result.get('total_expected_savings', f"Implementing these changes could reduce costs to below ${expected_threshold:.2f}")
+            )
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse cost efficiency JSON response: {e}")
+            logger.error(f"Response text: {response_text[:500]}...")
+            # Return minimal analysis when LLM fails - no generic recommendations
+            return FailureAnalysis(
+                dimension="cost_efficiency",
+                root_cause=f"Cost efficiency analysis failed - unable to parse LLM response",
+                specific_issues=[
+                    f"Cost efficiency score: {actual_score:.2f} < {target_score:.2f}",
+                    f"Total cost: ${total_cost:.2f}",
+                    f"Tokens used: {tokens_used:,}"
+                ],
+                recommendations=[],  # No recommendations if analysis fails
+                priority="high" if cost_exceeded else "medium"
             )
             
         except Exception as e:
-            logger.error(f"Failed to analyze cost efficiency: {e}")
-            # Fallback analysis
-            specific_issues = [
-                f"Total cost ${total_cost:.2f} vs threshold ${expected_threshold:.2f}",
-                f"Tokens used: {tokens_used:,}",
-                f"Cost efficiency score: {actual_score:.2f}"
-            ]
-            
-            recommendations = [
-                "Review and optimize prompt lengths",
-                "Reduce redundant tool calls",
-                "Implement token usage limits per complexity level",
-                "Use more concise response formats"
-            ]
-            
-            if cost_exceeded:
-                recommendations.insert(0, f"Reduce costs by ${total_cost - expected_threshold:.2f} to meet threshold")
-            
+            logger.error(f"Failed to analyze cost efficiency: {e}", exc_info=True)
+            # Return minimal analysis when LLM fails - no generic recommendations
             return FailureAnalysis(
                 dimension="cost_efficiency",
-                root_cause=f"Cost efficiency {actual_score:.2f} below target {target_score:.2f}",
-                specific_issues=specific_issues,
-                recommendations=recommendations,
+                root_cause=f"Cost efficiency analysis failed - {str(e)}",
+                specific_issues=[
+                    f"Cost efficiency score: {actual_score:.2f} < {target_score:.2f}"
+                ],
+                recommendations=[],  # No recommendations if analysis fails
                 priority="high" if cost_exceeded else "medium"
             )
     

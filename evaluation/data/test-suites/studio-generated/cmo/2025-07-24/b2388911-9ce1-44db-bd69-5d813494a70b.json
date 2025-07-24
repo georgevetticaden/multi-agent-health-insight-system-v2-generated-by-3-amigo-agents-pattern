@@ -1,0 +1,28 @@
+{
+  "id": "b2388911-9ce1-44db-bd69-5d813494a70b",
+  "agent_type": "cmo",
+  "query": "How has my HbA1c level changed since I started taking metformin, has my dosage been adjusted over time based on my lab results, and is there a correlation between these changes and my weight measurements during the same period ?",
+  "expected_complexity": "COMPLEX",
+  "expected_specialties": [
+    "laboratory_medicine",
+    "pharmacy",
+    "nutrition",
+    "endocrinology",
+    "preventive_medicine"
+  ],
+  "key_data_points": [
+    "hba1c",
+    "metformin",
+    "dosage",
+    "lab_results",
+    "weight",
+    "diet"
+  ],
+  "expected_cost_threshold": 1.2,
+  "notes": "Incorrectly classified as None complexity. Should be COMPLEX. Requires team of 5 specialists, missing endocrinology and preventive_medicine. Add diet to key data points.",
+  "category": "general",
+  "based_on_real_query": true,
+  "trace_id": "86262b3f-674c-45d7-96d6-05b4a4f2270d",
+  "created_at": "2025-07-24T14:29:29.681639",
+  "created_by": "studio"
+}

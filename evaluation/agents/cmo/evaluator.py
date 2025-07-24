@@ -1359,9 +1359,13 @@ Return a score where:
             
             elif dimension_name == "cost_efficiency":
                 # Analyze cost efficiency issues
-                total_cost = result_data.get('total_cost', 0.0)
-                tokens_used = result_data.get('tokens_used', 0)
+                # Use tokens from initial_data (trace) if available, otherwise fall back to result_data
+                initial_data = result_data.get('initial_data_gathered', {})
+                tokens_used = initial_data.get('tokens_used', result_data.get('tokens_used', 0))
+                total_cost = initial_data.get('total_cost', result_data.get('total_cost', 0.0))
                 complexity = result_data.get('actual_complexity', 'STANDARD')
+                
+                logger.info(f"Cost efficiency failure analysis using tokens: {tokens_used} (from {'trace' if tokens_used == initial_data.get('tokens_used') else 'mock'})")
                 
                 return await self.llm_judge.analyze_cost_efficiency_issues(
                     agent_type="cmo",
@@ -1371,7 +1375,8 @@ Return a score where:
                     complexity=complexity,
                     cost_breakdown=component_breakdowns.get('cost_efficiency', {}) if component_breakdowns else {},
                     actual_score=actual_score,
-                    target_score=target_score
+                    target_score=target_score,
+                    trace_data=initial_data  # Pass the full trace data for detailed analysis
                 )
             
             else:

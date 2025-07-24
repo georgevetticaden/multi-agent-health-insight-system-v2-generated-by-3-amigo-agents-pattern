@@ -58,8 +58,6 @@ const TestCaseDisplay: React.FC<TestCaseDisplayProps> = ({
   // Check if specialties actually differ from the actual specialties
   const areSpecialtiesDifferentFromActual = () => {
     if (testCase.expected_specialties.length !== testCase.actual_specialties.length) {
-      console.log('Specialties different - length mismatch:', 
-        testCase.expected_specialties.length, 'vs', testCase.actual_specialties.length);
       return true;
     }
     const allMatch = testCase.expected_specialties.every(spec => testCase.actual_specialties.includes(spec));

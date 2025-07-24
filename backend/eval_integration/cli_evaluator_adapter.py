@@ -155,7 +155,17 @@ class CLIEvaluatorAdapter:
         # Run evaluation in subprocess
         logger.info("Running evaluation in subprocess...")
         try:
-            result = run_evaluation_subprocess(test_case, trace_data, api_key, event_callback)
+            # Run subprocess in thread pool to avoid blocking the event loop
+            import asyncio
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None,  # Use default thread pool
+                run_evaluation_subprocess,
+                test_case,
+                trace_data,
+                api_key,
+                event_callback
+            )
             
             # Events are now processed in real-time by the subprocess reader threads
             # Just remove the collected_events from the result if present

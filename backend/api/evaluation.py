@@ -4,13 +4,13 @@ from typing import Dict, Any, Optional, List
 import json
 import logging
 
-from services.evaluation import EvaluationService
+from services.evaluation import get_evaluation_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Initialize service
-evaluation_service = EvaluationService()
+# Get shared service instance
+evaluation_service = get_evaluation_service()
 
 
 class RunEvaluationRequest(BaseModel):
@@ -147,11 +147,31 @@ async def get_evaluation_events(
     logger.info(f"Start index: {start_index}")
     logger.info(f"Available evaluations: {list(evaluation_service.evaluations.keys())}")
     
-    events_data = evaluation_service.get_evaluation_events(evaluation_id, start_index)
-    
-    if "error" in events_data:
-        logger.error(f"Events not found for evaluation {evaluation_id}")
-        raise HTTPException(status_code=404, detail=events_data["error"])
-    
-    logger.info(f"Returning {len(events_data.get('events', []))} events")
-    return events_data
+    try:
+        logger.info(f"About to call get_evaluation_events...")
+        events_data = evaluation_service.get_evaluation_events(evaluation_id, start_index)
+        logger.info(f"get_evaluation_events returned: {type(events_data)}")
+        
+        if "error" in events_data:
+            logger.error(f"Events not found for evaluation {evaluation_id}")
+            # Return empty events instead of 404 during evaluation
+            return {
+                "evaluation_id": evaluation_id,
+                "status": "unknown",
+                "events": [],
+                "total_events": 0,
+                "has_more": False
+            }
+        
+        logger.info(f"Returning {len(events_data.get('events', []))} events")
+        return events_data
+    except Exception as e:
+        logger.error(f"Error getting evaluation events: {e}", exc_info=True)
+        # Return empty response on error
+        return {
+            "evaluation_id": evaluation_id,
+            "status": "error",
+            "events": [],
+            "total_events": 0,
+            "has_more": False
+        }

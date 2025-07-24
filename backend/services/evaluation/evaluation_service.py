@@ -138,21 +138,53 @@ class EvaluationService:
     
     def get_evaluation_events(self, evaluation_id: str, start_index: int = 0) -> Dict[str, Any]:
         """Get evaluation events since the given index"""
-        logger.info(f"Getting events for evaluation {evaluation_id}")
+        logger.info(f"Getting events for evaluation {evaluation_id} from start_index {start_index}")
+        logger.info(f"Using unified storage: {self.use_unified_storage}")
         
         # If using unified storage, read from file system
         if self.use_unified_storage:
+            logger.info(f"Looking for run directory for evaluation {evaluation_id}")
             run_dir = self.config.find_run_dir(evaluation_id)
+            logger.info(f"Found run directory: {run_dir}")
             if not run_dir:
                 logger.error(f"Evaluation {evaluation_id} not found in file system")
                 return {"error": "Evaluation not found", "events": []}
             
-            # Read events from files
-            event_files = sorted((run_dir / "events").glob("*.json"))
-            events = []
-            for event_file in event_files[start_index:]:
-                with open(event_file) as f:
-                    events.append(json.load(f))
+            # Read ALL event files and sort them
+            events_dir = run_dir / "events"
+            logger.info(f"Looking for events in: {events_dir}")
+            logger.info(f"Events directory exists: {events_dir.exists()}")
+            
+            if events_dir.exists():
+                event_files = sorted(events_dir.glob("*.json"))
+                logger.info(f"Found {len(event_files)} total event files")
+                if event_files:
+                    logger.info(f"First few event files: {[f.name for f in event_files[:3]]}")
+                    logger.info(f"Last few event files: {[f.name for f in event_files[-3:]]}")
+            else:
+                event_files = []
+                logger.warning(f"Events directory does not exist: {events_dir}")
+            
+            # Load ALL events first to get correct ordering
+            all_events = []
+            for i, event_file in enumerate(event_files):
+                try:
+                    with open(event_file) as f:
+                        event = json.load(f)
+                        # Add an index to maintain order
+                        event['_index'] = i
+                        all_events.append(event)
+                except Exception as e:
+                    logger.error(f"Error reading event file {event_file}: {e}")
+            
+            # Now slice from start_index to get only NEW events
+            new_events = all_events[start_index:] if start_index < len(all_events) else []
+            logger.info(f"Total events loaded: {len(all_events)}")
+            logger.info(f"Returning {len(new_events)} new events (from index {start_index})")
+            if new_events:
+                logger.info(f"First new event: {new_events[0].get('type', 'unknown')} - {new_events[0].get('message', '')}")
+            else:
+                logger.info(f"No new events to return")
             
             # Read metadata for status
             metadata_path = run_dir / "metadata.json"
@@ -166,8 +198,8 @@ class EvaluationService:
             return {
                 "evaluation_id": evaluation_id,
                 "status": status,
-                "events": events,
-                "total_events": len(event_files),
+                "events": new_events,
+                "total_events": len(all_events),
                 "has_more": False
             }
         else:

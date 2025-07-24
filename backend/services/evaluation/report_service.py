@@ -358,7 +358,7 @@ class ReportService:
         Get an HTTP URL for the report that can be served by the API.
         
         Args:
-            report_path: Path to the report directory
+            report_path: Path to the report directory (evaluation run directory)
             
         Returns:
             HTTP URL to the report that will be served by the API
@@ -366,6 +366,18 @@ class ReportService:
         logger.info(f"Getting report URL for path: {report_path}")
         report_dir = Path(report_path)
         logger.info(f"Report directory exists: {report_dir.exists()}")
+        
+        # For unified storage, report_path is the evaluation run directory
+        # The actual report is in the "report" subdirectory
+        if report_dir.name.startswith("eval_"):
+            # This is an evaluation run directory
+            report_html = report_dir / "report" / "report.html"
+            if report_html.exists():
+                # Extract evaluation ID from directory name
+                eval_id = report_dir.name.replace("eval_", "").split("_trace_")[0]
+                url = f"/api/qe/report/{eval_id}/report.html"
+                logger.info(f"✅ Generated evaluation report URL: {url}")
+                return url
         
         # Check if this is a full report structure with report subdirectory
         full_report_path = report_dir / "report" / "report.html"

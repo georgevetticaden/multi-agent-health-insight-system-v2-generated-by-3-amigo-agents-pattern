@@ -17,7 +17,7 @@ from services.tracing import get_trace_collector
 from services.tracing.trace_models import CompleteTrace, TraceEventType
 from services.agents.qe.qe_agent import QEAgent
 from services.qe_analyst_service import QEAnalystService
-from services.evaluation.evaluation_service import EvaluationService
+from services.evaluation import get_evaluation_service
 
 # Import report service only when needed to avoid startup errors
 ReportService = None
@@ -274,8 +274,8 @@ async def evaluate_test_case(test_case_id: str):
         test_case = test_cases_db[test_case_id]
         logger.info(f"Starting evaluation for test case {test_case_id}")
         
-        # Create evaluation service
-        eval_service = EvaluationService()
+        # Get shared evaluation service instance
+        eval_service = get_evaluation_service()
         
         # Prepare test case in evaluation format
         test_case_data = {
@@ -292,7 +292,16 @@ async def evaluate_test_case(test_case_id: str):
         
         # Run evaluation via evaluation service
         evaluation_id = await eval_service.run_evaluation(test_case_data, agent_type="cmo")
+        logger.info(f"Evaluation started with ID: {evaluation_id}")
         
+        # For now, return immediately with the evaluation ID
+        # The frontend will poll for status updates
+        return {
+            "evaluation_id": evaluation_id,
+            "status": "started"
+        }
+        
+        # DISABLED: The code below waits for completion but causes timeout issues
         # Wait for evaluation to complete (with timeout)
         max_wait_time = 180  # seconds (3 minutes to account for LLM Judge processing)
         start_time = datetime.now()

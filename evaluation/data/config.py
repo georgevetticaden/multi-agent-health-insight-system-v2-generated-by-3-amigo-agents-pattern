@@ -144,6 +144,13 @@ class EvaluationDataConfig:
     @classmethod
     def find_run_dir(cls, evaluation_id: str) -> Optional[Path]:
         """Find evaluation run directory by ID"""
+        # First check today's directory (most likely location)
+        today = datetime.now().strftime("%Y-%m-%d")
+        today_dir = cls.RUNS_DIR / today / f"eval_{evaluation_id}"
+        if today_dir.exists() and today_dir.is_dir():
+            return today_dir
+        
+        # If not found in today, search all directories (slower)
         for run_dir in cls.RUNS_DIR.rglob(f"eval_{evaluation_id}"):
             if run_dir.is_dir():
                 return run_dir

@@ -149,10 +149,53 @@ async def serve_evaluation_report(report_name: str, filename: str):
     """Serve evaluation report HTML and asset files
     
     This endpoint serves the evaluation report files to avoid file:// URL security issues.
-    The report_name is the directory name in evaluation_results/qe_reports/
+    The report_name can be:
+    - A directory name in evaluation_results/qe_reports/ (old style)
+    - An evaluation ID for unified storage (new style)
     Supports nested paths like report/report.html or report/dimension_scores.png
     """
-    # Construct the file path safely using absolute path
+    logger.info(f"Serving report: report_name={report_name}, filename={filename}")
+    
+    # Try unified storage first (for evaluation IDs)
+    if len(report_name) == 36 and '-' in report_name:  # Looks like a UUID
+        try:
+            from evaluation.data.config import EvaluationDataConfig
+            # Find the evaluation run directory
+            for date_dir in EvaluationDataConfig.RUNS_DIR.iterdir():
+                if date_dir.is_dir():
+                    eval_dir = date_dir / f"eval_{report_name}"
+                    if eval_dir.exists():
+                        report_path = eval_dir / "report" / filename
+                        logger.info(f"Found report in unified storage: {report_path}")
+                        if report_path.exists():
+                            # Determine media type
+                            media_type = "application/octet-stream"
+                            if filename.endswith(".html"):
+                                media_type = "text/html"
+                            elif filename.endswith(".png"):
+                                media_type = "image/png"
+                            elif filename.endswith(".jpg") or filename.endswith(".jpeg"):
+                                media_type = "image/jpeg"
+                            elif filename.endswith(".json"):
+                                media_type = "application/json"
+                            elif filename.endswith(".css"):
+                                media_type = "text/css"
+                            elif filename.endswith(".js"):
+                                media_type = "application/javascript"
+                            
+                            return FileResponse(
+                                path=report_path,
+                                media_type=media_type,
+                                headers={
+                                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                                    "Pragma": "no-cache",
+                                    "Expires": "0"
+                                }
+                            )
+        except Exception as e:
+            logger.error(f"Error accessing unified storage: {e}")
+    
+    # Fall back to old path structure
     backend_dir = Path(__file__).parent.parent
     base_path = backend_dir / "evaluation_results" / "qe_reports"
     report_path = base_path / report_name / filename

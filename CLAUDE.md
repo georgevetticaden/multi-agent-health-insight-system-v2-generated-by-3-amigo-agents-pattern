@@ -587,44 +587,31 @@ async def test_new_specialist():
 
 ## Recent Updates
 
-### **Trace Viewer Improvements (Completed)**
-- Fixed text overflow issue in hierarchical trace viewer
-- Added proper text wrapping to event detail displays
-- Improved readability of long responses and data fields
-- Enhanced CSS with `white-space: pre-wrap` and `word-wrap: break-word`
+### **Evaluation Framework (Completed)**
+- Comprehensive evaluation system with metadata-driven architecture
+- CMOEvaluator and SpecialistEvaluator fully implemented
+- LLM Judge integration for intelligent failure analysis
+- HTML reports with drill-down capabilities
+- Eval Dev Studio UI for test case management
+- Subprocess execution pattern for clean separation
+- Persistent event storage and streaming
 
-### **Smart Content Formatter (Completed)**
-- Implemented intelligent formatting for trace event data
-- Added specialized formatters for:
-  - LLM responses with task XML parsing and card display
-  - Tool invocations with highlighted queries
-  - Query results with tabular data display
-  - JSON data with syntax highlighting
-- Toggle between formatted and raw views for debugging
-- Automatic detection of content type for appropriate formatting
-- Enhanced visual hierarchy with task cards, priority badges, and emojis
-- Made formatted view the default display mode (raw view available via toggle)
-- Added support for non-XML task format parsing (handles both XML and plain text task formats)
+## Primary Focus Areas
 
-## Future Enhancement Ideas
+### **Immediate Priorities**
+1. **Fix Failed Evaluation Tests**: Apply LLM Judge recommendations to improve agent prompts
+2. **Build New Features**: Implement health-focused enhancements from the backlog
+3. **Maintain System Quality**: Ensure all new features pass evaluation tests
 
-### **Near-term (Next Sprint)**
+### **Feature Backlog**
 - Health trend notifications
 - Medication reminder integration
 - Lab result explanations
 - Wellness recommendations
-
-### **Medium-term (Next Quarter)**
 - Predictive health insights
 - Integration with wearables
 - Family health tracking
 - Telemedicine integration
-
-### **Long-term (Next Year)**
-- AI health coach
-- Genomic data analysis
-- Clinical trial matching
-- Population health insights
 
 ## Getting Help
 
@@ -649,11 +636,46 @@ async def test_new_specialist():
 
 # Part 3: Evaluation System Architecture
 
+## Startup Check for Failed Evaluations
+
+When starting a new session, I'll check for any recently failed evaluation test cases. If found, I'll offer to apply the LLM Judge's recommended fixes to improve the system.
+
+### Recent Failed Test Cases
+- **Location**: `evaluation/data/test-suites/studio-generated/`
+- **Detection**: Look for evaluations with failing dimensions in recent runs
+- **Offer**: "I detected a failed evaluation test case at [path]. The LLM Judge identified specific improvements for [dimensions]. Would you like me to apply these fixes?"
+
+## Applying LLM Judge Recommendations
+
+When the user provides LLM Judge diagnostic results with root causes and recommendations:
+
+### Process for Applying Fixes
+1. **Minimal Changes**: Make the least invasive changes possible to avoid regressions
+2. **Preview Changes**: Always summarize proposed changes BEFORE applying them
+3. **User Review**: Wait for user approval before making any modifications
+4. **Test Reference**: Use the test's actual name (e.g., "hba1c_metformin_weight_test") not the full path
+5. **Run Instructions**: After applying changes, provide CLI commands to re-run the specific test
+
+### Example Workflow
+```
+User: "The LLM Judge says complexity classification failed because..."
+
+Claude: "I'll review the recommended changes for the hba1c_metformin_weight_test. The recommendations suggest:
+1. Modifying STANDARD rule to exclude medication impact analysis
+2. Adding COMPLEX indicators for medication effectiveness assessment
+3. Including specific examples for HbA1c + medication queries
+
+These minimal changes will help properly classify diabetes management queries. Shall I apply these updates?"
+
+User: "Yes, please apply the changes"
+
+Claude: "Changes applied successfully! To re-run the hba1c_metformin_weight_test:
+
+cd evaluation
+python -m evaluation.cli.run_evaluation --test-id f31fc246-c1cc-48e1-9386-49d1868dd6c1
+```
+
 ## System Overview
-
-The evaluation system provides comprehensive testing capabilities for the multi-agent health insight system:
-
-### Core Features
 - **QE Agent**: Fully operational with "run" and "details" commands for test case management
 - **Evaluation Engine**: Comprehensive scoring across 5 dimensions with metadata-driven architecture
 - **HTML Reports**: Beautiful reports with CLI-style drill-downs and LLM Judge analysis
@@ -694,6 +716,7 @@ evaluation/
 4. **No Duplication**: Single result file per evaluation
 5. **Configurable Storage**: Redirect paths via environment variables
 6. **Clean Separation**: Framework code vs data storage
+7. **LLM Judge Analysis**: Automatic failure diagnosis with specific improvement recommendations
 
 ## Eval Dev Studio UI
 

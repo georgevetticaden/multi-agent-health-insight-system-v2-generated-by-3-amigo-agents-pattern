@@ -119,10 +119,12 @@ async def run_evaluation(input_data: dict):
         expected_complexity=test_case_data.get('expected_complexity', 'SIMPLE'),
         expected_specialties=set(test_case_data.get('expected_specialties', [])),
         key_data_points=test_case_data.get('key_data_points', []),
-        notes=test_case_data.get('notes', '')
+        notes=test_case_data.get('notes', ''),
+        expected_cost_threshold=test_case_data.get('expected_cost_threshold')  # Add cost threshold
     )
     logger.info(f"Test case created: expected_complexity={test_case.expected_complexity}, "
-                f"expected_specialties={test_case.expected_specialties}")
+                f"expected_specialties={test_case.expected_specialties}, "
+                f"expected_cost_threshold={test_case.expected_cost_threshold}")
     
     # Update trace data to use total tool calls across all stages
     if 'total_tool_calls_all_stages' in trace_data.get('initial_data', {}):
@@ -178,6 +180,8 @@ async def run_evaluation(input_data: dict):
     logger.info(f"  Analysis quality: {result.analysis_quality_score:.3f} (target: 0.80)")
     logger.info(f"  Tool usage: {result.tool_usage_score:.3f} (target: 0.90)")
     logger.info(f"  Response structure: {result.response_structure_score:.3f} (target: 0.95)")
+    if hasattr(result, 'cost_efficiency_score'):
+        logger.info(f"  Cost efficiency: {result.cost_efficiency_score:.3f} (target: 0.80)")
     logger.info(f"  Execution time: {result.total_response_time_ms:.0f}ms")
     
     # Check which dimensions failed
@@ -192,6 +196,8 @@ async def run_evaluation(input_data: dict):
         failed_dimensions.append(f"tool_usage ({result.tool_usage_score:.3f} < 0.90)")
     if result.response_structure_score < 0.95:
         failed_dimensions.append(f"response_structure ({result.response_structure_score:.3f} < 0.95)")
+    if hasattr(result, 'cost_efficiency_score') and result.cost_efficiency_score < 0.80:
+        failed_dimensions.append(f"cost_efficiency ({result.cost_efficiency_score:.3f} < 0.80)")
     
     if failed_dimensions:
         logger.info(f"  ❌ Failed dimensions: {len(failed_dimensions)}")
@@ -312,6 +318,19 @@ async def run_evaluation(input_data: dict):
                 score = comp_data
             logger.info(f"  - {comp_name}: {score:.3f} ({method})")
     
+    # Check cost efficiency components
+    if hasattr(result, 'cost_efficiency_breakdown') and result.cost_efficiency_breakdown:
+        logger.info("Cost Efficiency Components:")
+        for comp_name, comp_data in result.cost_efficiency_breakdown.items():
+            if isinstance(comp_data, dict):
+                method = comp_data.get('evaluation_method', 'unknown')
+                score = comp_data.get('score', 0.0)
+            else:
+                # comp_data is just a float score - get actual method from metadata
+                method = get_component_method('cost_efficiency', comp_name)
+                score = comp_data
+            logger.info(f"  - {comp_name}: {score:.3f} ({method})")
+    
     # Convert result to dict
     result_dict = {
         'test_case_id': result.test_case_id,
@@ -340,7 +359,8 @@ def extract_component_methods(result):
     
     # Check each component breakdown
     for attr_name in ['specialty_component_breakdown', 'analysis_quality_breakdown', 
-                      'tool_component_breakdown', 'response_component_breakdown']:
+                      'tool_component_breakdown', 'response_component_breakdown',
+                      'cost_efficiency_breakdown']:
         if hasattr(result, attr_name):
             breakdown = getattr(result, attr_name)
             if breakdown and isinstance(breakdown, dict):
@@ -446,6 +466,30 @@ def convert_dimension_results(result):
         },
         'evaluation_method': 'deterministic'
     }
+    
+    # Cost Efficiency (if available)
+    if hasattr(result, 'cost_efficiency_score'):
+        # Check if any component used LLM Judge
+        has_cost_llm = False
+        if hasattr(result, 'cost_efficiency_breakdown') and result.cost_efficiency_breakdown:
+            has_cost_llm = any(
+                comp_data.get('evaluation_method') == 'llm_judge' if isinstance(comp_data, dict) else False
+                for comp_data in result.cost_efficiency_breakdown.values()
+            )
+        
+        dimensions['cost_efficiency'] = {
+            'score': result.cost_efficiency_score,
+            'normalized_score': result.cost_efficiency_score,
+            'components': result.cost_efficiency_breakdown if hasattr(result, 'cost_efficiency_breakdown') else {},
+            'details': {
+                'expected_cost_threshold': result.expected_cost_threshold if hasattr(result, 'expected_cost_threshold') else None,
+                'actual_total_cost': result.actual_total_cost if hasattr(result, 'actual_total_cost') else None,
+                'tokens_used': result.tokens_used if hasattr(result, 'tokens_used') else 0,
+                'cost_within_threshold': result.cost_within_threshold if hasattr(result, 'cost_within_threshold') else False,
+                'has_llm_components': has_cost_llm
+            },
+            'evaluation_method': 'hybrid' if has_cost_llm else 'deterministic'
+        }
     
     return dimensions
 

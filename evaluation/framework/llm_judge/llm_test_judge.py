@@ -548,6 +548,85 @@ class LLMTestJudge:
             logger.error(f"Response was: {response.content[0].text[:200] if response.content else 'No content'}")
             return ScoringResult(score=0.5, reasoning=f"Parsing error: {str(e)}")
     
+    async def score_generic(self, prompt: str, dimension: str) -> ScoringResult:
+        """
+        Generic scoring method for custom evaluation prompts.
+        
+        This method allows the evaluator to provide a custom prompt for scoring
+        dimensions that don't have a specific scoring method.
+        
+        Args:
+            prompt: The complete evaluation prompt including scoring instructions
+            dimension: The dimension being evaluated (for logging/tracking)
+            
+        Returns:
+            ScoringResult with score (0.0-1.0) and reasoning
+        """
+        logger.info(f"Generic scoring for dimension: {dimension}")
+        
+        response = self.client.messages.create(
+            model=self.model,
+            max_tokens=500,
+            temperature=0.0,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        
+        try:
+            response_text = response.content[0].text.strip()
+            logger.debug(f"LLM Judge response for {dimension}: {response_text[:200]}...")
+            
+            import re
+            # Try multiple score extraction patterns
+            score_patterns = [
+                r'<score>([\d.]+)</score>',
+                r'Score:\s*([\d.]+)',
+                r'"score":\s*([\d.]+)',
+                r'(\d+\.?\d*)\s*/\s*10(?:\.0)?',  # e.g., "8/10" or "8.5/10.0"
+            ]
+            
+            score = None
+            for pattern in score_patterns:
+                score_match = re.search(pattern, response_text, re.IGNORECASE)
+                if score_match:
+                    raw_score = float(score_match.group(1))
+                    # Normalize if it's out of 10
+                    if pattern == score_patterns[3]:  # The /10 pattern
+                        score = raw_score / 10.0
+                    else:
+                        score = raw_score
+                    break
+            
+            if score is None:
+                logger.warning(f"No score found in response for {dimension}: {response_text[:100]}...")
+                return ScoringResult(score=0.5, reasoning="Failed to parse score from response")
+            
+            score = max(0.0, min(1.0, score))  # Clamp to valid range
+            
+            # Extract reasoning
+            reasoning_patterns = [
+                r'<reasoning>(.*?)</reasoning>',
+                r'Reasoning:\s*(.*?)(?:\n|$)',
+                r'"reasoning":\s*"(.*?)"',
+            ]
+            
+            reasoning = None
+            for pattern in reasoning_patterns:
+                reasoning_match = re.search(pattern, response_text, re.DOTALL | re.IGNORECASE)
+                if reasoning_match:
+                    reasoning = reasoning_match.group(1).strip()
+                    break
+            
+            if not reasoning:
+                # Use the entire response as reasoning if no specific pattern found
+                reasoning = response_text.strip()
+            
+            logger.info(f"Parsed {dimension} - Score: {score}, Reasoning: {reasoning[:50]}...")
+            return ScoringResult(score=score, reasoning=reasoning)
+        except Exception as e:
+            logger.error(f"Failed to parse {dimension} score: {e}")
+            logger.error(f"Response was: {response.content[0].text[:200] if response.content else 'No content'}")
+            return ScoringResult(score=0.5, reasoning=f"Parsing error: {str(e)}")
+    
     # ==================== CMO Failure Analysis Methods ====================
     
     async def analyze_complexity_mismatch(
@@ -1168,6 +1247,161 @@ class LLMTestJudge:
                 priority="high"
             )
     
+    async def analyze_cost_efficiency_issues(
+        self,
+        agent_type: str,
+        query: str,
+        total_cost: float,
+        tokens_used: int,
+        complexity: str,
+        cost_breakdown: Dict[str, float],
+        actual_score: float,
+        target_score: float
+    ) -> FailureAnalysis:
+        """
+        Analyze cost efficiency issues when token usage or cost is inefficient.
+        
+        Args:
+            agent_type: Type of agent being evaluated
+            query: The original query
+            total_cost: Total cost incurred
+            tokens_used: Total tokens used
+            complexity: Query complexity level
+            cost_breakdown: Component breakdown of cost efficiency scores
+            actual_score: The actual cost efficiency score achieved
+            target_score: The target cost efficiency score
+            
+        Returns:
+            FailureAnalysis with cost optimization recommendations
+        """
+        # Define cost thresholds by complexity
+        cost_thresholds = {
+            'SIMPLE': 0.25,
+            'STANDARD': 0.50,
+            'COMPLEX': 1.00,
+            'COMPREHENSIVE': 2.00
+        }
+        
+        expected_threshold = cost_thresholds.get(complexity, 0.50)
+        cost_exceeded = total_cost > expected_threshold
+        
+        # Build a prompt for cost efficiency analysis
+        prompt = f"""Analyze the cost efficiency failure for this health query evaluation.
+
+Query: {query}
+Complexity: {complexity}
+Total Cost: ${total_cost:.2f}
+Expected Threshold: ${expected_threshold:.2f}
+Tokens Used: {tokens_used:,}
+Actual Score: {actual_score:.2f} (Target: {target_score:.2f})
+
+Component Breakdown:
+{json.dumps(cost_breakdown, indent=2)}
+
+The evaluation failed the cost efficiency criteria. Analyze why the system used excessive tokens or incurred high costs.
+
+Consider:
+1. Was the query complexity assessment accurate?
+2. Were there redundant or inefficient tool calls?
+3. Did the agent responses contain unnecessary verbosity?
+4. Could the same results be achieved with fewer tokens?
+
+Respond with a JSON object containing:
+{{
+    "issue_description": "Clear description of why cost efficiency failed",
+    "specific_inefficiencies": [
+        "List of specific areas where tokens were wasted"
+    ],
+    "recommendations": [
+        {{
+            "recommendation": "Specific actionable improvement",
+            "expected_savings": "Estimated token/cost reduction"
+        }}
+    ],
+    "priority": "high|medium|low",
+    "prompt_improvements": {{
+        "prompt_file.txt": {{
+            "needs_update": true,
+            "suggestions": ["Specific prompt improvements to reduce token usage"]
+        }}
+    }}
+}}"""
+        
+        try:
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=1000,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            
+            response_text = response.content[0].text.strip()
+            import re
+            json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', response_text, re.DOTALL)
+            if json_match:
+                result = json.loads(json_match.group())
+            else:
+                result = json.loads(response_text)
+            
+            # Extract specific issues
+            specific_issues = result.get('specific_inefficiencies', [])
+            if cost_exceeded:
+                specific_issues.insert(0, f"Cost ${total_cost:.2f} exceeded threshold ${expected_threshold:.2f}")
+            
+            # Extract recommendations
+            recommendations = []
+            for rec in result.get('recommendations', []):
+                if isinstance(rec, dict):
+                    rec_text = rec.get('recommendation', '')
+                    savings = rec.get('expected_savings', '')
+                    if savings:
+                        recommendations.append(f"{rec_text} (Est. savings: {savings})")
+                    else:
+                        recommendations.append(rec_text)
+                else:
+                    recommendations.append(str(rec))
+            
+            # Add prompt improvement suggestions
+            for prompt_file, improvements in result.get('prompt_improvements', {}).items():
+                if improvements.get('needs_update') and improvements.get('suggestions'):
+                    for suggestion in improvements['suggestions']:
+                        recommendations.append(f"{prompt_file}: {suggestion}")
+            
+            return FailureAnalysis(
+                dimension="cost_efficiency",
+                root_cause=result.get('issue_description', f'Cost efficiency below target: {actual_score:.2f} < {target_score}'),
+                specific_issues=specific_issues,
+                recommendations=recommendations,
+                priority=result.get('priority', 'medium'),
+                expected_impact=f"Implementing these changes could reduce costs to below ${expected_threshold:.2f}"
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to analyze cost efficiency: {e}")
+            # Fallback analysis
+            specific_issues = [
+                f"Total cost ${total_cost:.2f} vs threshold ${expected_threshold:.2f}",
+                f"Tokens used: {tokens_used:,}",
+                f"Cost efficiency score: {actual_score:.2f}"
+            ]
+            
+            recommendations = [
+                "Review and optimize prompt lengths",
+                "Reduce redundant tool calls",
+                "Implement token usage limits per complexity level",
+                "Use more concise response formats"
+            ]
+            
+            if cost_exceeded:
+                recommendations.insert(0, f"Reduce costs by ${total_cost - expected_threshold:.2f} to meet threshold")
+            
+            return FailureAnalysis(
+                dimension="cost_efficiency",
+                root_cause=f"Cost efficiency {actual_score:.2f} below target {target_score:.2f}",
+                specific_issues=specific_issues,
+                recommendations=recommendations,
+                priority="high" if cost_exceeded else "medium"
+            )
+    
     # ==================== Generic Interfaces ====================
     
     async def score_component(
@@ -1228,6 +1462,7 @@ class LLMTestJudge:
             "analysis_quality": self.analyze_quality_issues,
             "tool_usage": self.analyze_tool_usage_issues,
             "response_structure": self.analyze_response_structure_issues,
+            "cost_efficiency": self.analyze_cost_efficiency_issues,
         }
         
         if dimension not in analysis_methods:

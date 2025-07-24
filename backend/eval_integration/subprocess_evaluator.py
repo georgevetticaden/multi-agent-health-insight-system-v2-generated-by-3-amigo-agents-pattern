@@ -57,8 +57,8 @@ def parse_evaluation_event(line: str) -> Optional[Dict[str, Any]]:
         elif "Finalizing results" in line:
             return {"type": "finalizing", "message": "📊 Finalizing evaluation results"}
     
-    # Dimension results
-    elif "PASS" in line and ":" in line and any(dim in line for dim in ["complexity_classification", "specialty_selection", "analysis_quality", "tool_usage", "response_structure"]):
+    # Dimension results - INCLUDING cost_efficiency
+    elif "PASS" in line and ":" in line and any(dim in line for dim in ["complexity_classification", "specialty_selection", "analysis_quality", "tool_usage", "response_structure", "cost_efficiency"]):
         # Parse: ✅ PASS analysis_quality: 0.850 (target: 0.80)
         parts = line.split(":")
         if len(parts) >= 2:
@@ -76,7 +76,7 @@ def parse_evaluation_event(line: str) -> Optional[Dict[str, Any]]:
             except:
                 pass
     
-    elif "FAIL" in line and ":" in line and any(dim in line for dim in ["complexity_classification", "specialty_selection", "analysis_quality", "tool_usage", "response_structure"]):
+    elif "FAIL" in line and ":" in line and any(dim in line for dim in ["complexity_classification", "specialty_selection", "analysis_quality", "tool_usage", "response_structure", "cost_efficiency"]):
         # Parse: ❌ FAIL complexity_classification: 0.000 (target: 0.90)
         parts = line.split(":")
         if len(parts) >= 2:

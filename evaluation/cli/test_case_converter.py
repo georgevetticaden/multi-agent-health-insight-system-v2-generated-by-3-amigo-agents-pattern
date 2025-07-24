@@ -20,6 +20,7 @@ class CMOTestCase:
     category: str = "general"
     notes: Optional[str] = None
     based_on_real_query: bool = False
+    expected_cost_threshold: Optional[float] = None
 
 
 def convert_json_to_cmo_test_case(test_dict: Dict[str, Any]) -> CMOTestCase:
@@ -39,7 +40,8 @@ def convert_json_to_cmo_test_case(test_dict: Dict[str, Any]) -> CMOTestCase:
         description=test_dict.get("notes", ""),
         category=test_dict.get("category", "general"),
         notes=test_dict.get("notes"),
-        based_on_real_query=test_dict.get("based_on_real_query", False)
+        based_on_real_query=test_dict.get("based_on_real_query", False),
+        expected_cost_threshold=test_dict.get("expected_cost_threshold")
     )
 
 

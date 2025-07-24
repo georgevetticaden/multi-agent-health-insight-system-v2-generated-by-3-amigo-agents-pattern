@@ -136,15 +136,7 @@ const TestCaseDisplay: React.FC<TestCaseDisplayProps> = ({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Pre-population Notice */}
-      {isExpectedMatchingActual() && (!testCase.modified_fields || testCase.modified_fields.length === 0) && (
-        <div className="bg-blue-50 border-b border-blue-200 px-4 py-2 flex items-center gap-2">
-          <Info className="w-4 h-4 text-blue-600 flex-shrink-0" />
-          <p className="text-xs text-blue-700">
-            Expected values have been pre-populated from actual execution. Please review and adjust them based on your analysis with the EDA Agent.
-          </p>
-        </div>
-      )}
+
       
       {/* Test Case Header */}
       <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">

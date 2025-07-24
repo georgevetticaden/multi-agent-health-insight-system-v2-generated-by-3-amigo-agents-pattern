@@ -9,21 +9,26 @@ The Multi-Agent Health Insight System has been successfully implemented based on
 1. **Part 1: System Creation Guide (Historical Reference)** - How the system was built
 2. **Part 2: Enhancement & Feature Development Guide (Active)** - How to extend and improve the system
 
-## Recent Enhancements
+## System Architecture Highlights
 
-### Evaluation Framework Architecture Cleanup (Completed)
-- **Resolved module conflicts** between `/evaluation` (main framework) and `/backend/evaluation` by renaming to `/backend/eval_integration`
-- **Removed redundant code** - Deleted outdated `backend/evaluation/agents/` and `backend/evaluation/core/` directories
-- **Subprocess execution pattern** - Uses subprocess to run evaluations from main framework, avoiding import conflicts
-- **Event-driven evaluation progress** - Replaced streaming with lifecycle event capture for ~30 second evaluation process
-- **LLM-as-Judge terminology** - Aligned event messages with Analyze-Measure-Improve lifecycle from blog post
+### Multi-Agent Health System
+- **Orchestrator-Worker Pattern**: CMO agent orchestrates 8 medical specialists
+- **SSE Streaming**: Real-time updates with proper event handling
+- **Visualization Engine**: Generates self-contained React components with embedded data
+- **Tool Integration**: Pre-built Snowflake Cortex tools for health data queries
 
-### Trace Viewer Improvements (Completed)
-- **Fixed text overflow issue** in hierarchical trace viewer where LLM responses were getting cut off
-- **Added non-XML task format parsing** to handle plain text task assignments  
-- **Made formatted view the default** for better user experience
-- **Added timeline stage click navigation** - clicking on execution timeline stages navigates to the corresponding agent analysis details
-- **Added trace viewer link in Medical Team tab** - displays "View Health Query Trace" button when analysis is complete
+### Evaluation Framework
+- **Metadata-Driven Architecture**: BaseEvaluator provides generic, extensible foundation
+- **Hybrid Evaluation Methods**: Combines deterministic rules with LLM Judge evaluation
+- **Unified Data Storage**: All evaluation data in centralized `/evaluation/data/` directory
+- **Multi-Agent Support**: Separate test schemas and evaluators for CMO, Specialist, and Visualization agents
+- **Subprocess Execution**: Clean separation between web UI and evaluation framework
+
+### Trace Viewer Features
+- **Hierarchical Event Display**: Clear visualization of multi-agent execution flow
+- **Smart Content Formatting**: Automatic detection and formatting of LLM responses, tool calls, and data
+- **Timeline Navigation**: Click on execution stages to jump to corresponding agent analysis
+- **Standalone HTML Viewer**: View traces without backend server running
 
 ---
 
@@ -642,33 +647,28 @@ async def test_new_specialist():
 
 ---
 
-# Part 3: Evaluation Storage Architecture Refactor
+# Part 3: Evaluation System Architecture
 
-## Current Status: Evaluation System Working ✅
-- QE Agent fully operational with "run" and "details" commands
-- Evaluation engine working with comprehensive scoring across 5 dimensions
-- HTML report generation with CLI-style drill-downs and LLM Judge analysis
-- Report URLs clickable and served via HTTP API
-- Eval Dev Studio UI implemented with three-panel layout
+## System Overview
 
-## Active Refactor: Unified Evaluation Storage Architecture
+The evaluation system provides comprehensive testing capabilities for the multi-agent health insight system:
 
-### Problem Being Solved
-- **Event Loss**: Evaluation lifecycle events lost on server reload (stored in-memory)
-- **Data Fragmentation**: Traces, results, and test cases scattered across different locations
-- **Format Divergence**: CLI uses Python test cases, Studio generates JSON
-- **Result Duplication**: Same evaluation data stored in 3 different files
+### Core Features
+- **QE Agent**: Fully operational with "run" and "details" commands for test case management
+- **Evaluation Engine**: Comprehensive scoring across 5 dimensions with metadata-driven architecture
+- **HTML Reports**: Beautiful reports with CLI-style drill-downs and LLM Judge analysis
+- **Eval Dev Studio**: Three-panel UI for test case management and evaluation
+- **Unified Storage**: All evaluation data in centralized `/evaluation/data/` directory
 
-### Solution Architecture
+### Evaluation Data Architecture
 
 ```
 evaluation/
-├── agents/                       # Framework code only
-├── cli/                          # CLI interface
-├── core/                         # Core logic
-├── framework/                    # Framework components
-│
-└── data/                         # NEW: All evaluation data
+├── agents/                       # Agent-specific evaluation code
+├── cli/                          # Command-line interface
+├── core/                         # Core types and interfaces
+├── framework/                    # Evaluation framework components
+└── data/                         # All evaluation data artifacts
     ├── config.py                 # Central configuration
     ├── test_loader.py            # Multi-agent test loader
     ├── schemas/                  # Agent-specific test schemas
@@ -676,184 +676,92 @@ evaluation/
     │   ├── specialist_schema.json
     │   └── visualization_schema.json
     ├── traces/                   # Health query traces
-    ├── test-suites/              # ALL test cases in JSON
+    ├── test-suites/              # All test cases in JSON
     │   ├── framework/            # Organized by agent type
-    │   │   ├── cmo/
-    │   │   ├── specialist/
-    │   │   └── visualization/
-    │   └── studio-generated/     # Organized by agent type
-    │       ├── cmo/
-    │       ├── specialist/
-    │       └── visualization/
+    │   └── studio-generated/     # User-created tests
     └── runs/                     # Evaluation results
         └── [date]/eval_[id]/
-            ├── metadata.json     # Includes agent_type
-            ├── events/*.json     # Persistent events
-            ├── result.json       # Single source
-            └── report/index.html
+            ├── metadata.json     # Run metadata
+            ├── events/*.json     # Persistent lifecycle events
+            ├── result.json       # Evaluation result
+            └── report/index.html # HTML report
 ```
 
-### Key Changes
-1. **Multi-Agent Test Format**: Each agent type has its own JSON schema
-2. **File-Based Event Storage**: Events persist across server reloads
-3. **Single Result File**: No more duplication
-4. **Configurable Storage**: Can redirect via environment variables
-5. **Agent-Type Organization**: Tests organized by agent type for clarity
+### Key Architecture Benefits
+1. **Multi-Agent Support**: Each agent type has its own JSON schema and test organization
+2. **Persistent Events**: Evaluation lifecycle events survive server reloads
+3. **Unified Format**: All test cases use JSON format (framework and studio-generated)
+4. **No Duplication**: Single result file per evaluation
+5. **Configurable Storage**: Redirect paths via environment variables
+6. **Clean Separation**: Framework code vs data storage
 
-### Implementation Status ✅ COMPLETED
-- [x] Phase 1: Foundation & Configuration
-- [x] Phase 2: Convert Python tests to JSON
-- [x] Phase 3: Refactor all storage operations
-- [x] Phase 4: Update CLI framework
-- [x] Phase 5: Cleanup & Testing
+## Eval Dev Studio UI
 
-### Storage Features Implemented
-1. **Unified Storage Paths**:
-   - Traces: `evaluation/data/traces/YYYY-MM-DD/HHMMSS_trace_id.json`
-   - Runs: `evaluation/data/runs/YYYY-MM-DD/eval_*_trace_*/`
-   - Tests: `evaluation/data/test-suites/framework/[agent_type]/`
-
-2. **Enhanced Naming**:
-   - Trace files include timestamp prefix for chronological sorting
-   - Run folders include trace ID suffix for easy correlation
-   - Environment variables: `EVAL_TRACES_DIR`, `EVAL_RUNS_DIR`
-
-3. **Backward Compatibility**:
-   - System handles both old and new trace naming patterns
-   - Preserved `saved-traces` and `saved-runs` directories
-
-See `evaluation/data/REFACTOR_PLAN.md` for implementation details.
+### Three-Panel Layout
 
 #### **Left Panel: QE/Evaluation Agent Interface**
-- Similar to the current Medical Team panel
 - QE Agent chat interface for test case creation and evaluation commands
 - Real-time status of running evaluations
 - Agent conversation history and context
 - Quick actions (run evaluation, view details, reset)
 
 #### **Middle Panel: Test Case & Trace Viewer**
-- Similar to the current chat interface but focused on test management
-- **Primary View**: List/grid of test cases with:
-  - Test case ID, query preview, complexity, expected vs actual specialists
-  - Status indicators (created, evaluated, passed/failed)
-  - Quick action buttons (run, view report, edit, duplicate)
-- **Detail View**: When a test case is selected:
-  - Full test case details with all parameters
-  - Trace viewer integration (if trace_id exists)
-  - Evaluation history for that test case
-  - Side-by-side expected vs actual comparisons
+- **Test Case List**: Grid view with ID, query preview, complexity, status
+- **Detail View**: Full test case parameters, trace viewer integration
+- **Quick Actions**: Run, view report, edit, duplicate
+- **Evaluation History**: Timeline of all evaluations for a test case
 
-#### **Right Panel: Multi-Tab Information Panel**
-Similar to current visualization panel but with evaluation-focused tabs:
+#### **Right Panel: Multi-Tab Information**
 - **📊 Evaluation Reports** - Interactive HTML reports with drill-downs
 - **📈 Performance Analytics** - Charts and metrics across test cases
 - **🔍 Test Case Details** - Detailed breakdown of selected test case
 - **📋 Evaluation History** - Timeline of all evaluations
-- **⚙️ Test Management** - Bulk operations, import/export, templates
+- **⚙️ Test Management** - Bulk operations, import/export
 
-### Key Design Principles
+### Test Case Lifecycle
+1. **Creation**: Generate via QE Agent or manual input
+2. **Organization**: Categories, tags, complexity grouping
+3. **Execution**: Run single or batch evaluations
+4. **Analysis**: View results, compare runs, identify patterns
+5. **Iteration**: Edit, refine, and re-run test cases
 
-#### **Consistency with Current System**
-- Reuse existing UI components and patterns from Health Insight System
-- Maintain the same three-panel responsive layout
-- Use consistent styling, colors, and interaction patterns
-- Preserve the familiar user experience
+# Part 4: Evaluation Framework Integration
 
-#### **Test Case Lifecycle Management**
-- **Creation**: Generate test cases via QE Agent or manual input
-- **Organization**: Categories, tags, complexity grouping
-- **Execution**: Run single or batch evaluations
-- **Analysis**: View results, compare runs, identify patterns
-- **Iteration**: Edit, refine, and re-run test cases
+## Architecture Overview
 
-#### **Advanced Features to Consider**
-- **Test Case Templates** - Predefined test structures for different scenarios
-- **Batch Operations** - Run multiple evaluations, bulk edit, mass actions
-- **Comparison Views** - Side-by-side test case comparisons, A/B testing
-- **Performance Tracking** - Historical trends, regression detection
-- **Export/Import** - CSV, JSON, integration with external systems
-
-### Technical Architecture Considerations
-
-#### **Backend Extensions Needed**
-- **Test Case Storage**: Database or file-based persistence
-- **Batch Evaluation API**: Handle multiple test cases concurrently  
-- **Analytics API**: Aggregate statistics and performance metrics
-- **Test Management API**: CRUD operations, search, filtering
-
-#### **Frontend Components to Develop**
-- **TestCaseGrid**: Sortable, filterable list of test cases
-- **TestCaseDetail**: Rich detail view with editing capabilities
-- **EvaluationDashboard**: Analytics and performance visualization
-- **BatchOperations**: Multi-select and bulk action interface
-
-#### **Integration Points**
-- Reuse existing **QE Agent** for test case generation and evaluation
-- Integrate with **Trace Viewer** for test cases with associated traces  
-- Connect to **Report System** for displaying HTML evaluation reports
-- Maintain **SSE Streaming** for real-time evaluation progress
-
-### Discussion Points for Design Session
-
-When you return, let's discuss:
-
-1. **UI Layout Priorities**: Which panel should be most prominent? Should test case list be the primary focus?
-
-2. **Test Case Data Model**: What additional fields do we need beyond current test case structure?
-
-3. **User Workflows**: Primary use cases - are users mostly creating new tests, analyzing results, or managing existing tests?
-
-4. **Filtering & Search**: What criteria are most important for finding test cases? (complexity, status, score, date, category)
-
-5. **Real-time Updates**: Should test case status update in real-time during evaluations? How to handle concurrent users?
-
-6. **Performance Considerations**: How many test cases should we optimize for? Pagination vs infinite scroll?
-
-This design will create a comprehensive test management system that maintains the familiar three-panel experience while providing powerful evaluation and analysis capabilities.
-
-# Part 4: Evaluation Framework Architecture
-
-## Current Architecture Overview
-
-The evaluation framework is split into two separate but integrated systems:
+The evaluation framework consists of two integrated systems:
 
 ### 1. Main Evaluation Framework (`/evaluation`)
-The comprehensive evaluation system implementing Anthropic's best practices:
-- **Core Components**: CMOEvaluator, test cases, dimensions, LLM Judge implementation
-- **Location**: Root `/evaluation` directory
-- **Purpose**: Full evaluation engine with all scoring logic and analysis capabilities
-- **Access**: Run directly via CLI or imported for standalone use
+- **Purpose**: Comprehensive evaluation system implementing Anthropic's best practices
+- **Components**: CMOEvaluator, SpecialistEvaluator, test cases, dimensions, LLM Judge
+- **Access**: CLI (`python -m evaluation.cli.run_evaluation`) or direct import
+- **Features**: Metadata-driven architecture, hybrid evaluation methods, component-based scoring
 
-### 2. Backend Evaluation Integration (`/backend/eval_integration`)
-Integration layer for the Eval Development Studio:
-- **Core Components**: subprocess_evaluator.py, cli_evaluator_adapter.py, trace_parser.py, mock_agents/
-- **Location**: `/backend/eval_integration` (renamed from `/backend/evaluation` to avoid conflicts)
-- **Purpose**: Bridges the web UI with the main evaluation framework
-- **Access**: Called by backend services when evaluating from the Studio
+### 2. Backend Integration Layer (`/backend/eval_integration`)
+- **Purpose**: Bridges web UI with main evaluation framework
+- **Components**: subprocess_evaluator.py, cli_evaluator_adapter.py, trace_parser.py
+- **Access**: Called by backend services for Studio evaluations
+- **Features**: Subprocess execution, event streaming, mock agents for trace replay
 
-## Why Subprocess Execution?
+## Subprocess Execution Pattern
 
-The evaluation framework uses subprocess execution to avoid Python import path conflicts:
+The framework uses subprocess execution to maintain clean separation:
 
 ```python
-# Problem: Direct imports cause module name conflicts
-from evaluation.agents.cmo.evaluator import CMOEvaluator  # Conflicts with backend paths
-
-# Solution: Run evaluation in subprocess with clean environment
+# Avoids module conflicts between backend and evaluation paths
 result = run_evaluation_subprocess(test_case, trace_data, api_key, event_callback)
 ```
 
-This approach:
-- Maintains clean separation between systems
-- Avoids "module not found" and circular import issues
-- Allows each system to have its own dependencies
-- Enables real-time event streaming from subprocess
+Benefits:
+- Clean separation between systems
+- No import path conflicts
+- Independent dependencies
+- Real-time event streaming
 
 ## Evaluation Lifecycle Events
 
-During the ~30 second evaluation process, the system captures and reports key lifecycle events:
+The ~30 second evaluation process reports these lifecycle events:
 
-### Event Types and Flow
 1. **trace_load** - "🔍 Loading execution trace"
 2. **test_case_ready** - "📋 Test case prepared"
 3. **dimension_start** - "📏 Evaluating [Dimension Name]"
@@ -867,42 +775,23 @@ During the ~30 second evaluation process, the system captures and reports key li
 
 ### Event API
 ```python
-# Frontend polls for events during evaluation
 GET /api/evaluation/events/{evaluation_id}?start_index=0
 
-# Response
+# Response format
 {
     "evaluation_id": "...",
     "status": "running",
-    "events": [
-        {
-            "type": "trace_load",
-            "message": "🔍 Loading execution trace",
-            "timestamp": "2025-01-07T..."
-        },
-        ...
-    ],
+    "events": [{"type": "...", "message": "...", "timestamp": "..."}],
     "total_events": 15,
     "has_more": false
 }
 ```
 
-## Key Integration Points
+## Integration Points
 
-### 1. Test Case Flow
-```
-QE Agent → Test Case JSON → Backend Service → Subprocess → Main Evaluator
-```
-
-### 2. Trace Processing
-```
-Health Query → Trace File → TraceDataExtractor → MockCMOAgent → Evaluation
-```
-
-### 3. Event Streaming
-```
-Subprocess Output → Event Parser → Backend Storage → API Endpoint → Frontend
-```
+- **Test Case Flow**: QE Agent → JSON → Backend → Subprocess → Evaluator
+- **Trace Processing**: Health Query → Trace → Extractor → MockAgent → Evaluation
+- **Event Streaming**: Subprocess → Parser → Storage → API → Frontend
 
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.

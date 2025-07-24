@@ -2,7 +2,7 @@
 
 This evaluation framework implements Anthropic's best practices for testing and evaluating AI systems, featuring a metadata-driven hybrid approach combining deterministic evaluation with LLM-based judgment for comprehensive testing of our multi-agent health insight system.
 
-> **Note**: The evaluation framework follows a **metadata-driven architecture** with clean separation between the evaluation framework and agent implementations. BaseEvaluator provides a generic, extensible foundation while agent-specific evaluators implement domain-specific evaluation logic.
+The evaluation framework follows a **metadata-driven architecture** with clean separation between the evaluation framework and agent implementations. BaseEvaluator provides a generic, extensible foundation while agent-specific evaluators implement domain-specific evaluation logic.
 
 ## Table of Contents
 - [Overview](#overview)
@@ -103,6 +103,36 @@ evaluation/
 │   ├── logging_config.py         # Logging configuration
 │   ├── check_setup.py            # Setup verification
 │   └── __init__.py
+├── data/                         # All evaluation data artifacts
+│   ├── config.py                 # Central configuration module
+│   ├── test_loader.py            # Multi-agent test case loader
+│   ├── schemas/                  # Agent-specific test schemas
+│   │   ├── cmo_schema.json       # CMO agent test schema
+│   │   ├── specialist_schema.json # Specialist test schema
+│   │   └── visualization_schema.json # Visualization test schema
+│   ├── traces/                   # Health query execution traces
+│   │   └── {date}/
+│   │       └── {timestamp}_trace_{id}.json
+│   ├── test-suites/              # All test cases in JSON format
+│   │   ├── framework/            # Framework-provided tests by agent type
+│   │   │   ├── cmo/              # CMO agent tests
+│   │   │   ├── specialist/       # Specialist agent tests
+│   │   │   └── visualization/    # Visualization agent tests
+│   │   └── studio-generated/     # User-created tests by agent type
+│   │       ├── cmo/              # CMO tests by date
+│   │       ├── specialist/       # Specialist tests by date
+│   │       └── visualization/    # Visualization tests by date
+│   └── runs/                     # Evaluation execution results
+│       └── {date}/
+│           └── eval_{id}_{trace_id}/
+│               ├── metadata.json  # Run metadata (includes agent_type)
+│               ├── events/        # Lifecycle events (persistent)
+│               │   ├── 001_trace_load.json
+│               │   ├── 002_dimension_start.json
+│               │   └── ...
+│               ├── result.json    # Evaluation result
+│               └── report/
+│                   └── index.html # HTML report
 ├── test_runs/                    # All test outputs (created on first run)
 │   └── {agent}-{test_type}_{timestamp}/ # Unique directory per test run
 │       ├── evaluation.log        # Log file for this run
@@ -623,6 +653,215 @@ def get_evaluation_metadata(cls) -> AgentEvaluationMetadata:
 LOG_LEVEL=DEBUG python -m evaluation.cli.run_evaluation --agent cmo --test example
 ```
 
+## Evaluation Data Architecture
+
+The `evaluation/data/` directory provides a unified storage system for all evaluation-related data artifacts, supporting multiple agent types with agent-specific test schemas while maintaining a consistent storage structure.
+
+### Data Storage Components
+
+#### 1. **Configuration (`data/config.py`)**
+
+Central configuration for all storage operations:
+
+```python
+from evaluation.data.config import EvaluationDataConfig
+
+# Get paths
+trace_path = EvaluationDataConfig.get_trace_path(trace_id)
+run_dir = EvaluationDataConfig.get_run_dir(evaluation_id)
+test_path = EvaluationDataConfig.get_test_case_path(test_id)
+
+# Initialize directories
+EvaluationDataConfig.init_directories()
+```
+
+#### 2. **Test Loader (`data/test_loader.py`)**
+
+Unified loader for all test cases:
+
+```python
+from evaluation.data.test_loader import TestLoader
+
+# Load all tests (framework + studio)
+all_tests = TestLoader.load_all_tests()
+
+# Load specific test
+test = TestLoader.load_test_by_id("test_001")
+
+# Load by agent type
+cmo_tests = TestLoader.load_all_tests(agent_type="cmo")
+specialist_tests = TestLoader.load_all_tests(agent_type="specialist")
+```
+
+#### 3. **Test Case Schemas**
+
+Each agent type has its own test case schema:
+
+**CMO Test Schema:**
+```json
+{
+  "id": "cmo_test_001",
+  "agent_type": "cmo",
+  "query": "Show me my blood pressure trends",
+  "expected_complexity": "STANDARD",
+  "expected_specialties": ["CARDIOLOGY", "DATA_ANALYSIS"],
+  "key_data_points": ["blood_pressure", "trends"],
+  "category": "cardiac",
+  "notes": "Tests basic cardiac data analysis",
+  "trace_id": "abc123",
+  "created_at": "2025-01-23T10:30:00Z",
+  "created_by": "studio"
+}
+```
+
+**Specialist Test Schema:**
+```json
+{
+  "id": "specialist_test_001",
+  "agent_type": "specialist",
+  "specialist_type": "CARDIOLOGY",
+  "task": {
+    "objective": "Analyze blood pressure trends",
+    "context": "Patient history context",
+    "expected_output": "Trend analysis",
+    "priority": "high",
+    "max_tool_calls": 5
+  },
+  "expected_tools": ["execute_health_query_v2"],
+  "expected_data_points": ["systolic_bp", "diastolic_bp"],
+  "validation_criteria": {},
+  "created_at": "2025-01-23T10:30:00Z",
+  "created_by": "framework"
+}
+```
+
+**Visualization Test Schema:**
+```json
+{
+  "id": "viz_test_001",
+  "agent_type": "visualization",
+  "query": "Create blood pressure chart",
+  "input_data": {
+    "type": "time_series",
+    "metrics": ["systolic_bp", "diastolic_bp"]
+  },
+  "expected_chart_type": "LineChart",
+  "expected_features": ["dual_y_axis", "trend_line"],
+  "created_at": "2025-01-23T10:30:00Z",
+  "created_by": "studio"
+}
+```
+
+### Data Flow
+
+#### Creating a Test Case
+1. Health Query → Creates trace in `data/traces/`
+2. QE Agent → Generates test case
+3. Save → Stores in `data/test-suites/studio-generated/`
+
+#### Running an Evaluation
+1. Load test case from `data/test-suites/`
+2. Create run directory in `data/runs/[date]/eval_[id]/`
+3. Stream events to `events/` directory (persistent storage)
+4. Save final result to `result.json`
+5. Generate report in `report/index.html`
+
+#### Event Storage
+Events are stored as numbered JSON files for chronological ordering:
+- `001_trace_load.json`
+- `002_dimension_start.json`
+- `003_complexity_eval.json`
+- etc.
+
+### Environment Variables
+
+Configure storage locations via environment:
+
+```bash
+# Redirect traces to temp storage
+EVAL_TRACES_DIR=/tmp/evaluation/traces
+
+# Redirect runs to larger disk
+EVAL_RUNS_DIR=/mnt/storage/evaluation/runs
+```
+
+### Storage Usage Examples
+
+#### Backend Service
+```python
+# Save a trace
+trace_path = EvaluationDataConfig.get_trace_path(trace_id)
+trace_path.write_text(json.dumps(trace_data))
+
+# Save a test case with agent type
+test_path = EvaluationDataConfig.get_test_case_path(
+    test_id="test_001",
+    agent_type="cmo"
+)
+test_path.parent.mkdir(parents=True, exist_ok=True)
+test_path.write_text(json.dumps(test_data))
+
+# Start evaluation
+run_dir = EvaluationDataConfig.get_run_dir(evaluation_id)
+metadata = {
+    "evaluation_id": evaluation_id,
+    "agent_type": "cmo",  # Important!
+    "test_case_id": "test_001"
+}
+(run_dir / "metadata.json").write_text(json.dumps(metadata))
+
+# Store event
+event_file = run_dir / "events" / f"{num:03d}_{event_type}.json"
+event_file.write_text(json.dumps(event_data))
+```
+
+#### Schema Validation
+```python
+# Validate a test case
+test_case = {
+    "id": "test_001",
+    "agent_type": "cmo",
+    "query": "Show me my labs",
+    # ... other fields
+}
+
+if EvaluationDataConfig.validate_test_case(test_case):
+    print("Valid test case")
+else:
+    print("Invalid test case")
+```
+
+### Storage Benefits
+
+1. **Unified Storage**: All evaluation data in one place
+2. **Persistent Events**: Survive server reloads and provide complete evaluation lifecycle tracking
+3. **Single Test Format**: JSON for all test cases (framework and studio-generated)
+4. **No Duplication**: One result file per evaluation
+5. **Configurable**: Redirect storage as needed via environment variables
+6. **Clean Separation**: Framework code vs data
+7. **Multi-Agent Support**: Test cases organized by agent type for clarity
+
+### Maintenance
+
+#### Cleanup Old Data
+```bash
+# Remove traces older than 90 days
+find evaluation/data/traces -mtime +90 -delete
+
+# Archive old runs
+tar -czf runs_2024.tar.gz evaluation/data/runs/2024-*
+rm -rf evaluation/data/runs/2024-*
+```
+
+#### Backup
+```bash
+# Backup test suites (small, important)
+cp -r evaluation/data/test-suites /backup/
+
+# Backup recent runs
+rsync -av evaluation/data/runs/ /backup/runs/
+```
+
 ## Current Capabilities
 
 ### **Metadata-Driven Architecture**
@@ -652,6 +891,13 @@ LOG_LEVEL=DEBUG python -m evaluation.cli.run_evaluation --agent cmo --test examp
 - Dynamic dimension evaluation framework
 - Robust error handling and logging
 - Extensible design for new agent types
+
+### **Unified Data Storage**
+- All evaluation data in centralized `data/` directory
+- Multi-agent test schemas with JSON format
+- Persistent event storage for evaluation lifecycle
+- Configurable storage paths via environment variables
+- Clean organization by agent type and date
 
 ## Future Enhancements
 

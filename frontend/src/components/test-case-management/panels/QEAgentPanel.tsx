@@ -277,7 +277,7 @@ I transform execution traces into powerful test cases and insightful evaluation 
     const userMessage: QEMessage = {
       id: Date.now().toString(),
       role: 'user',
-      content: inputValue.trim(),
+      content: inputValue,
       timestamp: new Date()
     };
 
@@ -339,7 +339,7 @@ I transform execution traces into powerful test cases and insightful evaluation 
       }
     } else {
       // Regular conversation with QE Agent
-      await connectToQEAgent(inputValue.trim());
+      await connectToQEAgent(inputValue);
     }
   };
 
@@ -354,7 +354,7 @@ I transform execution traces into powerful test cases and insightful evaluation 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Bot className="w-5 h-5 text-blue-600" />
-            <h2 className="font-semibold text-gray-900">Eval Development Assistant (EDA)</h2>
+            <h2 className="font-semibold text-gray-900">Eval Development Assistant (EDA Agent)</h2>
             {isConnected && (
               <span className="ml-2 text-xs text-green-600 flex items-center gap-1">
                 <span className="w-2 h-2 bg-green-600 rounded-full"></span>
@@ -471,13 +471,26 @@ I transform execution traces into powerful test cases and insightful evaluation 
       {/* Input */}
       <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200">
         <div className="flex gap-2">
-          <input
-            type="text"
+          <textarea
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder='Share observations or type "run" to evaluate...'
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onPaste={(e) => {
+              // Preserve line breaks when pasting
+              e.preventDefault();
+              const text = e.clipboardData.getData('text');
+              setInputValue(text);
+            }}
+            placeholder='Share observations or type "run" to evaluate... (Ctrl+Enter to send)'
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            rows={3}
             disabled={isLoading}
+            onKeyDown={(e) => {
+              // Allow Ctrl/Cmd+Enter to submit
+              if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                handleSubmit(e);
+              }
+            }}
           />
           <button
             type="submit"

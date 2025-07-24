@@ -45,6 +45,8 @@ async def qe_chat_stream(
     async def generate():
         try:
             logger.info(f"Starting QE chat stream for trace {trace_id}, message: {message[:50]}...")
+            # Debug: Log the full message to check line breaks
+            logger.debug(f"Full message received: {repr(message)}")
             event_count = 0
             
             # Add initial delay to prevent buffering

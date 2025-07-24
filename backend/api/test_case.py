@@ -19,6 +19,12 @@ from services.agents.qe.qe_agent import QEAgent
 from services.qe_analyst_service import QEAnalystService
 from services.evaluation import get_evaluation_service
 
+# Import unified storage config
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent.parent / "evaluation"))
+from evaluation.data.config import EvaluationDataConfig
+
 # Import report service only when needed to avoid startup errors
 ReportService = None
 
@@ -63,6 +69,20 @@ class TestCaseResponse(BaseModel):
     based_on_real_query: bool = True
     category: str = "general"
     modified_fields: list[str] = []  # Track which fields have been modified by QE Agent
+
+
+class TestCaseSave(BaseModel):
+    """Request model for saving a test case to unified storage"""
+    id: str
+    query: str
+    expected_complexity: str
+    expected_specialties: list[str]
+    key_data_points: list[str]
+    expected_cost_threshold: Optional[float] = None
+    notes: str
+    category: str = "general"
+    based_on_real_query: bool = True
+    trace_id: Optional[str] = None
 
 
 # In-memory storage for test cases (in production, use a database)
@@ -491,4 +511,70 @@ Respond with ONLY the 5 keywords, one per line. No explanations or additional te
         
     except Exception as e:
         logger.error(f"Error extracting key data points: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/save-to-storage")
+async def save_test_case_to_storage(test_case: TestCaseSave):
+    """
+    Save a test case to unified storage in evaluation/data/test-suites/studio-generated/cmo.
+    
+    This endpoint persists test cases to the file system in the unified evaluation
+    storage structure for later use in evaluations.
+    """
+    try:
+        logger.info(f"Saving test case {test_case.id} to unified storage")
+        
+        # Initialize directories if needed
+        EvaluationDataConfig.init_directories()
+        
+        # Prepare test case data for CMO agent
+        test_case_data = {
+            "id": test_case.id,
+            "agent_type": "cmo",
+            "query": test_case.query,
+            "expected_complexity": test_case.expected_complexity,
+            "expected_specialties": test_case.expected_specialties,
+            "key_data_points": test_case.key_data_points,
+            "expected_cost_threshold": test_case.expected_cost_threshold,
+            "notes": test_case.notes,
+            "category": test_case.category,
+            "based_on_real_query": test_case.based_on_real_query,
+            "trace_id": test_case.trace_id,
+            "created_at": datetime.now().isoformat(),
+            "created_by": "studio"
+        }
+        
+        # Validate test case against schema
+        if not EvaluationDataConfig.validate_test_case(test_case_data):
+            raise HTTPException(status_code=400, detail="Test case validation failed")
+        
+        # Get the save path
+        save_path = EvaluationDataConfig.get_test_case_path(test_case.id, "cmo")
+        
+        # Ensure the directory exists
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Save to file
+        import json
+        with open(save_path, 'w') as f:
+            json.dump(test_case_data, f, indent=2)
+        
+        logger.info(f"Test case saved successfully to: {save_path}")
+        
+        # Try to get relative path, but fallback to absolute if outside cwd
+        try:
+            display_path = str(save_path.relative_to(Path.cwd()))
+        except ValueError:
+            display_path = str(save_path)
+            
+        return {
+            "success": True,
+            "test_case_id": test_case.id,
+            "save_path": display_path,
+            "message": f"Test case saved to {save_path.name}"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error saving test case to storage: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

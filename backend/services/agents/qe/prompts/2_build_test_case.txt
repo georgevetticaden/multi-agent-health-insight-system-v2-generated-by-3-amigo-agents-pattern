@@ -51,11 +51,18 @@ If current key_data_points = ["hba1c", "metformin", "weight", "glycemic control"
 Then updated key_data_points = ["hba1c", "metformin", "weight", "glycemic control", "diabetes management", "diet"]
 DO NOT replace the list with just ["diet"]!
 
+CONCRETE EXAMPLE OF UPDATING COST THRESHOLD:
+Developer: "Update cost threshold to $1.20" or "Set cost threshold to 1.20"
+Then update: { "expected_cost_threshold": 1.20 }
+Developer: "Cost should be under $0.50" or "Cost threshold should be 50 cents"
+Then update: { "expected_cost_threshold": 0.50 }
+
 Test case JSON structure:
 IMPORTANT: Only include fields that need to be updated based on the developer's message!
 - If they ONLY mention complexity, include ONLY: { "expected_complexity": "NEW_VALUE" }
 - If they ONLY mention specialists, include ONLY: { "expected_specialties": [...] }
 - If they ONLY mention key data points, include ONLY: { "key_data_points": [...] }
+- If they ONLY mention cost/cost threshold, include ONLY: { "expected_cost_threshold": NUMBER }
 - DO NOT include fields that weren't mentioned in the current message
 
 Full structure for reference (but remember - only send changed fields):
@@ -68,6 +75,7 @@ Full structure for reference (but remember - only send changed fields):
   "expected_specialties": ["array", "of", "expected", "specialists"],
   "actual_specialties": ["array", "of", "actual", "specialists"],
   "key_data_points": ["important", "data", "elements"],
+  "expected_cost_threshold": 1.0,  // Cost in dollars (e.g., 0.25, 0.50, 1.00, 2.00)
   "category": "complexity_misclassification|specialist_selection|synthesis_quality|etc",
   "notes": "Developer's observations and the specific issue identified"
 }

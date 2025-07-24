@@ -249,12 +249,14 @@ class ReportService:
             "analysis_quality_score": dimension_results.get("analysis_quality", {}).get("score", 0),
             "tool_usage_score": dimension_results.get("tool_usage", {}).get("score", 0),
             "response_structure_score": dimension_results.get("response_structure", {}).get("score", 0),
+            "cost_efficiency_score": dimension_results.get("cost_efficiency", {}).get("score", 0),
             
             # Component breakdowns
             "specialty_component_breakdown": dimension_results.get("specialty_selection", {}).get("components", {}),
             "analysis_quality_breakdown": dimension_results.get("analysis_quality", {}).get("components", {}),
             "tool_component_breakdown": dimension_results.get("tool_usage", {}).get("components", {}),
             "response_component_breakdown": dimension_results.get("response_structure", {}).get("components", {}),
+            "cost_efficiency_breakdown": dimension_results.get("cost_efficiency", {}).get("components", {}),
             
             # Details
             "expected_complexity": test_case.get("expected_complexity"),
@@ -274,6 +276,12 @@ class ReportService:
             
             "response_valid": dimension_results.get("response_structure", {}).get("details", {}).get("response_valid", True),
             "structure_errors": dimension_results.get("response_structure", {}).get("details", {}).get("structure_errors", []),
+            
+            # Cost efficiency details
+            "expected_cost_threshold": test_case.get("expected_cost_threshold"),
+            "actual_total_cost": dimension_results.get("cost_efficiency", {}).get("details", {}).get("actual_total_cost"),
+            "tokens_used": dimension_results.get("cost_efficiency", {}).get("details", {}).get("tokens_used", 0),
+            "cost_within_threshold": dimension_results.get("cost_efficiency", {}).get("details", {}).get("cost_within_threshold", False),
             
             # Metadata
             "response_time_ms": evaluation_result.get("execution_time_ms", 0),
@@ -309,7 +317,8 @@ class ReportService:
                 "specialty_selection": 1.0 if individual_result["specialty_f1_score"] >= 0.85 else 0.0,
                 "analysis_quality": 1.0 if individual_result["analysis_quality_score"] >= 0.80 else 0.0,
                 "tool_usage": 1.0 if individual_result["tool_usage_score"] >= 0.90 else 0.0,
-                "response_structure": 1.0 if individual_result["response_structure_score"] >= 0.95 else 0.0
+                "response_structure": 1.0 if individual_result["response_structure_score"] >= 0.95 else 0.0,
+                "cost_efficiency": 1.0 if individual_result["cost_efficiency_score"] >= 0.80 else 0.0
             },
             
             # Average dimension scores
@@ -318,7 +327,8 @@ class ReportService:
                 "specialty_selection": individual_result["specialty_selection_score"],
                 "analysis_quality": individual_result["analysis_quality_score"],
                 "tool_usage": individual_result["tool_usage_score"],
-                "response_structure": individual_result["response_structure_score"]
+                "response_structure": individual_result["response_structure_score"],
+                "cost_efficiency": individual_result["cost_efficiency_score"]
             }
         }
         
@@ -346,7 +356,7 @@ class ReportService:
         logger.info(f"Summary overall_success: {summary.get('overall_success', 'NOT_FOUND')}")
         logger.info(f"Summary overall_success_rate: {summary.get('overall_success_rate', 'NOT_FOUND')}")
         logger.info(f"Dimension scores:")
-        for dim_name in ['complexity_classification', 'specialty_selection', 'analysis_quality', 'tool_usage', 'response_structure']:
+        for dim_name in ['complexity_classification', 'specialty_selection', 'analysis_quality', 'tool_usage', 'response_structure', 'cost_efficiency']:
             score = individual_result.get(f"{dim_name}_score", 'NOT_FOUND')
             logger.info(f"  {dim_name}: {score}")
         logger.info(f"=== END CLI FORMAT RESULTS DEBUG ===")

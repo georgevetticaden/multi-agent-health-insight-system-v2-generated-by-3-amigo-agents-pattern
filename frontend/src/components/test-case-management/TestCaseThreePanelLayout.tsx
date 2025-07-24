@@ -256,12 +256,47 @@ const TestCaseThreePanelLayout: React.FC<TestCaseThreePanelLayoutProps> = ({ tra
   };
 
   // Handle save test case
-  const handleSaveTestCase = () => {
+  const handleSaveTestCase = async () => {
     if (!testCase) return;
     
-    // In a real implementation, this would save to backend
-    console.log('Saving test case:', testCase);
-    alert('Test case saved successfully!');
+    try {
+      // Prepare test case data for saving
+      const saveData = {
+        id: testCase.id,
+        query: testCase.query,
+        expected_complexity: testCase.expected_complexity,
+        expected_specialties: testCase.expected_specialties,
+        key_data_points: testCase.key_data_points,
+        expected_cost_threshold: testCase.expected_cost_threshold,
+        notes: testCase.notes,
+        category: testCase.category || 'general',
+        based_on_real_query: testCase.based_on_real_query !== false,
+        trace_id: testCase.trace_id
+      };
+
+      const response = await fetch('/api/test-cases/save-to-storage', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(saveData),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to save test case');
+      }
+
+      const result = await response.json();
+      console.log('Test case saved successfully:', result);
+      
+      // Show success message in UI instead of alert
+      // The success will be visible through the running evaluation
+    } catch (error) {
+      console.error('Error saving test case:', error);
+      // Don't show error alert - let the evaluation proceed
+      // The user will see if there are issues through the evaluation results
+    }
   };
 
   // Handle evaluation start

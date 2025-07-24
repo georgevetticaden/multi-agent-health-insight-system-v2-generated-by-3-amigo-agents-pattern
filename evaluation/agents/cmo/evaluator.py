@@ -157,6 +157,12 @@ class CMOEvaluationResult(EvaluationResult):
     # Failure analyses from LLM Judge
     failure_analyses: Optional[List[Dict[str, Any]]] = None
     
+    # Cost and token data
+    expected_cost_threshold: Optional[float] = None
+    actual_total_cost: Optional[float] = None
+    tokens_used: Optional[int] = None
+    cost_within_threshold: bool = False
+    
     # Weighted scoring
     weighted_score: float = 0.0
     dimension_success_rate: float = 0.0  # Percentage of dimensions that passed
@@ -362,7 +368,8 @@ class CMOEvaluator(BaseEvaluator):
                 
                 # Cost and token data from initial_data (extracted from trace)
                 'total_cost': initial_data.get('total_cost', 0.0),
-                'tokens_used': initial_data.get('tokens_used', 0)
+                'tokens_used': initial_data.get('tokens_used', 0),
+                'expected_cost_threshold': getattr(test_case, 'expected_cost_threshold', None)
             }
             
             # Evaluate dimensions dynamically
@@ -510,6 +517,11 @@ class CMOEvaluator(BaseEvaluator):
                 # Failure analyses
                 failure_analyses=failure_analyses if failure_analyses else None,
                 
+                # Cost and token data
+                expected_cost_threshold=result_data.get('expected_cost_threshold'),
+                actual_total_cost=result_data.get('total_cost'),
+                cost_within_threshold=(result_data.get('total_cost', 0) <= result_data.get('expected_cost_threshold', float('inf'))) if result_data.get('expected_cost_threshold') else True,
+                
                 # Weighted scoring
                 weighted_score=weighted_score,
                 dimension_success_rate=dimension_success_rate,
@@ -553,7 +565,12 @@ class CMOEvaluator(BaseEvaluator):
                 analysis_quality_breakdown={},
                 tool_component_breakdown={},
                 response_component_breakdown={},
-                cost_efficiency_breakdown={}
+                cost_efficiency_breakdown={},
+                
+                # Cost and token data (defaults for error case)
+                expected_cost_threshold=getattr(test_case, 'expected_cost_threshold', None),
+                actual_total_cost=None,
+                cost_within_threshold=False
             )
     
     def _collect_specialty_data(self, expected: Set[str], actual: Set[str]) -> Dict[str, Any]:
@@ -1126,15 +1143,20 @@ Return a score where:
                 total_cost = result_data.get('total_cost', 0.0)
                 complexity = result_data.get('actual_complexity', 'STANDARD')
                 
-                # Define cost thresholds per complexity
-                cost_thresholds = {
-                    'SIMPLE': 0.25,      # $0.25 for simple queries
-                    'STANDARD': 0.50,    # $0.50 for standard queries
-                    'COMPLEX': 1.00,     # $1.00 for complex queries
-                    'COMPREHENSIVE': 2.00 # $2.00 for comprehensive queries
-                }
-                
-                threshold = cost_thresholds.get(complexity, 0.50)
+                # Use expected_cost_threshold from test case if provided, otherwise use defaults
+                expected_threshold = result_data.get('expected_cost_threshold')
+                if expected_threshold is not None and expected_threshold > 0:
+                    # Use the expected threshold from test case
+                    threshold = expected_threshold
+                else:
+                    # Fallback to default cost thresholds per complexity
+                    cost_thresholds = {
+                        'SIMPLE': 0.25,      # $0.25 for simple queries
+                        'STANDARD': 0.50,    # $0.50 for standard queries
+                        'COMPLEX': 1.00,     # $1.00 for complex queries
+                        'COMPREHENSIVE': 2.00 # $2.00 for comprehensive queries
+                    }
+                    threshold = cost_thresholds.get(complexity, 0.50)
                 
                 # Score based on how well we stayed under the threshold
                 if total_cost <= threshold:

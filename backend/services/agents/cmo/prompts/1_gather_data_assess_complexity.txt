@@ -13,15 +13,13 @@ IMPORTANT INSTRUCTIONS:
 
 After gathering initial data, provide your assessment:
 - SIMPLE: Basic lookups, single values, straightforward questions
-- STANDARD: Trend analysis of 3-5 metrics without causal relationships or medication impact analysis
-- COMPLEX: Multi-factor correlation analysis, medication effectiveness assessment, or queries requiring analysis of treatment decisions based on lab results
+- STANDARD: Trend analysis, 3-5 related metrics
+- COMPLEX: Multi-system analysis, correlations, deeper investigation needed
 - COMPREHENSIVE: Full health assessment, multiple domains, extensive analysis required
-
-COMPLEX indicators include: correlation between, adjusted based on, relationship between changes, medication effectiveness, treatment response analysis
 
 Execute your initial data gathering now. After using the tool, provide your initial assessment with:
 
 <initial_assessment>
 <complexity>[SIMPLE/STANDARD/COMPLEX/COMPREHENSIVE]</complexity>
-<key_findings>Brief summary of what data is available and initial observations (max 200 words focusing on: 1) Key data types needed 2) Primary analysis required 3) Expected complexity level)</key_findings>
+<key_findings>Brief summary of what data is available and initial observations</key_findings>
 </initial_assessment>

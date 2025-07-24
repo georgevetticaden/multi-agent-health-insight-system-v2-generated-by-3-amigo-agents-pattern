@@ -1,5 +1,5 @@
 import React from 'react';
-import { Info, CheckCircle, AlertCircle, Target, Activity, Edit3 } from 'lucide-react';
+import { Info, CheckCircle, AlertCircle, Target, Activity, Edit3, DollarSign } from 'lucide-react';
 import { TestCase } from '../types';
 
 interface TestCaseDisplayProps {
@@ -38,9 +38,16 @@ const TestCaseDisplay: React.FC<TestCaseDisplayProps> = ({
 
   // Check if expected values match actual values (indicating pre-population)
   const isExpectedMatchingActual = () => {
+    const costMatches = testCase.expected_cost_threshold !== null && 
+                       testCase.expected_cost_threshold !== undefined &&
+                       testCase.actual_total_cost !== null && 
+                       testCase.actual_total_cost !== undefined &&
+                       Math.abs(testCase.expected_cost_threshold - testCase.actual_total_cost) < 0.0001;
+    
     return testCase.expected_complexity === testCase.actual_complexity &&
            testCase.expected_specialties.length === testCase.actual_specialties.length &&
-           testCase.expected_specialties.every(spec => testCase.actual_specialties.includes(spec));
+           testCase.expected_specialties.every(spec => testCase.actual_specialties.includes(spec)) &&
+           (costMatches || (testCase.expected_cost_threshold === undefined && testCase.actual_total_cost === undefined));
   };
 
   // Check if a field has been modified by QE Agent
@@ -95,6 +102,14 @@ const TestCaseDisplay: React.FC<TestCaseDisplayProps> = ({
              testCase.key_data_points.length > 0 &&
              testCase.actual_key_data_points?.length === testCase.key_data_points.length &&
              testCase.key_data_points.every(point => testCase.actual_key_data_points?.includes(point));
+    }
+    if (fieldName === 'expected_cost_threshold') {
+      return !isFieldModified('expected_cost_threshold') && 
+             testCase.expected_cost_threshold !== null && 
+             testCase.expected_cost_threshold !== undefined &&
+             testCase.actual_total_cost !== null && 
+             testCase.actual_total_cost !== undefined &&
+             Math.abs(testCase.expected_cost_threshold - testCase.actual_total_cost) < 0.0001; // Allow for floating point precision
     }
     return false;
   };
@@ -355,6 +370,101 @@ const TestCaseDisplay: React.FC<TestCaseDisplayProps> = ({
         {/* Placeholder for future Analysis Quality sections */}
         {/* Future sections like "Coverage", "Completeness", etc. can be added here */}
       </div>
+
+      {/* Cost Efficiency Card - Only show if we have cost data */}
+      {(testCase.actual_total_cost !== undefined || testCase.expected_cost_threshold !== undefined) && (
+        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+          <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <DollarSign className="w-4 h-4 text-green-600" />
+            Cost Efficiency
+          </h4>
+          
+          {/* Cost Threshold Section */}
+          <div className="mb-4">
+            <h5 className="text-xs font-medium text-gray-700 mb-2">Cost Threshold</h5>
+            
+            {/* Expected vs Actual Grid */}
+            <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs text-gray-600 mb-1 flex items-center gap-1">
+                Expected
+                {showPrePopulationIndicator('expected_cost_threshold') && (
+                  <span className="text-xs text-blue-600 italic">(pre-filled from actual)</span>
+                )}
+                {isFieldModified('expected_cost_threshold') && (
+                  <span className="text-xs text-orange-600 italic flex items-center gap-0.5">
+                    <Edit3 className="w-3 h-3" />
+                    (modified)
+                  </span>
+                )}
+              </p>
+              {testCase.expected_cost_threshold !== undefined && testCase.expected_cost_threshold !== null ? (
+                <div className="relative inline-block">
+                  <span className={`inline-block px-3 py-1 rounded-md text-xs font-medium border ${
+                    isFieldModified('expected_cost_threshold')
+                      ? 'bg-yellow-50 text-yellow-700 border-yellow-200 ring-2 ring-orange-400 ring-offset-1'
+                      : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                  }`}>
+                    ${testCase.expected_cost_threshold.toFixed(3)}
+                  </span>
+                  {isFieldModified('expected_cost_threshold') && (
+                    <div className="absolute -top-1 -right-1">
+                      <Edit3 className="w-3 h-3 text-orange-500" title="Modified by QE Agent" />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <span className="inline-block px-3 py-1 rounded-md text-xs font-medium border bg-gray-100 text-gray-500 border-gray-200 italic">
+                  Not set
+                </span>
+              )}
+            </div>
+            
+            <div>
+              <p className="text-xs text-gray-600 mb-1">Actual (from trace)</p>
+              {testCase.actual_total_cost !== undefined && testCase.actual_total_cost !== null ? (
+                <span className={`inline-block px-3 py-1 rounded-md text-xs font-medium border ${
+                  testCase.expected_cost_threshold && testCase.actual_total_cost <= testCase.expected_cost_threshold
+                    ? 'bg-green-50 text-green-700 border-green-200'
+                    : testCase.expected_cost_threshold && testCase.actual_total_cost > testCase.expected_cost_threshold
+                    ? 'bg-red-50 text-red-700 border-red-200'
+                    : 'bg-gray-50 text-gray-700 border-gray-200'
+                }`}>
+                  ${testCase.actual_total_cost.toFixed(3)}
+                  {testCase.actual_total_cost === null && ' (est.)'}
+                </span>
+              ) : (
+                <span className="inline-block px-3 py-1 rounded-md text-xs font-medium border bg-gray-100 text-gray-500 border-gray-200 italic">
+                  Not available
+                </span>
+              )}
+            </div>
+            </div>
+          </div>
+          
+          {/* Cost Analysis Summary */}
+          {testCase.actual_total_cost !== undefined && testCase.actual_total_cost !== null && 
+           testCase.expected_cost_threshold !== undefined && testCase.expected_cost_threshold !== null && (
+            <div className={`mt-3 pt-3 border-t text-xs ${
+              testCase.actual_total_cost <= testCase.expected_cost_threshold
+                ? 'text-green-600 border-green-200'
+                : 'text-red-600 border-red-200'
+            }`}>
+              {testCase.actual_total_cost <= testCase.expected_cost_threshold ? (
+                <div className="flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3" />
+                  <span>Cost within threshold (saved ${(testCase.expected_cost_threshold - testCase.actual_total_cost).toFixed(2)})</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  <span>Cost exceeded threshold by ${(testCase.actual_total_cost - testCase.expected_cost_threshold).toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
         {/* Metadata Footer - Compact */}
         <div className="text-xs text-gray-500 px-2">

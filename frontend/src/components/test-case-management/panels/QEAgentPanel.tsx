@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Loader2, Bot, User, Maximize2, Minimize2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { QEMessage, TestCase, EvaluationReport } from '../types';
 
 interface QEAgentPanelProps {
@@ -52,17 +53,39 @@ const QEAgentPanel: React.FC<QEAgentPanelProps> = ({
     setMessages([{
       id: '1',
       role: 'assistant',
-      content: `Hi! I'm your Eval Development Assistant. I help you turn execution traces into actionable test cases and evaluation reports.
+      content: `**👋 Hi! I'm your Eval Development Assistant (EDA)**
 
-I've analyzed the trace from your health query and created an initial test case (see right panel). Right now, the expected values match what actually happened—but that's probably not what you want.
+I transform execution traces into powerful test cases and insightful evaluation reports that help you improve your agents.
 
-Let's work through the Analyze → Measure workflow:
-- Tell me what went wrong in the trace, and I'll update the test case
-- Point out failures like misclassified complexity or missing specialists
-- Click the ⋯ menu in the Test Case panel and select "Run Evaluation" when ready
-- See exactly where and why your agent failed
+**✨ What I've Done So Far:**
+• 🔍 **Analyzed** your health query trace
+• 📝 **Created** an initial test case (see right panel)
+• ⚠️ **Note:** Expected values currently match actual results—let's fix that together!
 
-What issues do you see in this trace?`,
+**🚀 Let's Work Through the Analyze → Measure → Improve Workflow:**
+
+**1. 🔍 Analyze** - Share what went wrong:
+   • Misclassified complexity level?
+   • Missing or incorrect specialists?
+   • Wrong task assignments?
+   • Other unexpected behaviors?
+
+**2. 📏 Measure** - I'll update the test case:
+   • Adjust expected values based on your insights
+   • Define correct specialist requirements
+   • Set proper complexity expectations
+
+**3. 📊 Evaluate** - Run the evaluation:
+   • Click the **⋯ menu** in Test Case panel
+   • Select **"Run Evaluation"**
+   • Get detailed scoring across 5 dimensions
+
+**4. 💡 Improve** - Review results:
+   • See exactly where your agent failed
+   • Get LLM-as-Judge recommendations
+   • Iterate and refine your approach
+
+**💬 What issues do you see in this trace?**`,
     timestamp: new Date()
   }]);
 }, []);
@@ -375,7 +398,41 @@ What issues do you see in this trace?`,
                   : 'bg-gray-100 text-gray-900'
               }`}
             >
-              <pre className="whitespace-pre-wrap font-sans text-sm">{message.content}</pre>
+              {message.role === 'user' ? (
+                <p className="whitespace-pre-wrap text-sm">{message.content}</p>
+              ) : (
+                <ReactMarkdown 
+                  className="prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-strong:text-gray-900 prose-ul:text-gray-700 prose-li:text-gray-700"
+                  components={{
+                    // Custom rendering for inline code
+                    code: ({ node, inline, className, children, ...props }) => {
+                      return inline ? (
+                        <code className="px-1 py-0.5 bg-gray-200 rounded text-xs" {...props}>
+                          {children}
+                        </code>
+                      ) : (
+                        <pre className="bg-gray-200 p-3 rounded-lg overflow-x-auto my-2">
+                          <code className="text-xs" {...props}>
+                            {children}
+                          </code>
+                        </pre>
+                      );
+                    },
+                    // Custom rendering for paragraphs to handle spacing
+                    p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                    // Custom rendering for lists
+                    ul: ({ children }) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal pl-4 mb-2">{children}</ol>,
+                    li: ({ children }) => <li className="mb-1">{children}</li>,
+                    // Custom rendering for headings
+                    h1: ({ children }) => <h1 className="text-lg font-bold mb-2">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-base font-bold mb-2">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-sm font-bold mb-1">{children}</h3>,
+                  }}
+                >
+                  {message.content}
+                </ReactMarkdown>
+              )}
               <div
                 className={`text-xs mt-1 ${
                   message.role === 'user' ? 'text-blue-200' : 'text-gray-500'

@@ -36,7 +36,8 @@ const EvalReportViewer: React.FC<EvalReportViewerProps> = ({ report }) => {
     'specialty_selection',
     'analysis_quality',
     'tool_usage',
-    'response_structure'
+    'response_structure',
+    'cost_efficiency'
   ];
 
   const dimensionLabels: Record<string, string> = {
@@ -44,7 +45,8 @@ const EvalReportViewer: React.FC<EvalReportViewerProps> = ({ report }) => {
     specialty_selection: 'Specialty Selection',
     analysis_quality: 'Analysis Quality',
     tool_usage: 'Tool Usage',
-    response_structure: 'Response Structure'
+    response_structure: 'Response Structure',
+    cost_efficiency: 'Cost Efficiency'
   };
 
   // Show only the iframe for the full report

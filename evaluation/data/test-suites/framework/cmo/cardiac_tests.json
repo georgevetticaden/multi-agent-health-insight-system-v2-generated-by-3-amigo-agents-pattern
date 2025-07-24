@@ -14,7 +14,8 @@
     "category": "cardiac",
     "notes": "Simple vital sign query",
     "created_by": "framework",
-    "created_at": "2025-01-01T00:00:00Z"
+    "created_at": "2025-01-01T00:00:00Z",
+    "expected_cost_threshold": 0.25
   },
   {
     "id": "standard_001",
@@ -33,7 +34,8 @@
     "category": "cardiac",
     "notes": "Standard trend analysis",
     "created_by": "framework",
-    "created_at": "2025-01-01T00:00:00Z"
+    "created_at": "2025-01-01T00:00:00Z",
+    "expected_cost_threshold": 0.5
   },
   {
     "id": "standard_002",
@@ -52,7 +54,8 @@
     "category": "cardiac",
     "notes": "Medication effectiveness analysis",
     "created_by": "framework",
-    "created_at": "2025-01-01T00:00:00Z"
+    "created_at": "2025-01-01T00:00:00Z",
+    "expected_cost_threshold": 0.5
   },
   {
     "id": "complex_002",
@@ -75,6 +78,7 @@
     "category": "cardiac",
     "notes": "Comprehensive cardiac health analysis",
     "created_by": "framework",
-    "created_at": "2025-01-01T00:00:00Z"
+    "created_at": "2025-01-01T00:00:00Z",
+    "expected_cost_threshold": 1.0
   }
 ]

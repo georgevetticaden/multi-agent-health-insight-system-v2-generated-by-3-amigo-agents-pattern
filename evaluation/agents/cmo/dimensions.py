@@ -32,6 +32,11 @@ CMO_DIMENSIONS = {
         "synthesis_quality",
         DimensionCategory.ORCHESTRATION,
         "Quality of synthesizing findings from multiple specialists"
+    ),
+    "cost_efficiency": dimension_registry.get_or_create(
+        "cost_efficiency",
+        DimensionCategory.ORCHESTRATION,
+        "Efficiency in managing token usage and computational costs"
     )
 }
 

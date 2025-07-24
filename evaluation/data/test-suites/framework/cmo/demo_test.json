@@ -19,6 +19,7 @@
       "glycemic_control",
       "temporal_analysis"
     ],
+    "expected_cost_threshold": 1.0,
     "category": "diabetes",
     "notes": "Real query 4 - Found suboptimal dosing and weight gain correlation",
     "based_on_real_query": true,

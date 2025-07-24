@@ -724,7 +724,7 @@ class CMOAgent:
                 dimension=CMO_DIMENSIONS["complexity_classification"],
                 description="Accuracy in classifying query complexity (SIMPLE/STANDARD/COMPLEX/COMPREHENSIVE)",
                 target_score=0.90,
-                weight=0.20,  # 20% of total evaluation
+                weight=0.18,  # Reduced from 20% to 18%
                 evaluation_method=EvaluationMethod.DETERMINISTIC,
                 evaluation_description="Binary accuracy against expert-labeled complexity"
             ),
@@ -732,7 +732,7 @@ class CMOAgent:
                 dimension=CMO_DIMENSIONS["specialty_selection"],
                 description="Precision in selecting appropriate medical specialists",
                 target_score=0.85,
-                weight=0.25,  # 25% of total evaluation
+                weight=0.22,  # Reduced from 25% to 22%
                 evaluation_method=EvaluationMethod.HYBRID,
                 evaluation_description="Weighted combination of deterministic precision and LLM judge rationale"
             ),
@@ -740,7 +740,7 @@ class CMOAgent:
                 dimension=dimension_registry.get("analysis_quality"),  # Common dimension
                 description="Comprehensiveness and quality of medical analysis orchestration",
                 target_score=0.80,
-                weight=0.25,  # 25% of total evaluation
+                weight=0.23,  # Reduced from 25% to 23%
                 evaluation_method=EvaluationMethod.HYBRID,
                 evaluation_description="Weighted score across deterministic and LLM judge components"
             ),
@@ -748,7 +748,7 @@ class CMOAgent:
                 dimension=dimension_registry.get("tool_usage"),  # Common dimension
                 description="Effectiveness of health data tool usage",
                 target_score=0.90,
-                weight=0.15,  # 15% of total evaluation
+                weight=0.14,  # Reduced from 15% to 14%
                 evaluation_method=EvaluationMethod.HYBRID,
                 evaluation_description="Combination of success rate and relevance scoring"
             ),
@@ -756,9 +756,17 @@ class CMOAgent:
                 dimension=dimension_registry.get("response_structure"),  # Common dimension
                 description="Compliance with expected XML response format",
                 target_score=0.95,
-                weight=0.15,  # 15% of total evaluation
+                weight=0.13,  # Reduced from 15% to 13%
                 evaluation_method=EvaluationMethod.HYBRID,
                 evaluation_description="XML validation and required field presence"
+            ),
+            EvaluationCriteria(
+                dimension=CMO_DIMENSIONS["cost_efficiency"],
+                description="Efficiency in managing token usage and computational costs",
+                target_score=0.80,
+                weight=0.10,  # 10% of total evaluation
+                evaluation_method=EvaluationMethod.HYBRID,
+                evaluation_description="Token usage efficiency and cost optimization across agent interactions"
             )
         ]
         
@@ -825,6 +833,20 @@ class CMOAgent:
                     description="Presence of all required XML fields",
                     weight=0.3,
                     evaluation_method=EvaluationMethod.DETERMINISTIC
+                )
+            ],
+            CMO_DIMENSIONS["cost_efficiency"]: [
+                QualityComponent(
+                    name="cost_threshold",
+                    description="Staying below cost threshold ($0.50 for standard)",
+                    weight=0.5,
+                    evaluation_method=EvaluationMethod.DETERMINISTIC
+                ),
+                QualityComponent(
+                    name="token_efficiency",
+                    description="Efficient use of tokens relative to query complexity",
+                    weight=0.5,
+                    evaluation_method=EvaluationMethod.LLM_JUDGE
                 )
             ]
         }

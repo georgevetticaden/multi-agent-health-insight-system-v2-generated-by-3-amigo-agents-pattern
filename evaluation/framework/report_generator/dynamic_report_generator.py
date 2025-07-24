@@ -406,7 +406,8 @@ class DynamicHTMLReportGenerator:
                         'specialty_selection': 'specialty_component_breakdown',
                         'analysis_quality': 'analysis_quality_breakdown',
                         'tool_usage': 'tool_component_breakdown',
-                        'response_structure': 'response_component_breakdown'
+                        'response_structure': 'response_component_breakdown',
+                        'cost_efficiency': 'cost_efficiency_breakdown'
                     }
                     breakdown_key = breakdown_key_map.get(dim_name, f"{dim_name}_component_breakdown")
                     

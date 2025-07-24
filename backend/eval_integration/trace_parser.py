@@ -81,6 +81,12 @@ class TraceDataExtractor:
         initial_data['execution_time_ms'] = execution_time
         logger.info(f"  - Extracted execution time: {execution_time}ms")
         
+        # Extract cost and token data
+        cost_data = self._extract_cost_and_tokens(trace)
+        initial_data['total_cost'] = cost_data['total_cost']
+        initial_data['tokens_used'] = cost_data['tokens_used']
+        logger.info(f"  - Extracted cost data: ${cost_data['total_cost']:.4f}, {cost_data['tokens_used']} tokens")
+        
         # Extract Stage 2 data (specialist tasks)
         logger.info("Stage 2: Extracting specialist tasks...")
         specialist_tasks = self._extract_specialist_tasks_as_objects(trace)
@@ -418,6 +424,40 @@ class TraceDataExtractor:
         # Default to a reasonable value if we can't calculate
         logger.warning("Could not extract execution time, using default 300ms")
         return 300.0  # Default to 300ms instead of 0
+    
+    def _extract_cost_and_tokens(self, trace: CompleteTrace) -> Dict[str, Any]:
+        """Extract total cost and token usage from trace events."""
+        total_cost = 0.0
+        total_tokens = 0
+        
+        # Look for LLM response events that contain token usage
+        for event in trace.events:
+            if event.event_type == TraceEventType.LLM_RESPONSE:
+                # Extract token usage
+                # Note: The field is "usage" not "token_usage" in the trace events
+                token_usage = event.data.get("usage", {})
+                if token_usage:
+                    tokens = token_usage.get("total_tokens", 0)
+                    total_tokens += tokens
+                    
+                    # Extract cost if available
+                    if "cost" in event.data:
+                        total_cost += event.data["cost"]
+                    
+                    # Log for debugging
+                    logger.debug(f"  - LLM response event: {tokens} tokens, cost: ${event.data.get('cost', 0):.4f}")
+        
+        # If no direct cost data, calculate from tokens using same formula as trace viewer
+        if total_cost == 0 and total_tokens > 0:
+            # Use the same pricing as trace_formatters.py: $15 per 1M tokens for Claude 3.5 Sonnet
+            # This ensures consistency between trace viewer display and test case extraction
+            total_cost = (total_tokens / 1_000_000) * 15.00
+            logger.info(f"  - Estimated cost from tokens: ${total_cost:.4f}")
+        
+        return {
+            "total_cost": total_cost,
+            "tokens_used": total_tokens
+        }
 
 
 class TraceBasedEvaluationAdapter:

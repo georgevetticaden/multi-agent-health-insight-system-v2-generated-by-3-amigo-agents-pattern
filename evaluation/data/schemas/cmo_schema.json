@@ -40,6 +40,10 @@
         "type": "string"
       }
     },
+    "expected_cost_threshold": {
+      "type": "number",
+      "description": "Expected maximum cost in dollars for this query complexity"
+    },
     "category": {
       "type": "string"
     },

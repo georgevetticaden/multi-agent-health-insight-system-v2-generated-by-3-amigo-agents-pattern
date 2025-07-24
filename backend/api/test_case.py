@@ -39,6 +39,7 @@ class TestCaseUpdate(BaseModel):
     expected_complexity: Optional[str] = None
     expected_specialties: Optional[list[str]] = None
     key_data_points: Optional[list[str]] = None
+    expected_cost_threshold: Optional[float] = None
     notes: Optional[str] = None
 
 
@@ -53,6 +54,9 @@ class TestCaseResponse(BaseModel):
     actual_specialties: list[str]
     key_data_points: list[str]
     actual_key_data_points: list[str] = []  # Key data points from synthesis
+    expected_cost_threshold: Optional[float] = None
+    actual_total_cost: Optional[float] = None
+    actual_tokens_used: Optional[int] = None
     notes: str
     created_at: datetime
     updated_at: datetime
@@ -182,6 +186,63 @@ async def create_test_case_from_trace(request: TestCaseCreate):
         # This matches the pattern of other dimensions where expected values are pre-populated from actual
         actual_key_data_points = key_data_points.copy()
         
+        # Extract cost and token information from trace
+        total_cost = None
+        total_tokens = None
+        
+        logger.info(f"Extracting cost data from trace with {len(trace.events)} events")
+        
+        # Calculate total cost and tokens from LLM responses in the trace
+        llm_response_count = 0
+        for event in trace.events:
+            event_type_str = event.event_type.value if hasattr(event.event_type, 'value') else str(event.event_type)
+            if event_type_str == "llm_response":
+                llm_response_count += 1
+                # Extract token usage and cost from LLM response events
+                # Note: The field is "usage" not "token_usage" in the trace events
+                token_usage = event.data.get("usage", {})
+                if token_usage:
+                    tokens = token_usage.get("total_tokens", 0)
+                    if tokens > 0:
+                        logger.info(f"Found tokens in LLM response: {tokens}")
+                        if total_tokens is None:
+                            total_tokens = 0
+                        total_tokens += tokens
+                
+                # Cost might be in the event data
+                event_cost = event.data.get("cost", 0)
+                if event_cost:
+                    logger.info(f"Found direct cost in event: {event_cost}")
+                    if total_cost is None:
+                        total_cost = 0.0
+                    total_cost += event_cost
+        
+        logger.info(f"Processed {llm_response_count} LLM response events")
+        logger.info(f"Total tokens extracted: {total_tokens}")
+        logger.info(f"Direct cost extracted: {total_cost}")
+        
+        # If no direct cost data, calculate from tokens using same formula as trace viewer
+        if total_cost is None and total_tokens is not None:
+            # Use the same pricing as trace_formatters.py: $15 per 1M tokens for Claude 3.5 Sonnet
+            # This ensures consistency between trace viewer display and test case extraction
+            total_cost = (total_tokens / 1_000_000) * 15.00
+            logger.info(f"Calculated cost from tokens: ${total_cost:.4f}")
+        
+        # Pre-populate expected cost threshold from actual cost (if available)
+        # If no actual cost is available, fall back to complexity-based defaults
+        if total_cost is not None and total_cost > 0:
+            expected_cost_threshold = total_cost  # Pre-populate with actual
+        else:
+            # Fallback to complexity-based defaults
+            cost_thresholds = {
+                "SIMPLE": 0.25,
+                "STANDARD": 0.50,
+                "COMPLEX": 1.0,
+                "COMPREHENSIVE": 2.0,
+                "CRITICAL": 2.0
+            }
+            expected_cost_threshold = cost_thresholds.get(complexity_str, 0.50)
+        
         # Create test case
         test_case_id = str(uuid4())
         test_case = {
@@ -194,6 +255,9 @@ async def create_test_case_from_trace(request: TestCaseCreate):
             "actual_specialties": actual_specialties,
             "key_data_points": key_data_points,  # Pre-populated from approach
             "actual_key_data_points": actual_key_data_points,  # Extracted from synthesis
+            "expected_cost_threshold": expected_cost_threshold,  # Based on complexity
+            "actual_total_cost": total_cost,
+            "actual_tokens_used": total_tokens,
             "notes": request.user_notes or f"Auto-generated from trace {request.trace_id}. Expected values pre-populated from actual execution.",
             "created_at": datetime.now(),
             "updated_at": datetime.now(),
@@ -206,6 +270,7 @@ async def create_test_case_from_trace(request: TestCaseCreate):
         test_cases_db[test_case_id] = test_case
         
         logger.info(f"Created test case {test_case_id} from trace {request.trace_id}")
+        logger.info(f"Test case cost data - actual_total_cost: {test_case['actual_total_cost']}, actual_tokens_used: {test_case['actual_tokens_used']}, expected_cost_threshold: {test_case['expected_cost_threshold']}")
         
         return TestCaseResponse(**test_case)
         
@@ -283,7 +348,7 @@ async def update_test_case(test_case_id: str, update: TestCaseUpdate):
             if value_changed:
                 test_case[key] = value
                 # Track this field as modified (if it's a user-editable field)
-                if key in ["expected_complexity", "expected_specialties", "key_data_points", "notes"]:
+                if key in ["expected_complexity", "expected_specialties", "key_data_points", "expected_cost_threshold", "notes"]:
                     if key not in test_case["modified_fields"]:
                         test_case["modified_fields"].append(key)
                         logger.info(f"Added '{key}' to modified_fields")
@@ -329,6 +394,7 @@ async def evaluate_test_case(test_case_id: str):
             "expected_complexity": test_case["expected_complexity"],
             "expected_specialties": test_case["expected_specialties"],
             "key_data_points": test_case.get("key_data_points", []),
+            "expected_cost_threshold": test_case.get("expected_cost_threshold"),
             "notes": test_case["notes"],
             "category": test_case["category"],
             "based_on_real_query": test_case["based_on_real_query"],

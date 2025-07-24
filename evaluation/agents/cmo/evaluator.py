@@ -101,12 +101,14 @@ class CMOEvaluationResult(EvaluationResult):
             - analysis_quality_score: Score for analysis quality
             - tool_usage_score: Score for tool usage effectiveness
             - response_structure_score: Score for response structure
+            - cost_efficiency_score: Score for cost and token efficiency
             
         Component Breakdowns:
             - specialty_component_breakdown: Component scores for specialty selection
             - analysis_quality_breakdown: Component scores for analysis quality
             - tool_component_breakdown: Component scores for tool usage
             - response_component_breakdown: Component scores for response structure
+            - cost_efficiency_breakdown: Component scores for cost efficiency
             
         Context and Metadata:
             - approach_text: Agent's approach description
@@ -131,12 +133,14 @@ class CMOEvaluationResult(EvaluationResult):
     analysis_quality_score: float = 0.0
     tool_usage_score: float = 0.0
     response_structure_score: float = 0.0
+    cost_efficiency_score: float = 0.0
     
     # Component breakdowns for each dimension
     specialty_component_breakdown: Dict[str, float] = field(default_factory=dict)
     analysis_quality_breakdown: Dict[str, float] = field(default_factory=dict)
     tool_component_breakdown: Dict[str, float] = field(default_factory=dict)
     response_component_breakdown: Dict[str, float] = field(default_factory=dict)
+    cost_efficiency_breakdown: Dict[str, float] = field(default_factory=dict)
     
     # Context and metadata
     approach_text: Optional[str] = None
@@ -354,7 +358,11 @@ class CMOEvaluator(BaseEvaluator):
                 # Task creation data
                 'specialist_tasks': specialist_tasks,
                 'task_count': len(specialist_tasks),
-                'task_creation_success': task_creation_success
+                'task_creation_success': task_creation_success,
+                
+                # Cost and token data from initial_data (extracted from trace)
+                'total_cost': initial_data.get('total_cost', 0.0),
+                'tokens_used': initial_data.get('tokens_used', 0)
             }
             
             # Evaluate dimensions dynamically
@@ -478,12 +486,14 @@ class CMOEvaluator(BaseEvaluator):
                 analysis_quality_score=dynamic_dimension_scores.get("analysis_quality", 0.0),
                 tool_usage_score=dynamic_dimension_scores.get("tool_usage", 0.0),
                 response_structure_score=dynamic_dimension_scores.get("response_structure", 0.0),
+                cost_efficiency_score=dynamic_dimension_scores.get("cost_efficiency", 0.0),
                 
                 # Component breakdowns
                 specialty_component_breakdown=dynamic_component_breakdowns.get("specialty_selection", {}),
                 analysis_quality_breakdown=dynamic_component_breakdowns.get("analysis_quality", {}),
                 tool_component_breakdown=dynamic_component_breakdowns.get("tool_usage", {}),
                 response_component_breakdown=dynamic_component_breakdowns.get("response_structure", {}),
+                cost_efficiency_breakdown=dynamic_component_breakdowns.get("cost_efficiency", {}),
                 
                 # Context and metadata
                 approach_text=approach,
@@ -536,12 +546,14 @@ class CMOEvaluator(BaseEvaluator):
                 analysis_quality_score=0.0,
                 tool_usage_score=0.0,
                 response_structure_score=0.0,
+                cost_efficiency_score=0.0,
                 
                 # Empty component breakdowns on error
                 specialty_component_breakdown={},
                 analysis_quality_breakdown={},
                 tool_component_breakdown={},
-                response_component_breakdown={}
+                response_component_breakdown={},
+                cost_efficiency_breakdown={}
             )
     
     def _collect_specialty_data(self, expected: Set[str], actual: Set[str]) -> Dict[str, Any]:
@@ -810,6 +822,81 @@ class CMOEvaluator(BaseEvaluator):
             logger.warning(f"LLM Judge concern identification evaluation failed: {e}")
             return self._get_default_score_for_method(EvaluationMethod.LLM_JUDGE)
     
+    async def _llm_judge_token_efficiency(self, tokens_used: int, complexity: str, query: str, approach_text: str) -> float:
+        """
+        Evaluate token usage efficiency using LLM Judge.
+        
+        This method assesses whether the agent used tokens efficiently
+        relative to the query complexity and approach taken.
+        
+        Args:
+            tokens_used: Total tokens used in the interaction
+            complexity: Query complexity (SIMPLE/STANDARD/COMPLEX/COMPREHENSIVE)
+            query: Original patient query
+            approach_text: Agent's analytical approach
+            
+        Returns:
+            Score from 0.0 to 1.0 indicating token efficiency
+        """
+        logger.debug(f"          🤖 LLM Judge evaluating token efficiency...")
+        if not self.llm_judge:
+            logger.debug(f"          LLM Judge not available, returning default score")
+            return self._get_default_score_for_method(EvaluationMethod.LLM_JUDGE)
+        
+        # Define expected token ranges per complexity
+        token_ranges = {
+            'SIMPLE': (1000, 3000),      # Simple queries should use 1k-3k tokens
+            'STANDARD': (3000, 8000),    # Standard queries should use 3k-8k tokens
+            'COMPLEX': (8000, 15000),    # Complex queries should use 8k-15k tokens
+            'COMPREHENSIVE': (15000, 30000) # Comprehensive queries can use 15k-30k tokens
+        }
+        
+        expected_range = token_ranges.get(complexity, (3000, 8000))
+        
+        try:
+            # Create a custom prompt for token efficiency evaluation
+            prompt = f"""Evaluate the token usage efficiency for this health query.
+
+Query: {query}
+Complexity: {complexity}
+Tokens Used: {tokens_used:,}
+Expected Range: {expected_range[0]:,} - {expected_range[1]:,} tokens
+Approach: {approach_text[:500]}...
+
+Score the efficiency from 0.0 to 1.0 based on:
+1. Whether token usage is appropriate for the complexity
+2. If the approach justifies the token count
+3. Evidence of conciseness vs verbosity
+4. Efficient use of tool calls and data gathering
+
+Return a score where:
+- 1.0 = Highly efficient, tokens well-utilized
+- 0.7-0.9 = Good efficiency with minor verbosity
+- 0.4-0.6 = Moderate efficiency, some waste
+- 0.0-0.3 = Poor efficiency, excessive token usage"""
+
+            # Use a generic scoring method from LLM judge
+            result = await self.llm_judge.score_generic(
+                prompt=prompt,
+                dimension="token_efficiency"
+            )
+            
+            logger.debug(f"          Token efficiency score: {result.score:.3f}")
+            logger.debug(f"          Tokens used: {tokens_used:,}, Expected range: {expected_range}")
+            return result.score
+        except Exception as e:
+            logger.warning(f"LLM Judge token efficiency evaluation failed: {e}")
+            # Fallback to rule-based scoring
+            min_tokens, max_tokens = expected_range
+            if min_tokens <= tokens_used <= max_tokens:
+                return 0.8  # Good efficiency
+            elif tokens_used < min_tokens:
+                return 0.6  # Possibly too brief
+            else:
+                # Penalize for going over
+                overage_ratio = (tokens_used - max_tokens) / max_tokens
+                return max(0.0, 0.5 - overage_ratio * 0.5)
+    
     def _calculate_weighted_score(self, dimension_scores: Dict[str, float]) -> float:
         """
         Calculate weighted score for a test case based on dimension scores and weights.
@@ -1033,6 +1120,33 @@ class CMOEvaluator(BaseEvaluator):
                 logger.debug(f"          Data gathering: {1.0 if data_available else 0.0} (available: {data_available})")
                 return 1.0 if data_available else 0.0
         
+        elif dimension.name == "cost_efficiency":
+            if component.name == "cost_threshold":
+                # Evaluate if cost stayed below threshold based on complexity
+                total_cost = result_data.get('total_cost', 0.0)
+                complexity = result_data.get('actual_complexity', 'STANDARD')
+                
+                # Define cost thresholds per complexity
+                cost_thresholds = {
+                    'SIMPLE': 0.25,      # $0.25 for simple queries
+                    'STANDARD': 0.50,    # $0.50 for standard queries
+                    'COMPLEX': 1.00,     # $1.00 for complex queries
+                    'COMPREHENSIVE': 2.00 # $2.00 for comprehensive queries
+                }
+                
+                threshold = cost_thresholds.get(complexity, 0.50)
+                
+                # Score based on how well we stayed under the threshold
+                if total_cost <= threshold:
+                    score = 1.0
+                elif total_cost <= threshold * 1.5:  # Within 50% over
+                    score = 0.5
+                else:
+                    score = 0.0
+                    
+                logger.debug(f"          Cost threshold: {score:.3f} (cost: ${total_cost:.2f}, threshold: ${threshold:.2f}, complexity: {complexity})")
+                return score
+        
         logger.debug(f"          No deterministic evaluation for {component.name} in {dimension.name}, returning 0.0")
         return 0.0
     
@@ -1098,6 +1212,15 @@ class CMOEvaluator(BaseEvaluator):
                 approach_text = result_data.get('approach_text', '')
                 query = result_data.get('query', '')
                 return await self._llm_judge_concern_identification(approach_text, query)
+        
+        elif dimension.name == "cost_efficiency":
+            if component.name == "token_efficiency":
+                # Evaluate token usage efficiency relative to complexity
+                tokens_used = result_data.get('tokens_used', 0)
+                complexity = result_data.get('actual_complexity', 'STANDARD')
+                query = result_data.get('query', '')
+                approach_text = result_data.get('approach_text', '')
+                return await self._llm_judge_token_efficiency(tokens_used, complexity, query, approach_text)
         
         return 0.0
     
@@ -1210,6 +1333,23 @@ class CMOEvaluator(BaseEvaluator):
                     query=test_case.query,
                     structure_errors=result_data.get('structure_errors', []),
                     approach_text=result_data.get('approach_text', '')
+                )
+            
+            elif dimension_name == "cost_efficiency":
+                # Analyze cost efficiency issues
+                total_cost = result_data.get('total_cost', 0.0)
+                tokens_used = result_data.get('tokens_used', 0)
+                complexity = result_data.get('actual_complexity', 'STANDARD')
+                
+                return await self.llm_judge.analyze_cost_efficiency_issues(
+                    agent_type="cmo",
+                    query=test_case.query,
+                    total_cost=total_cost,
+                    tokens_used=tokens_used,
+                    complexity=complexity,
+                    cost_breakdown=component_breakdowns.get('cost_efficiency', {}) if component_breakdowns else {},
+                    actual_score=actual_score,
+                    target_score=target_score
                 )
             
             else:

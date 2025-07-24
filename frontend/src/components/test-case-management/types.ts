@@ -8,6 +8,9 @@ export interface TestCase {
   actual_specialties: string[];
   key_data_points: string[];
   actual_key_data_points: string[];
+  expected_cost_threshold?: number;
+  actual_total_cost?: number;
+  actual_tokens_used?: number;
   notes: string;
   created_at: string;
   updated_at: string;

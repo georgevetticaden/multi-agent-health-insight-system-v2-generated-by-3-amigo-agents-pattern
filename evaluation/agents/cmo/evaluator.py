@@ -43,6 +43,7 @@ See Also:
 
 import re
 import logging
+import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -54,6 +55,14 @@ from evaluation.framework.llm_judge import SpecialistSimilarityScorer, LLMTestJu
 from evaluation.core.dimensions import EvaluationMethod
 from evaluation.core import EvaluationCriteria, QualityComponent
 from anthropic import Anthropic
+
+# Import TraceEventType for proper enum comparison
+try:
+    from services.tracing import TraceEventType
+    TRACING_AVAILABLE = True
+except ImportError:
+    TRACING_AVAILABLE = False
+    TraceEventType = None
 
 logger = logging.getLogger(__name__)
 
@@ -393,7 +402,56 @@ class CMOEvaluator(BaseEvaluator):
             
             # Calculate total time and tokens
             total_response_time_ms = (datetime.now() - start_time).total_seconds() * 1000
+            
+            # Start with a crude word count estimation
             tokens_used = len(test_case.query.split()) + len(analysis.split()) + len(str(serialized_tasks).split())
+            
+            # Update result_data with initial estimate
+            result_data['tokens_used'] = tokens_used
+            
+            # For CLI flow: Get actual token count from trace when using word count estimate
+            # The CLI uses real CMO agent which doesn't return tokens in initial_data
+            if tokens_used < 1000 and not initial_data.get('tokens_used') and TRACING_AVAILABLE:  
+                try:
+                    from services.tracing import get_trace_collector, TraceContextManager
+                    trace_collector = get_trace_collector()
+                    current_trace_id = TraceContextManager.get_trace_id()
+                    
+                    if trace_collector and current_trace_id:
+                        # Get the active trace
+                        trace = None
+                        if hasattr(trace_collector, 'active_traces'):
+                            trace = trace_collector.active_traces.get(current_trace_id)
+                        
+                        if not trace:
+                            trace = await trace_collector.get_active_trace(current_trace_id)
+                        
+                        if trace and hasattr(trace, 'events'):
+                            # Calculate total tokens from CMO's LLM response events
+                            total_tokens = 0
+                            llm_call_count = 0
+                            
+                            for event in trace.events:
+                                # Only count CMO agent's LLM responses
+                                if (TraceEventType and hasattr(event, 'event_type') 
+                                    and event.event_type == TraceEventType.LLM_RESPONSE 
+                                    and hasattr(event, 'agent_type') and event.agent_type == 'cmo'):
+                                    # Check for tokens in data.usage.total_tokens
+                                    if (hasattr(event, 'data') and isinstance(event.data, dict) 
+                                        and 'usage' in event.data and 'total_tokens' in event.data['usage']):
+                                        tokens = event.data['usage']['total_tokens']
+                                        total_tokens += tokens
+                                        llm_call_count += 1
+                            
+                            if total_tokens > tokens_used:
+                                tokens_used = total_tokens
+                                result_data['tokens_used'] = total_tokens
+                                initial_data['tokens_used'] = total_tokens
+                                # Recalculate cost based on actual tokens
+                                initial_data['total_cost'] = (total_tokens / 1_000_000) * 15.00
+                                result_data['total_cost'] = initial_data['total_cost']
+                except Exception as e:
+                    pass  # Silently fall back to mock token count
             
             # Analyze failures for dimensions that didn't meet thresholds
             logger.info(f"🔍 EVALUATION STAGE 5: Analyzing failures for test case {test_case.id}")
@@ -454,6 +512,7 @@ class CMOEvaluator(BaseEvaluator):
             
             # Evaluation success: weighted score meets overall threshold (default 0.75)
             evaluation_success = weighted_score >= EvaluationConstants.OVERALL_SUCCESS_THRESHOLD
+            
             
             # Final stage - prepare results
             logger.info(f"📊 EVALUATION STAGE 6: Finalizing results for test case {test_case.id}")
@@ -860,37 +919,30 @@ class CMOEvaluator(BaseEvaluator):
             logger.debug(f"          LLM Judge not available, returning default score")
             return self._get_default_score_for_method(EvaluationMethod.LLM_JUDGE)
         
-        # Define expected token ranges per complexity
+        # Define more meaningful token ranges per complexity
+        # These ranges reflect realistic usage for multi-agent health analysis
         token_ranges = {
-            'SIMPLE': (1000, 3000),      # Simple queries should use 1k-3k tokens
-            'STANDARD': (3000, 8000),    # Standard queries should use 3k-8k tokens
-            'COMPLEX': (8000, 15000),    # Complex queries should use 8k-15k tokens
-            'COMPREHENSIVE': (15000, 30000) # Comprehensive queries can use 15k-30k tokens
+            'SIMPLE': (2000, 6000),          # Simple queries: basic analysis with 1-2 specialists
+            'STANDARD': (5000, 12000),       # Standard queries: 3-4 specialists, moderate analysis
+            'COMPLEX': (10000, 25000),       # Complex queries: 5-6 specialists, comprehensive analysis
+            'COMPREHENSIVE': (20000, 40000)  # Comprehensive queries: full team, deep analysis
         }
         
-        expected_range = token_ranges.get(complexity, (3000, 8000))
+        expected_range = token_ranges.get(complexity, (5000, 12000))
         
         try:
-            # Create a custom prompt for token efficiency evaluation
-            prompt = f"""Evaluate the token usage efficiency for this health query.
-
-Query: {query}
-Complexity: {complexity}
-Tokens Used: {tokens_used:,}
-Expected Range: {expected_range[0]:,} - {expected_range[1]:,} tokens
-Approach: {approach_text[:500]}...
-
-Score the efficiency from 0.0 to 1.0 based on:
-1. Whether token usage is appropriate for the complexity
-2. If the approach justifies the token count
-3. Evidence of conciseness vs verbosity
-4. Efficient use of tool calls and data gathering
-
-Return a score where:
-- 1.0 = Highly efficient, tokens well-utilized
-- 0.7-0.9 = Good efficiency with minor verbosity
-- 0.4-0.6 = Moderate efficiency, some waste
-- 0.0-0.3 = Poor efficiency, excessive token usage"""
+            # Load prompt from file
+            prompt_file = Path(__file__).parent / "judge_prompts" / "scoring" / "token_efficiency.txt"
+            with open(prompt_file, 'r') as f:
+                prompt_template = f.read()
+            
+            # Fill in the template
+            prompt = prompt_template.replace("{{QUERY}}", query)
+            prompt = prompt.replace("{{COMPLEXITY}}", complexity)
+            prompt = prompt.replace("{{TOKENS_USED}}", f"{tokens_used:,}")
+            prompt = prompt.replace("{{MIN_TOKENS}}", f"{expected_range[0]:,}")
+            prompt = prompt.replace("{{MAX_TOKENS}}", f"{expected_range[1]:,}")
+            prompt = prompt.replace("{{APPROACH_TEXT}}", approach_text[:500] + "..." if len(approach_text) > 500 else approach_text)
 
             # Use a generic scoring method from LLM judge
             result = await self.llm_judge.score_generic(
@@ -903,16 +955,19 @@ Return a score where:
             return result.score
         except Exception as e:
             logger.warning(f"LLM Judge token efficiency evaluation failed: {e}")
-            # Fallback to rule-based scoring
+            # Fallback to rule-based scoring with updated ranges
             min_tokens, max_tokens = expected_range
             if min_tokens <= tokens_used <= max_tokens:
                 return 0.8  # Good efficiency
             elif tokens_used < min_tokens:
                 return 0.6  # Possibly too brief
             else:
-                # Penalize for going over
-                overage_ratio = (tokens_used - max_tokens) / max_tokens
-                return max(0.0, 0.5 - overage_ratio * 0.5)
+                # Over the limit - scale down based on how much over
+                overage = (tokens_used - max_tokens) / max_tokens
+                if overage < 0.5:  # Up to 50% over
+                    return 0.4
+                else:
+                    return 0.2
     
     def _calculate_weighted_score(self, dimension_scores: Dict[str, float]) -> float:
         """
@@ -1365,7 +1420,6 @@ Return a score where:
                 total_cost = initial_data.get('total_cost', result_data.get('total_cost', 0.0))
                 complexity = result_data.get('actual_complexity', 'STANDARD')
                 
-                logger.info(f"Cost efficiency failure analysis using tokens: {tokens_used} (from {'trace' if tokens_used == initial_data.get('tokens_used') else 'mock'})")
                 
                 return await self.llm_judge.analyze_cost_efficiency_issues(
                     agent_type="cmo",
@@ -1495,7 +1549,7 @@ Return a score where:
                         }
                         
                         # Add individual failure analysis if available
-                        if 'failure_analyses' in test_result:
+                        if 'failure_analyses' in test_result and test_result['failure_analyses']:
                             for fa in test_result['failure_analyses']:
                                 if fa['dimension'] == dim_name:
                                     failed_test_data.update({

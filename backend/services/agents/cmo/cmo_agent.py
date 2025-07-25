@@ -803,13 +803,13 @@ class CMOAgent:
                 QualityComponent(
                     name="specialist_precision",
                     description="Selected specialists match expected set",
-                    weight=0.6,
+                    weight=0.8,
                     evaluation_method=EvaluationMethod.DETERMINISTIC
                 ),
                 QualityComponent(
                     name="specialist_rationale",
                     description="Clear reasoning for specialist choices",
-                    weight=0.4,
+                    weight=0.2,
                     evaluation_method=EvaluationMethod.LLM_JUDGE
                 )
             ],

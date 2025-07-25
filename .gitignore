@@ -142,14 +142,12 @@ evaluation/logs/*.log
 
 # Evaluation test runs
 # Ignore all test runs
-evaluation/test_runs/*/
 # But keep the saved-runs directory
 !evaluation/test_runs/saved-runs/
 !evaluation/test_runs/saved-runs/**/
 
 # Evaluation data - unified storage
 # Ignore all runs
-evaluation/data/runs/*/
 # Ignore all traces  
 evaluation/data/traces/*/
 

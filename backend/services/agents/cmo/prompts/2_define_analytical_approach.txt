@@ -14,4 +14,4 @@ Describe your recommended analytical approach including:
 - Priority of different aspects
 </approach>
 
-Be concise but thorough in your approach description. This will guide the specialist team's investigation.
+Be concise but thorough in your approach description (maximum 200 words). This will guide the specialist team's investigation.

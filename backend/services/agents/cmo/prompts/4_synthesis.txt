@@ -18,3 +18,5 @@ Your synthesis should:
 7. Use clear, patient-friendly language while maintaining medical accuracy
 
 Remember: The patient asked a specific question - ensure it is clearly and directly answered in your response.
+
+IMPORTANT: Keep your synthesis concise and focused (target 300-400 words). Use clear structure with brief sections for key findings, analysis, and recommendations.

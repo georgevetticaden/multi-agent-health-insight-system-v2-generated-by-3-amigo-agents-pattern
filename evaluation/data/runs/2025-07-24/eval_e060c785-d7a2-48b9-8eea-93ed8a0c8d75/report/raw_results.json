@@ -1,0 +1,166 @@
+{
+  "test_type": "qe-generated",
+  "agent_type": "cmo",
+  "timestamp": "2025-07-24T15:45:01.201608",
+  "evaluation_id": "e060c785-d7a2-48b9-8eea-93ed8a0c8d75",
+  "results": [
+    {
+      "test_case_id": "f31fc246-c1cc-48e1-9386-49d1868dd6c1",
+      "query": "How has my HbA1c level changed since I started taking metformin, has my dosage been adjusted over time based on my lab results, and is there a correlation between these changes and my weight measurements during the same period ?",
+      "success": false,
+      "weighted_score": 0.63083125,
+      "complexity_classification_score": 0.0,
+      "specialty_selection_score": 0.44,
+      "analysis_quality_score": 0.8218749999999999,
+      "tool_usage_score": 1.0,
+      "response_structure_score": 1.0,
+      "cost_efficiency_score": 0.75,
+      "specialty_component_breakdown": {
+        "specialist_precision": 0.6,
+        "specialist_rationale": 0.2
+      },
+      "analysis_quality_breakdown": {
+        "data_gathering": 1.0,
+        "context_awareness": 0.7,
+        "comprehensive_approach": 0.85,
+        "concern_identification": 0.7
+      },
+      "tool_component_breakdown": {
+        "tool_success_rate": 1.0
+      },
+      "response_component_breakdown": {
+        "xml_validity": 1.0,
+        "required_fields": 1.0
+      },
+      "cost_efficiency_breakdown": {
+        "cost_threshold": 1.0,
+        "token_efficiency": 0.5
+      },
+      "expected_complexity": "COMPLEX",
+      "actual_complexity": "standard",
+      "complexity_correct": false,
+      "expected_specialties": [
+        "laboratory_medicine",
+        "pharmacy",
+        "nutrition",
+        "endocrinology",
+        "preventive_medicine"
+      ],
+      "actual_specialties": [
+        "pharmacy",
+        "laboratory_medicine",
+        "nutrition"
+      ],
+      "specialty_precision": 0.6,
+      "specialty_recall": 0.0,
+      "specialty_f1_score": 0.44,
+      "tool_calls_made": 9,
+      "tool_success_count": 9,
+      "tool_success_rate": 1.0,
+      "response_valid": true,
+      "structure_errors": [],
+      "expected_cost_threshold": 1.2,
+      "actual_total_cost": 0.997185,
+      "tokens_used": 538,
+      "cost_within_threshold": true,
+      "response_time_ms": 37238.988999999994,
+      "approach_text": "To address the patient's health query, the analytical approach will focus on the following:\n\nData Points for Investigation:\n- HbA1c levels over time to track glycemic control\n- Metformin dosage changes to understand medication management\n- Weight measurements to identify any correlations with HbA1c and metformin\n\nCorrelations to Explore:\n- Relationship between changes in HbA1c levels and metformin dosage adjustments\n- Impact of weight changes on HbA1c levels and metformin effectiveness\n\nKey Health Concerns:\n- Maintaining optimal glycemic control (HbA1c within target range)\n- Effective management of diabetes through medication and lifestyle factors\n- Potential side effects or complications from metformin use\n\nTimeframes to Consider:\n- Analyze data from 2020 to 2025 to understand the full timeline of the patient's diabetes management\n\nAreas of Focus:\n- Trend analysis of HbA1c levels, metformin dosage, and weight measurements\n- Identification of any patterns or correlations between the key health metrics\n- Evaluation of medication adherence and dosage adjustments based on lab results\n- Assessment of the patient's overall diabetes control and management\n\nPriority of Different Aspects:\n1. Analyze HbA1c levels and trends over time to understand glycemic control\n2. Examine metformin dosage changes and correlate with HbA1c results\n3. Investigate weight measurements and their potential impact on HbA1c and metformin effectiveness\n4. Provide an overall assessment of the patient's diabetes management and recommendations for optimization",
+      "failure_analyses": [
+        {
+          "dimension": "complexity_classification",
+          "root_cause": "The query was misclassified as STANDARD instead of COMPLEX because the prompt lacks clear guidance on when multiple correlations and medication impact analysis elevate a query from STANDARD to COMPLEX. The query involves three interconnected analyses: HbA1c trends, medication dosage adjustments based on lab results, and correlation with weight changes.",
+          "specific_issues": [],
+          "recommendations": [
+            "MODIFY RULE: Change to 'STANDARD: Trend analysis of 3-5 metrics without causal relationships or medication impact analysis'",
+            "MODIFY RULE: Change to 'COMPLEX: Multi-factor correlation analysis, medication effectiveness assessment, or queries requiring analysis of treatment decisions based on lab results'",
+            "ADD EXAMPLE: 'How has my HbA1c changed since starting metformin and has dosage been adjusted based on results?' \u2192 COMPLEX because it requires analyzing medication effectiveness, dosage decisions, and correlating multiple factors",
+            "ADD BOUNDARY CLARIFICATION: 'COMPLEX queries involve: 1) Analyzing cause-effect relationships between treatments and outcomes, 2) Evaluating medication adjustments based on lab results, 3) Correlating 3+ interdependent health metrics where changes in one affect others'",
+            "ADD KEYWORD INDICATORS: 'COMPLEX indicators: correlation between, adjusted based on, relationship between changes, medication effectiveness, treatment response analysis'"
+          ],
+          "priority": "high",
+          "prompt_file": "backend/services/agents/cmo/prompts/1_gather_data_assess_complexity.txt",
+          "expected_impact": null
+        },
+        {
+          "dimension": "specialty_selection",
+          "root_cause": "The specialist selection failed because the prompt lacks explicit guidance for diabetes-related queries that require endocrinology expertise, and doesn't have rules for including preventive_medicine when analyzing long-term disease management patterns and risk factors",
+          "specific_issues": [
+            "Missing endocrinology: Despite HbA1c and metformin being core diabetes management topics under endocrinology's domain, the prompt lacks explicit keyword mappings or rules that connect these terms to endocrinology selection",
+            "Missing preventive_medicine: The prompt doesn't guide the CMO to include preventive_medicine for queries about long-term disease progression tracking and risk factor correlation analysis"
+          ],
+          "recommendations": [
+            "ADD to CRITICAL INSTRUCTIONS: 'For diabetes-related queries: ALWAYS include endocrinology when the query mentions HbA1c, blood sugar, glucose control, diabetes medications (metformin, insulin, etc.), or diabetes management'",
+            "CLARIFY in Available specialists: Change 'endocrinology: Diabetes, thyroid, hormones, metabolic health' to 'endocrinology: Diabetes management, HbA1c control, blood sugar monitoring, diabetes medications (metformin, insulin), thyroid, hormones, metabolic health'",
+            "ADD to Guidelines: 'For queries analyzing correlations between multiple health metrics over time (e.g., medication changes vs lab results vs weight), include preventive_medicine to assess overall disease progression and risk factors'",
+            "ADD EXAMPLE: 'Query: How has my HbA1c changed since starting metformin? \u2192 Select: [endocrinology (diabetes management), laboratory_medicine (HbA1c values), pharmacy (metformin dosing), preventive_medicine (disease progression analysis)]'",
+            "ADD RULE: 'When a query involves medication effectiveness evaluation (e.g., \"since I started taking X\"), always include both the condition specialist (endocrinology for diabetes) AND pharmacy for comprehensive medication impact assessment'",
+            "ADD to this section: 'When lab values are mentioned in context of a specific condition (e.g., HbA1c for diabetes), ALSO include the relevant condition specialist (endocrinology) in addition to laboratory_medicine'"
+          ],
+          "priority": "high",
+          "prompt_file": "backend/services/agents/cmo/prompts/3_assign_specialist_tasks.txt",
+          "expected_impact": null
+        },
+        {
+          "dimension": "cost_efficiency",
+          "root_cause": "Token usage exceeded expected range by 330% (66,479 vs expected 10-20K) due to verbose multi-agent responses, redundant data gathering, and overly detailed task descriptions for a standard complexity query",
+          "specific_issues": [
+            "Excessive verbosity in CMO initial analysis and specialist task descriptions, treating standard queries with complex query workflows",
+            "Cost $1.00 exceeded threshold $0.50",
+            "Token efficiency score 0.50 below expected threshold"
+          ],
+          "recommendations": [
+            "OPTIMIZE PROMPT: Add 'Provide concise analysis (max 200 words) focusing on: 1) Key data types needed 2) Primary analysis required 3) Expected complexity level' (Impact: 40% reduction in initial CMO analysis tokens)",
+            "ADD CONSTRAINT: 'Each task must be described in 50-75 words maximum. Include only: objective, key data points, and expected output format' (Impact: 60% reduction in task creation phase tokens)",
+            "STREAMLINE: For STANDARD queries, skip detailed analytical approach and use template-based analysis patterns (Impact: 45% reduction for standard complexity queries)",
+            "ADD CONSTRAINT: 'Synthesize findings in 300-400 words maximum. Use bullet points for key findings, brief narrative for conclusions' (Impact: 30% reduction in synthesis phase tokens)",
+            "IMPROVE TOOL USAGE: Implement shared data context - CMO retrieves core data once, specialists reference without re-querying (Impact: 25% reduction in tool-related tokens)",
+            "OPTIMIZE PROMPT: Create concise task handoff format with only essential context (100 words max per specialist) (Impact: 35% reduction in specialist assignment tokens)",
+            "ADJUST THRESHOLD: Implement 'fast-track' for standard queries - single specialist with focused analysis (Impact: 70% reduction for appropriately classified standard queries)"
+          ],
+          "priority": "critical",
+          "prompt_file": "backend/services/agents/cmo/prompts/1_gather_data_assess_complexity.txt",
+          "expected_impact": "65-75% reduction in total token usage (target: 15,000-20,000 tokens for standard queries)"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_tests": 1,
+    "passed_tests": 0,
+    "failed_tests": 1,
+    "overall_success": false,
+    "overall_success_rate": 0.63083125,
+    "weighted_average_score": 0.63083125,
+    "weighted_score": 0.63083125,
+    "success_rate": 0.63083125,
+    "overall_score": 0.63083125,
+    "performance_metrics": {
+      "avg_response_time_ms": 37238.988999999994,
+      "min_response_time_ms": 37238.988999999994,
+      "max_response_time_ms": 37238.988999999994,
+      "total_execution_time_ms": 37238.988999999994
+    },
+    "dimension_success_rates": {
+      "complexity_classification": 0.0,
+      "specialty_selection": 0.0,
+      "analysis_quality": 1.0,
+      "tool_usage": 1.0,
+      "response_structure": 1.0,
+      "cost_efficiency": 0.0
+    },
+    "average_dimension_scores": {
+      "complexity_classification": 0.0,
+      "specialty_selection": 0.44,
+      "analysis_quality": 0.8218749999999999,
+      "tool_usage": 1.0,
+      "response_structure": 1.0,
+      "cost_efficiency": 0.75
+    }
+  },
+  "metadata": {
+    "test_count": 1,
+    "test_source": "QE Agent",
+    "trace_id": "86262b3f-674c-45d7-96d6-05b4a4f2270d",
+    "test_case_category": "general"
+  }
+}

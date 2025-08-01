@@ -36,18 +36,23 @@ Guidelines:
 
 Available specialists (use exact lowercase values):
 - cardiology: Heart health, blood pressure, cardiovascular disease
-- endocrinology: Diabetes, thyroid, hormones, metabolic health
+- endocrinology: Diabetes (including HbA1c, blood glucose), thyroid, hormones, metabolic health, metformin and diabetes medications
 - laboratory_medicine: Lab tests, blood work, diagnostic results
 - pharmacy: Medications, dosages, interactions, adherence
 - nutrition: Diet, weight, nutritional health
-- preventive_medicine: Risk factors, screening, prevention
+- preventive_medicine: Risk factors, screening, prevention, long-term health patterns and outcome analysis
+
+SPECIALIST SELECTION RULES:
+- For diabetes management queries involving HbA1c, glucose, or diabetes medications: ALWAYS include endocrinology
+- For queries about correlations between health metrics and outcomes: Include preventive_medicine for pattern analysis
+- Example: "HbA1c changes with metformin adjustment and weight correlation" requires endocrinology (HbA1c/metformin) + preventive_medicine (correlation analysis)
 
 Format each task as XML within a tasks wrapper:
 
 <tasks>
 <task>
   <specialist>lowercase_specialist_name</specialist>
-  <objective>Specific, measurable objective</objective>
+  <objective>Specific, measurable objective (50-75 words max)</objective>
   <context>Relevant context including initial findings</context>
   <expected_output>Concrete deliverables expected</expected_output>
   <priority>1-5 (1 being highest)</priority>

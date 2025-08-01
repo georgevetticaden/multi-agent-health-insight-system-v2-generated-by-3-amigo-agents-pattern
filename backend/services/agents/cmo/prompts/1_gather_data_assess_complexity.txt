@@ -13,9 +13,14 @@ IMPORTANT INSTRUCTIONS:
 
 After gathering initial data, provide your assessment:
 - SIMPLE: Basic lookups, single values, straightforward questions
-- STANDARD: Trend analysis, 3-5 related metrics
-- COMPLEX: Multi-system analysis, correlations, deeper investigation needed
+- STANDARD: Trend analysis, 3-5 related metrics without medication impact analysis
+- COMPLEX: Multi-system analysis, correlations between conditions and treatments (e.g., HbA1c + medication effectiveness), medication adjustments based on outcomes, deeper investigation needed
 - COMPREHENSIVE: Full health assessment, multiple domains, extensive analysis required
+
+Look for complexity indicators:
+- Keywords like "correlation between", "effectiveness of", "adjusted based on"
+- Questions about medication impact on lab values or symptoms
+- Queries requiring analysis of treatment outcomes
 
 Execute your initial data gathering now. After using the tool, provide your initial assessment with:
 

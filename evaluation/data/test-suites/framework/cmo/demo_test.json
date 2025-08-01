@@ -1,0 +1,29 @@
+[
+  {
+    "id": "demo_test_1",
+    "agent_type": "cmo",
+    "query": "How has my HbA1c level changed since I started taking metformin, has my dosage been adjusted over time based on my lab results, and is there a correlation between these changes and my weight measurements during the same period (standard)?",
+    "expected_complexity": "COMPLEX",
+    "expected_specialties": [
+      "endocrinology",
+      "laboratory_medicine",
+      "preventive_medicine",
+      "pharmacy",
+      "nutrition"
+    ],
+    "key_data_points": [
+      "hba1c_trend",
+      "metformin_initiation",
+      "dose_adjustments",
+      "weight_correlation",
+      "glycemic_control",
+      "temporal_analysis"
+    ],
+    "expected_cost_threshold": 1.0,
+    "category": "diabetes",
+    "notes": "Real query 4 - Found suboptimal dosing and weight gain correlation",
+    "based_on_real_query": true,
+    "created_by": "framework",
+    "created_at": "2025-01-01T00:00:00Z"
+  }
+]

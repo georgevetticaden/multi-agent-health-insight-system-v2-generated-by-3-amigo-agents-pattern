@@ -1,0 +1,64 @@
+{
+  "type": "object",
+  "required": [
+    "id",
+    "agent_type",
+    "query",
+    "input_data"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "agent_type": {
+      "type": "string",
+      "enum": [
+        "visualization"
+      ]
+    },
+    "query": {
+      "type": "string"
+    },
+    "input_data": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "metrics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "time_range": {
+          "type": "string"
+        }
+      }
+    },
+    "expected_chart_type": {
+      "type": "string"
+    },
+    "expected_features": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "expected_libraries": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "created_by": {
+      "enum": [
+        "framework",
+        "studio"
+      ]
+    }
+  }
+}

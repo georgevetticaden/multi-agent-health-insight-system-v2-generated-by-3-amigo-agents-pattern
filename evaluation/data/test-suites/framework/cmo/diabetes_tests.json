@@ -1,0 +1,43 @@
+[
+  {
+    "id": "simple_001",
+    "agent_type": "cmo",
+    "query": "What is my current blood sugar level?",
+    "expected_complexity": "SIMPLE",
+    "expected_specialties": [
+      "endocrinology"
+    ],
+    "key_data_points": [
+      "glucose",
+      "latest_labs"
+    ],
+    "category": "diabetes",
+    "notes": "Simple single data point query",
+    "created_by": "framework",
+    "created_at": "2025-01-01T00:00:00Z",
+    "expected_cost_threshold": 0.25
+  },
+  {
+    "id": "complex_001",
+    "agent_type": "cmo",
+    "query": "How has my diabetes management changed since starting the new medication regimen, including A1C trends, glucose variability, and any side effects?",
+    "expected_complexity": "COMPLEX",
+    "expected_specialties": [
+      "endocrinology",
+      "pharmacy",
+      "data_analysis"
+    ],
+    "key_data_points": [
+      "a1c",
+      "glucose_variability",
+      "medications",
+      "side_effects",
+      "trends"
+    ],
+    "category": "diabetes",
+    "notes": "Complex multi-dimensional analysis",
+    "created_by": "framework",
+    "created_at": "2025-01-01T00:00:00Z",
+    "expected_cost_threshold": 1.0
+  }
+]

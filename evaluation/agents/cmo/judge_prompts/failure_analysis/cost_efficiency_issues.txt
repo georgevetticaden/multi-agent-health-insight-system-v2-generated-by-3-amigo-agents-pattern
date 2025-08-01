@@ -1,0 +1,101 @@
+You are an expert at analyzing cost efficiency in AI-powered health query systems.
+
+A test case failed the cost efficiency evaluation:
+
+Query: {query}
+Complexity: {complexity}
+Total Cost: ${total_cost:.2f}
+Expected Cost Threshold: ${expected_threshold:.2f}
+Tokens Used: {tokens_used:,}
+Actual Score: {actual_score:.2f} (Target: {target_score:.2f})
+
+Component Breakdown:
+- Cost Threshold Score: {cost_threshold_score:.2f} (Weight: 0.50)
+- Token Efficiency Score: {token_efficiency_score:.2f} (Weight: 0.50)
+
+Token Efficiency Analysis:
+{efficiency_status}
+Query Complexity: {complexity}
+
+The system failed to meet the cost efficiency target primarily due to {failure_reason}.
+
+The main prompts contributing to token usage are:
+1. Initial Query Analysis (backend/services/agents/cmo/prompts/1_gather_data_assess_complexity.txt)
+2. Analytical Approach (backend/services/agents/cmo/prompts/2_define_analytical_approach.txt)
+3. Task Creation (backend/services/agents/cmo/prompts/2_create_tasks_with_context.txt)
+4. Specialist Task Assignment (backend/services/agents/cmo/prompts/3_assign_specialist_tasks.txt)
+5. Synthesis (backend/services/agents/cmo/prompts/4_synthesize_findings.txt)
+6. Various specialist prompts for the selected specialists
+
+Based on this analysis, provide specific, actionable recommendations to improve cost efficiency.
+
+**RECOMMENDATION CATEGORIES:**
+1. **PROMPT_OPTIMIZATION**: Reduce verbosity in prompts (format: "OPTIMIZE PROMPT: [specific change]")
+2. **RESPONSE_CONSTRAINTS**: Add token limits or conciseness instructions (format: "ADD CONSTRAINT: [specific limit]")
+3. **TOOL_EFFICIENCY**: Optimize tool calling patterns (format: "IMPROVE TOOL USAGE: [specific pattern]")
+4. **COMPLEXITY_CALIBRATION**: Adjust complexity thresholds (format: "ADJUST THRESHOLD: [new values]")
+5. **WORKFLOW_STREAMLINING**: Eliminate redundant steps (format: "STREAMLINE: [specific workflow change]")
+
+CRITICAL INSTRUCTIONS FOR YOUR RESPONSE:
+1. You MUST return a COMPLETE, VALID JSON object
+2. Do NOT truncate or cut off your response
+3. Ensure ALL brackets and quotes are properly closed
+4. Each recommendation MUST specify:
+   - Which specific prompt file to modify
+   - What specific text or section to change
+   - The expected token reduction (with percentage)
+5. Prioritize recommendations by potential token savings
+6. Consider that {complexity} queries should typically use 10-20K tokens, not {tokens_used:,}
+
+Provide your analysis in EXACTLY the following JSON format. Output ONLY valid, complete JSON with no additional text before or after:
+{{
+    "prompt_file": "backend/services/agents/cmo/prompts/1_gather_data_assess_complexity.txt",
+    "issue_description": "Clear description of why cost efficiency failed (e.g., 'Token usage exceeded expected range by 45% due to verbose agent responses and redundant data gathering')",
+    "primary_inefficiency": "The single biggest contributor to excess token usage",
+    "recommendations": [
+        {{
+            "category": "PROMPT_OPTIMIZATION",
+            "location": "backend/services/agents/cmo/prompts/1_gather_data_assess_complexity.txt - Line containing 'detailed analytical approach'",
+            "current_state": "Prompt asks for 'detailed analytical approach' which encourages verbose responses",
+            "recommendation": "OPTIMIZE PROMPT: Replace 'Provide a detailed analytical approach' with 'Provide a concise analytical approach (3-5 bullet points, max 50 words each)'",
+            "expected_token_savings": "~2,000-3,000 tokens per query",
+            "rationale": "Current responses average 1,500+ words for approach section alone",
+            "expected_impact": "20-25% reduction in CMO initial analysis tokens"
+        }},
+        {{
+            "category": "RESPONSE_CONSTRAINTS",
+            "location": "Task Creation Prompt",
+            "recommendation": "ADD CONSTRAINT: 'Each task description must be under 100 words. Focus on WHAT to analyze, not HOW'",
+            "expected_token_savings": "~20-30% reduction in task descriptions",
+            "rationale": "Current task descriptions include unnecessary methodology details",
+            "expected_impact": "Significant cumulative savings across multiple specialists"
+        }},
+        {{
+            "category": "TOOL_EFFICIENCY",
+            "location": "Data Gathering Phase",
+            "recommendation": "IMPROVE TOOL USAGE: Batch related queries (e.g., combine lab results and medication queries for diabetes)",
+            "expected_token_savings": "~10-15% reduction in tool-related tokens",
+            "rationale": "Separate tool calls have redundant context",
+            "expected_impact": "10% reduction in tool-related tokens"
+        }},
+        {{
+            "category": "WORKFLOW_STREAMLINING",
+            "location": "Specialist Analysis",
+            "recommendation": "STREAMLINE: For SIMPLE queries, skip formal task creation and use direct analysis",
+            "expected_token_savings": "~40-50% reduction for simple queries",
+            "rationale": "Simple queries don't need multi-specialist coordination",
+            "expected_impact": "50% token reduction for SIMPLE complexity queries"
+        }},
+        {{
+            "category": "COMPLEXITY_CALIBRATION",
+            "location": "Token Range Expectations",
+            "recommendation": "REVIEW PATTERNS: Analyze token usage patterns across similar {complexity} queries to identify optimization opportunities",
+            "expected_token_savings": "Data-driven optimizations",
+            "rationale": "Understanding usage patterns enables targeted improvements",
+            "expected_impact": "More accurate cost efficiency scoring"
+        }}
+    ],
+    "total_expected_savings": "25-40% reduction in total token usage",
+    "reasoning": "These optimizations maintain response quality while significantly reducing token usage through targeted constraints and workflow improvements",
+    "priority": "high"
+}}

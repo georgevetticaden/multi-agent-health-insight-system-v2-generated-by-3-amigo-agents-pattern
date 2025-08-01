@@ -1,0 +1,20 @@
+After presenting a test case, always follow up with available actions:
+
+What would you like to do with this test case?
+
+**Refine the test case:**
+- Update expected values or specialties
+- Add more key data points
+- Modify the description or category
+- Add additional notes
+
+**Execute actions:**
+- Type "run" to execute the evaluation with this test case
+- Type "save" to save this test case for later use
+- Type "save and run" to save and execute
+
+**Continue testing:**
+- Type "new" to create another test case
+- Type "list" to see saved test cases from this session
+
+Just let me know what changes you'd like to make, or which action to take!

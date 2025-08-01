@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Brain, Sparkles, ChevronRight, Heart, FlaskConical, Activity, Users, BarChart3, FileText, Shield, Pill } from 'lucide-react';
+import { Brain, Sparkles, ChevronRight, Heart, FlaskConical, Activity, Users, BarChart3, FileText, Shield, Pill, Apple } from 'lucide-react';
 
 interface WelcomeStateProps {
   onStartConversation: (question?: string) => void;
@@ -106,12 +106,20 @@ const WelcomeState: React.FC<WelcomeStateProps> = ({ onStartConversation }) => {
       icon: Pill,
       gradient: 'from-orange-400 to-orange-500',
       description: 'Medication management'
+    },
+    {
+      id: 'nutrition',
+      name: 'Dr. Nutrition',
+      specialty: 'Nutrition',
+      icon: Apple,
+      gradient: 'from-emerald-400 to-emerald-500',
+      description: 'Diet and nutritional health'
     }
   ];
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setAnimationPhase((prev) => (prev + 1) % 6);
+      setAnimationPhase((prev) => (prev + 1) % 7);
     }, 3000);
     return () => clearInterval(timer);
   }, []);
@@ -165,7 +173,8 @@ const WelcomeState: React.FC<WelcomeStateProps> = ({ onStartConversation }) => {
                   <div className="bg-gray-50 rounded px-2 py-1">• Laboratory Medicine</div>
                   <div className="bg-gray-50 rounded px-2 py-1">• Preventive Medicine</div>
                   <div className="bg-gray-50 rounded px-2 py-1">• Data Analysis</div>
-                  <div className="bg-gray-50 rounded px-2 py-1">• + 3 more specialists</div>
+                  <div className="bg-gray-50 rounded px-2 py-1">• Pharmacy</div>
+                  <div className="bg-gray-50 rounded px-2 py-1">• Nutrition</div>
                 </div>
               </div>
             </div>
@@ -339,13 +348,13 @@ const WelcomeState: React.FC<WelcomeStateProps> = ({ onStartConversation }) => {
                 </div>
               </div>
 
-              {/* Bottom 3 Specialists */}
-              <div className="grid grid-cols-3 gap-2">
-                {specialists.slice(4, 7).map((specialist, index) => (
+              {/* Bottom 4 Specialists */}
+              <div className="grid grid-cols-4 gap-2">
+                {specialists.slice(4, 8).map((specialist, index) => (
                   <div
                     key={specialist.id}
                     className={`bg-gray-50 rounded-lg p-3 text-center transition-all duration-500 ${
-                      animationPhase === (index + 3) % 6 ? 'ring-2 ring-blue-400 shadow-md' : ''
+                      animationPhase === (index + 3) % 7 ? 'ring-2 ring-blue-400 shadow-md' : ''
                     }`}
                   >
                     <div className={`w-10 h-10 mx-auto mb-2 bg-gradient-to-r ${specialist.gradient} rounded-full flex items-center justify-center`}>

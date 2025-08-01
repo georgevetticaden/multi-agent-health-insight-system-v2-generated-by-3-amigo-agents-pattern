@@ -1,0 +1,65 @@
+You are an expert at analyzing medical query complexity classification.
+
+A test case failed because the complexity was misclassified:
+
+Query: {query}
+Expected Complexity: {expected_complexity}
+Actual Complexity: {actual_complexity}
+
+The CMO's reasoning was:
+{approach_text}
+
+Here is the ACTUAL PROMPT that the CMO used for complexity classification:
+```
+{actual_prompt_content}
+```
+
+Based on this analysis and the actual prompt content above, provide specific, actionable recommendations to fix complexity classification.
+
+**RECOMMENDATION CATEGORIES:**
+1. **RULE_MODIFICATIONS**: Adjust complexity criteria (format: "MODIFY RULE: [Change]")
+2. **EXAMPLE_ADDITIONS**: Add classification examples (format: "ADD EXAMPLE: '[Query]' → [Complexity] because [reason]")
+3. **PROMPT_CLARIFICATIONS**: Clarify existing text (format: "CLARIFY: Change '[current]' to '[new]'")
+4. **BOUNDARY_DEFINITIONS**: Define clearer boundaries between levels
+5. **KEYWORD_INDICATORS**: Add keywords that signal complexity levels
+
+CRITICAL INSTRUCTIONS FOR YOUR RESPONSE:
+1. You MUST return a COMPLETE, VALID JSON object
+2. Do NOT truncate or cut off your response
+3. Ensure ALL brackets and quotes are properly closed
+4. The JSON must be parseable by standard JSON parsers
+5. Do not include any text before or after the JSON object
+6. Make sure to include ALL required fields in the response
+
+Provide your analysis in EXACTLY the following JSON format. Output ONLY valid, complete JSON with no additional text before or after:
+{{
+    "prompt_file": "backend/services/agents/cmo/prompts/1_gather_data_assess_complexity.txt",
+    "issue_description": "Clear description of why the misclassification occurred",
+    "misclassification_reason": "Specific prompt guidance that led to wrong classification",
+    "recommendations": [
+        {{
+            "category": "RULE_MODIFICATION",
+            "location": "Complexity Criteria Section",
+            "current_state": "Current rule that caused misclassification",
+            "recommendation": "MODIFY RULE: Change 'queries with multiple conditions' to 'queries with 3+ distinct medical conditions or 2+ if they interact (e.g., diabetes + kidney disease)'",
+            "rationale": "Current rule is too vague about what constitutes 'multiple'",
+            "expected_impact": "Will correctly classify 90% of multi-condition queries"
+        }},
+        {{
+            "category": "EXAMPLE_ADDITION",
+            "location": "Complexity Examples",
+            "recommendation": "ADD EXAMPLE: 'How has my A1C changed over time?' → STANDARD because it involves single metric trend analysis",
+            "rationale": "No similar example exists in current prompt",
+            "expected_impact": "Provides clear precedent for this query pattern"
+        }},
+        {{
+            "category": "BOUNDARY_DEFINITION",
+            "location": "Between SIMPLE and STANDARD",
+            "recommendation": "ADD BOUNDARY CLARIFICATION: 'STANDARD includes trend analysis and multiple data points while SIMPLE is limited to current values only'",
+            "rationale": "Current boundaries between these levels are unclear",
+            "expected_impact": "Prevents confusion between these two levels"
+        }}
+    ],
+    "reasoning": "Detailed explanation of why these changes will fix the classification",
+    "priority": "high/medium/low"
+}}

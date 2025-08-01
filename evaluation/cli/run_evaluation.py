@@ -1,0 +1,608 @@
+"""
+Multi-Agent Evaluation Runner
+
+Script to run comprehensive evaluation of different agents in the multi-agent health system.
+Supports evaluation of CMO, specialist agents, and full system evaluation.
+"""
+
+import asyncio
+import json
+import argparse
+import logging
+from datetime import datetime
+from pathlib import Path
+from typing import List, Optional, Dict, Any
+import sys
+import os
+
+# Add backend to path for imports
+sys.path.append(os.path.join(os.path.dirname(__file__), "../../backend"))
+
+from anthropic import Anthropic
+from dotenv import load_dotenv
+
+# Import tracing components
+try:
+    from services.tracing import TRACING_ENABLED
+    TRACING_AVAILABLE = True
+except ImportError:
+    TRACING_AVAILABLE = False
+    TRACING_ENABLED = False
+
+# Import agent implementations
+from services.agents.cmo.cmo_agent import CMOAgent
+from services.agents.specialist.specialist_agent import SpecialistAgent
+from services.agents.models import MedicalSpecialty
+from tools.tool_registry import ToolRegistry
+
+# Import evaluators
+from evaluation.agents.cmo import CMOEvaluator
+from evaluation.agents.specialist import SpecialistEvaluator
+
+# Import test loader and converter
+from evaluation.data.test_loader import TestLoader
+from evaluation.cli.test_case_converter import convert_json_test_cases
+
+# Import other evaluation components
+from evaluation.framework.report_generator import DynamicHTMLReportGenerator
+from evaluation.utils import setup_evaluation_logging
+
+# Load environment variables
+# Try to load from multiple locations with absolute paths
+current_dir = Path(__file__).parent.parent.parent
+load_dotenv(current_dir / '.env')  # Project root
+load_dotenv(current_dir / 'backend' / '.env')  # Backend directory
+load_dotenv(current_dir / 'evaluation' / '.env')  # Evaluation directory
+
+# Setup initial logging without file output (will be updated per test run)
+log_level = os.getenv("LOG_LEVEL", "INFO")
+setup_evaluation_logging(log_level=log_level, log_to_file=False)
+logger = logging.getLogger(__name__)
+
+
+def _print_evaluation_summary(results: Dict[str, Any], test_dir: Path, agent_type: str, test_type: str):
+    """Print comprehensive evaluation summary with file tree"""
+    summary = results.get("summary", {})
+    
+    print("\n" + "="*80)
+    print(f"EVALUATION SUMMARY - {agent_type.upper()} Agent")
+    print(f"Test Type: {test_type}")
+    print("="*80)
+    
+    # Overall result
+    overall_result = "PASS" if summary.get("overall_success", False) else "FAIL"
+    overall_score = summary.get("success_rate", 0.0) * 100
+    print(f"\nOverall Result: {overall_result}")
+    print(f"Overall Score: {overall_score:.1f}% (Target: 75.0%)")
+    
+    # Failed dimensions
+    if not summary.get("overall_success", False):
+        print("\nFailed Dimensions:")
+        # Calculate failed dimensions from results
+        dimension_scores = {}
+        dimension_targets = {
+            'complexity_classification': 0.90,
+            'specialty_selection': 0.85,
+            'analysis_quality': 0.80,
+            'tool_usage': 0.90,
+            'response_structure': 0.95
+        }
+        
+        for result in results.get("results", []):
+            for dim in dimension_targets:
+                if dim not in dimension_scores:
+                    dimension_scores[dim] = []
+                
+                # Use metadata-driven dynamic score fields
+                score_key = f"{dim}_score"
+                score = result.get(score_key, 0.0)
+                dimension_scores[dim].append(score)
+        
+        for dim, scores in dimension_scores.items():
+            if scores:
+                avg_score = sum(scores) / len(scores)
+                target = dimension_targets[dim]
+                if avg_score < target:
+                    print(f"  - {dim.replace('_', ' ').title()}: {avg_score:.2f} (Target: {target:.2f})")
+    
+    # Recommendations
+    print("\nRecommendations for Improvement:")
+    if overall_score < 75.0:
+        # Check if we have macro analysis results
+        if 'macro_analyses' in results and results['macro_analyses']:
+            print("  📊 Macro-Level Analysis Available:")
+            print("  - Pattern analysis across all test failures")
+            print("  - Consolidated recommendations in HTML report")
+            print("  - Expected improvements from implementing recommendations")
+        else:
+            print("  1. Review failed test cases in the HTML report")
+            print("  2. Analyze LLM Judge feedback for quality improvements")
+            print("  3. Consider prompt refinements based on failure patterns")
+    else:
+        print("  ✓ All performance targets met!")
+    
+    # Test output assets
+    print("\n" + "="*80)
+    print("TEST OUTPUT ASSETS CREATED")
+    print("="*80)
+    print(f"\nTest Directory: {test_dir.absolute()}")
+    print("\nFile Structure:")
+    
+    # Build file tree
+    def print_tree(path, prefix="", is_last=True):
+        """Print directory tree"""
+        if path.name.startswith('.'):
+            return
+            
+        # Determine icon
+        if path.is_dir():
+            icon = "📁"
+        elif path.suffix == '.json':
+            icon = "📄"
+        elif path.suffix == '.html':
+            icon = "📊"
+        elif path.suffix == '.png':
+            icon = "📈"
+        elif path.suffix == '.log':
+            icon = "📜"
+        else:
+            icon = "📄"
+        
+        # Print current item
+        connector = "└── " if is_last else "├── "
+        print(f"{prefix}{connector}{icon} {path.name}", end="")
+        
+        # Add description for known files
+        descriptions = {
+            "results.json": "Complete evaluation results with metrics",
+            "evaluation.log": "Detailed execution logs",
+            "report.html": "Interactive HTML report with visualizations",
+            "raw_results.json": "Raw evaluation data for analysis",
+            "dimension_scores.png": "Bar chart comparing actual vs target scores",
+            "complexity_performance.png": "Performance metrics by query complexity",
+            "response_time_distribution.png": "Histogram of response times",
+            "specialty_heatmap.png": "Co-occurrence matrix of specialist selections"
+        }
+        
+        if path.name in descriptions:
+            print(f" - {descriptions[path.name]}")
+        else:
+            print()
+        
+        # Recurse for directories
+        if path.is_dir():
+            extension = "    " if is_last else "│   "
+            children = sorted(list(path.iterdir()))
+            for i, child in enumerate(children):
+                print_tree(child, prefix + extension, i == len(children) - 1)
+    
+    print_tree(test_dir)
+    
+    print("\n" + "="*80)
+    print("📊 Full report with visualizations available at:")
+    print(f"   {test_dir.absolute()}/report/report.html")
+    print("\n📁 Raw results saved to:")
+    print(f"   {test_dir.absolute()}/results.json")
+    print("="*80 + "\n")
+
+
+class EvaluationRunner:
+    """Manages the evaluation process for different agents with integrated LLM Judge"""
+    
+    def __init__(self):
+        # Initialize Anthropic client
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise ValueError("ANTHROPIC_API_KEY environment variable not set")
+        
+        # Create Anthropic client - tracing will be handled by AnthropicStreamingClient
+        self.anthropic_client = Anthropic(api_key=api_key)
+        
+        if TRACING_AVAILABLE and TRACING_ENABLED:
+            logger.info("Tracing enabled - AnthropicStreamingClient will handle trace recording")
+        else:
+            if not TRACING_AVAILABLE:
+                logger.warning("Tracing not available")
+            elif not TRACING_ENABLED:
+                logger.info("Tracing disabled")
+        
+        # Initialize tool registry
+        self.tool_registry = ToolRegistry()
+        
+        # LLM Judge is now handled within evaluators, not in CLI
+        # This ensures separation of concerns
+        
+        # Map of agent types to their evaluators
+        self.evaluator_map = {
+            "cmo": self._create_cmo_evaluator,
+            "specialist": self._create_specialist_evaluator
+        }
+        
+        # Test loader for new JSON test cases
+        self.test_loader = TestLoader()
+        
+        # We still need the map for agent type validation
+        self.test_case_map = {"cmo": True, "specialist": True}
+    
+    def _create_cmo_evaluator(self) -> CMOEvaluator:
+        """Create CMO evaluator"""
+        cmo_agent = CMOAgent(
+            anthropic_client=self.anthropic_client,
+            tool_registry=self.tool_registry,
+            model="claude-opus-4-20250514",  # Use Opus for evaluation
+            max_tokens_analysis=3000,  # Reduced for Opus limit
+            max_tokens_planning=4000,   # Reduced for Opus limit (max 4096)
+            enable_tracing=True  # Enable tracing for evaluation		
+        )
+        return CMOEvaluator(cmo_agent, self.anthropic_client)
+    
+    def _create_specialist_evaluator(self) -> SpecialistEvaluator:
+        """Create generic specialist evaluator"""
+        # Initialize specialist agent - specialty will be determined by test cases
+        specialist_agent = SpecialistAgent(
+            anthropic_client=self.anthropic_client,
+            tool_registry=self.tool_registry,
+            model="claude-opus-4-20250514",  # Use Opus for evaluation
+            max_tokens=3500,  # Reduced for Opus limit
+            enable_tracing=True  # Enable tracing for evaluation
+        )
+        return SpecialistEvaluator(specialist_agent, MedicalSpecialty.CARDIOLOGY, self.anthropic_client)
+    
+    def _create_specialist_evaluator_for_specialty(self, specialty: str) -> SpecialistEvaluator:
+        """Create specialist evaluator for specific specialty"""
+        specialist_agent = SpecialistAgent(
+            anthropic_client=self.anthropic_client,
+            tool_registry=self.tool_registry,
+            model="claude-opus-4-20250514",  # Use Opus for evaluation
+            max_tokens=3500,  # Reduced for Opus limit
+            enable_tracing=True  # Enable tracing for evaluation
+        )
+        medical_specialty = MedicalSpecialty(specialty)
+        return SpecialistEvaluator(specialist_agent, medical_specialty, self.anthropic_client)
+    
+    def _get_json_test_cases(self, agent_type: str, test_type: str, category: Optional[str] = None, specialty: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Get test cases from JSON storage"""
+        # Load all test cases for the agent type
+        all_tests = self.test_loader.load_all_tests(agent_type=agent_type)
+        
+        if not all_tests:
+            logger.warning(f"No test cases found for agent type: {agent_type}")
+            return []
+        
+        # Apply filters based on test type
+        if test_type == "example":
+            return all_tests[:1]
+        elif test_type == "comprehensive":
+            return all_tests[:8]
+        elif test_type == "all":
+            return all_tests
+        elif category:
+            return [t for t in all_tests if t.get("category") == category]
+        
+        return all_tests
+    
+    def get_test_cases_new(self, agent_type: str, test_type: str, category: Optional[str] = None, specialty: Optional[str] = None) -> List[Any]:
+        """Get test cases for specified agent and test type"""
+        
+        if agent_type not in self.test_case_map:
+            raise ValueError(f"Unknown agent type: {agent_type}")
+        
+        test_cases_class = self.test_case_map[agent_type]
+        
+        # CMO test cases
+        if agent_type == "cmo":
+            if test_type == "example":
+                return [test_cases_class.get_simple_queries()[0]]
+            elif test_type == "complexity":
+                return test_cases_class.get_complexity_test_suite()
+            elif test_type == "specialty":
+                return test_cases_class.get_specialty_test_suite()
+            elif test_type == "comprehensive":
+                return test_cases_class.get_comprehensive_test_suite()
+            elif test_type == "real-world":
+                return test_cases_class.get_real_world_test_suite()
+            elif test_type == "all":
+                return test_cases_class.get_all_test_cases()
+            
+        # Specialist test cases
+        elif agent_type == "specialist":
+            # Handle specialty-specific filtering first
+            if specialty:
+                medical_specialty = MedicalSpecialty(specialty)
+                if test_type == "example":
+                    specialty_cases = test_cases_class.get_test_cases_by_specialty(medical_specialty)
+                    return specialty_cases[:1] if specialty_cases else []
+                elif test_type == "comprehensive":
+                    return test_cases_class.get_test_cases_by_specialty(medical_specialty)
+                elif test_type == "real-world":
+                    all_cases = test_cases_class.get_test_cases_by_specialty(medical_specialty)
+                    return [case for case in all_cases if case.based_on_real_case]
+                elif test_type == "all":
+                    return test_cases_class.get_test_cases_by_specialty(medical_specialty)
+            else:
+                # No specialty specified, use general logic
+                if test_type == "example":
+                    return test_cases_class.get_cardiology_lipid_trend_cases()[:1]
+                elif test_type == "comprehensive":
+                    return test_cases_class.get_comprehensive_test_suite()
+                elif test_type == "real-world":
+                    return test_cases_class.get_real_world_test_suite()
+                elif test_type == "all":
+                    return test_cases_class.get_all_test_cases()
+                # Support for specialty-specific filtering via test_type
+                elif test_type in ["cardiology", "endocrinology", "pharmacy", "nutrition", "laboratory_medicine", "preventive_medicine", "data_analysis", "general_practice"]:
+                    # Parse specialty from test_type
+                    medical_specialty = MedicalSpecialty(test_type)
+                    return test_cases_class.get_test_cases_by_specialty(medical_specialty)
+                elif test_type == "category" and category:
+                    return test_cases_class.get_test_cases_by_category(category)
+                elif test_type == "urgency" and category:
+                    return test_cases_class.get_test_cases_by_urgency(category)
+        
+        return []
+    
+    async def run_evaluation(
+        self, 
+        agent_type: str,
+        test_type: str,
+        max_concurrent: int = 5,
+        test_ids: Optional[List[str]] = None,
+        category: Optional[str] = None,
+        specialty: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Run evaluation for specified agent type"""
+        
+        # Create evaluator
+        if agent_type not in self.evaluator_map:
+            raise ValueError(f"Unknown agent type: {agent_type}. Available: {list(self.evaluator_map.keys())}")
+        
+        # For specialist agent, use the specialty parameter to create the right evaluator
+        if agent_type == "specialist" and specialty:
+            evaluator = self._create_specialist_evaluator_for_specialty(specialty)
+        else:
+            evaluator = self.evaluator_map[agent_type]()
+        
+        # Get test cases using new JSON loader
+        json_test_cases = self._get_json_test_cases(agent_type, test_type, category, specialty)
+        
+        # Convert to appropriate objects
+        test_cases = convert_json_test_cases(json_test_cases, agent_type)
+        
+        if not test_cases:
+            logger.warning(f"No test cases found for agent={agent_type}, test={test_type}, category={category}")
+            return {"error": "No test cases found"}
+        
+        # Filter by test IDs if specified
+        if test_ids:
+            test_ids_set = set(test_ids)
+            test_cases = [tc for tc in test_cases if tc.id in test_ids_set]
+            logger.info(f"Filtered to {len(test_cases)} test cases by ID")
+        
+        # Print test case preview for real-world tests
+        if test_type == "real-world":
+            print(f"\n📋 Real-World Based Test Cases ({len(test_cases)} tests):")
+            print("="*80)
+            for i, tc in enumerate(test_cases):
+                print(f"\n{i+1}. Test ID: {tc.id}")
+                print(f"   Query: {tc.query[:100]}..." if len(tc.query) > 100 else f"   Query: {tc.query}")
+                print(f"   Expected Complexity: {tc.expected_complexity}")
+                print(f"   Expected Specialists: {', '.join(sorted(tc.expected_specialties))}")
+                if hasattr(tc, 'notes') and tc.notes:
+                    print(f"   Notes: {tc.notes}")
+            print("="*80 + "\n")
+        
+        logger.info(f"Running {len(test_cases)} test cases for {agent_type} agent...")
+        
+        # Run evaluation
+        results = await evaluator.evaluate_test_suite(
+            test_cases=test_cases,
+            max_concurrent=max_concurrent
+        )
+        
+        # Add metadata
+        results["agent_type"] = agent_type
+        results["test_type"] = test_type
+        results["category"] = category
+        
+        # Perform macro-level analysis if applicable (CMO evaluator has this method)
+        if hasattr(evaluator, 'perform_macro_analysis'):
+            logger.info("Performing macro-level analysis across all test failures...")
+            results = await evaluator.perform_macro_analysis(results)
+            logger.info("Macro-level analysis completed")
+        
+        # No need to enhance here - failure analysis is now done in the evaluator
+        return results
+    
+    
+    def create_test_directory(self, agent_type: str, test_type: str) -> Path:
+        """Create directory for test run outputs"""
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        test_name = f"{agent_type}-{test_type}_{timestamp}"
+        
+        # Try to use unified storage for runs
+        try:
+            from evaluation.data.config import EvaluationDataConfig
+            import uuid
+            # Create evaluation ID for this run
+            evaluation_id = f"{test_name}_{uuid.uuid4().hex[:8]}"
+            test_dir = EvaluationDataConfig.get_run_dir(evaluation_id)
+            logger.info(f"Using unified run storage: {test_dir}")
+            return test_dir
+        except ImportError:
+            # Fallback to old location
+            test_dir = Path("evaluation/test_runs") / test_name
+            test_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Using legacy test directory: {test_dir}")
+            return test_dir
+
+
+async def main():
+    """Main entry point for evaluation runner"""
+    parser = argparse.ArgumentParser(description="Run multi-agent evaluation")
+    
+    # Agent selection
+    parser.add_argument(
+        "--agent",
+        type=str,
+        default="cmo",
+        choices=["cmo", "specialist"],
+        help="Agent type to evaluate"
+    )
+    
+    # Test type selection
+    parser.add_argument(
+        "--test",
+        type=str,
+        default="example",
+        help="Type of test to run (depends on agent type)"
+    )
+    
+    # Additional options
+    parser.add_argument(
+        "--specialty",
+        type=str,
+        help="Medical specialty (for specialist agent)",
+        choices=["cardiology", "endocrinology", "pharmacy", "nutrition", "laboratory_medicine", "preventive_medicine", "data_analysis", "general_practice"]
+    )
+    
+    parser.add_argument(
+        "--category",
+        type=str,
+        help="Test category (for category-based tests)"
+    )
+    
+    parser.add_argument(
+        "--test-ids",
+        type=str,
+        help="Comma-separated list of specific test IDs to run"
+    )
+    
+    parser.add_argument(
+        "--concurrent",
+        type=int,
+        default=5,
+        help="Maximum concurrent test executions"
+    )
+    
+    parser.add_argument(
+        "--output",
+        type=str,
+        help="Output file for results (default: stdout)"
+    )
+    
+    args = parser.parse_args()
+    
+    # Parse test IDs if provided
+    test_ids = None
+    if args.test_ids:
+        test_ids = [tid.strip() for tid in args.test_ids.split(",")]
+    
+    # Initialize runner
+    runner = EvaluationRunner()
+    
+    # Create test directory
+    test_dir = runner.create_test_directory(args.agent, args.test)
+    
+    # Setup logging for this test run
+    setup_evaluation_logging(log_level=log_level, log_to_file=True, log_dir=test_dir)
+    
+    # Configure trace storage - prefer unified storage if available
+    try:
+        from evaluation.data.config import EvaluationDataConfig
+        EvaluationDataConfig.init_directories()
+        # Always use unified trace storage when available
+        os.environ["TRACE_STORAGE_PATH"] = str(EvaluationDataConfig.TRACES_DIR)
+        logger.info(f"Using unified trace storage: {EvaluationDataConfig.TRACES_DIR}")
+    except ImportError:
+        # Only fall back to test directory if unified storage not available
+        os.environ["TRACE_STORAGE_PATH"] = str(test_dir / "traces")
+        logger.info(f"Using test directory trace storage: {test_dir / 'traces'}")
+    os.environ["TRACE_STORAGE_TYPE"] = "filesystem"
+    
+    # Reset the trace collector if it was already initialized with default path
+    if TRACING_AVAILABLE:
+        from services.tracing.trace_collector import set_trace_collector, TraceCollector
+        from services.tracing.storage import FileSystemTraceStorage
+        # Create a new trace collector with the correct storage path
+        trace_storage_path = Path(os.environ.get("TRACE_STORAGE_PATH", str(test_dir / "traces")))
+        storage = FileSystemTraceStorage(trace_storage_path)
+        new_collector = TraceCollector(storage_backend=storage)
+        set_trace_collector(new_collector)
+        logger.info(f"Reset trace collector with storage path: {trace_storage_path}")
+    
+    logger.info(f"Starting {args.agent} agent evaluation")
+    logger.info(f"Test type: {args.test}")
+    logger.info(f"Test directory: {test_dir}")
+    logger.info(f"Trace storage: {os.environ.get('TRACE_STORAGE_PATH', 'default')}")
+    
+    try:
+        # Run evaluation
+        results = await runner.run_evaluation(
+            agent_type=args.agent,
+            test_type=args.test,
+            max_concurrent=args.concurrent,
+            test_ids=test_ids,
+            category=args.category,
+            specialty=args.specialty
+        )
+        
+        # Save results
+        results_file = test_dir / "results.json"
+        with open(results_file, "w") as f:
+            json.dump(results, f, indent=2, default=str)
+        
+        logger.info(f"Results saved to: {results_file}")
+        
+        # Rename directory to include trace ID if available
+        if results.get("results") and len(results["results"]) > 0:
+            # Get the first trace_id from results (typically all tests in a run share same trace)
+            first_result = results["results"][0]
+            trace_id = first_result.get("trace_id")
+            
+            if trace_id:
+                # Extract the first 8 chars of trace ID for brevity
+                trace_suffix = trace_id[:8]
+                
+                # Create new directory name with trace ID
+                old_dir_name = test_dir.name
+                new_dir_name = f"{old_dir_name}_trace_{trace_suffix}"
+                new_test_dir = test_dir.parent / new_dir_name
+                
+                try:
+                    # Rename the directory
+                    test_dir.rename(new_test_dir)
+                    test_dir = new_test_dir
+                    results_file = test_dir / "results.json"
+                    logger.info(f"Renamed test directory to include trace ID: {new_test_dir}")
+                except Exception as e:
+                    logger.warning(f"Could not rename directory to include trace ID: {e}")
+        
+        # Generate report
+        if results.get("results"):
+            # Add agent type to results for dynamic report generation
+            results['agent_type'] = args.agent
+            report_generator = DynamicHTMLReportGenerator(test_dir, args.agent)
+            report_path = report_generator.generate_html_report(results)
+            logger.info(f"Report generated at: {report_path}")
+        
+        # Generate comprehensive summary
+        _print_evaluation_summary(results, test_dir, args.agent, args.test)
+        
+        # Output summary
+        if args.output:
+            with open(args.output, "w") as f:
+                json.dump(results.get("summary", {}), f, indent=2)
+        else:
+            print(json.dumps(results.get("summary", {}), indent=2))
+        
+        # Return appropriate exit code
+        return 0 if results.get("overall_success", False) else 1
+        
+    except Exception as e:
+        logger.error(f"Evaluation failed: {e}", exc_info=True)
+        return 1
+
+
+if __name__ == "__main__":
+    exit_code = asyncio.run(main())
+    sys.exit(exit_code)

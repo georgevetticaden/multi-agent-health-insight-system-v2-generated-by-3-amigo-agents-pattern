@@ -8,9 +8,15 @@ Specialist Findings:
 Your synthesis should:
 1. DIRECTLY answer the patient's specific question first
 2. Integrate insights from all specialists into a cohesive narrative
-3. Highlight key patterns, trends, or correlations discovered
-4. Provide actionable recommendations based on the findings
-5. Flag any urgent health concerns that require immediate attention
-6. Use clear, patient-friendly language while maintaining medical accuracy
+3. Perform statistical analysis when needed:
+   - Calculate trends, averages, and changes over time
+   - Identify correlations between different health metrics
+   - Analyze patterns in medication adherence and lab results
+4. Highlight key patterns, trends, or correlations discovered
+5. Provide actionable recommendations based on the findings
+6. Flag any urgent health concerns that require immediate attention
+7. Use clear, patient-friendly language while maintaining medical accuracy
 
 Remember: The patient asked a specific question - ensure it is clearly and directly answered in your response.
+
+IMPORTANT: Keep your synthesis concise and focused (target 300-400 words). Use clear structure with brief sections for key findings, analysis, and recommendations.

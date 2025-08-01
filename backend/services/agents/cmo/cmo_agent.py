@@ -1,14 +1,28 @@
 import os
 import re
 import json
+import time
 import logging
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Dict, Any, List, Tuple, Optional, TYPE_CHECKING, Union
 from anthropic import Anthropic
 
 from services.agents.models import QueryComplexity, SpecialistTask, MedicalSpecialty
 from services.agents.cmo.cmo_prompts import CMOPrompts
 from utils.anthropic_client import AnthropicStreamingClient
 from tools.tool_registry import ToolRegistry
+from config.model_config import get_safe_max_tokens, validate_model_config
+
+# Import tracing components
+try:
+    from services.tracing import get_trace_collector, TraceEventType
+    TRACING_AVAILABLE = True
+except ImportError:
+    TRACING_AVAILABLE = False
+
+# Avoid circular import
+if TYPE_CHECKING:
+    from services.agents.metadata.core import AgentMetadata
+    from evaluation.core import AgentEvaluationMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -22,16 +36,35 @@ class CMOAgent:
         model: Optional[str] = None,
         max_tokens_analysis: int = 4000,
         max_tokens_planning: int = 6000,
-        default_max_tool_calls: int = 5
+        max_tokens_synthesis: int = 16384,
+        default_max_tool_calls: int = 5,
+        enable_tracing: bool = True
     ):
-        self.client = anthropic_client or Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        # Initialize base client
+        self.client = anthropic_client
+        if self.client is None:
+            self.client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+            
         self.tool_registry = tool_registry or ToolRegistry()
         self.model = model or os.getenv("CMO_MODEL", "claude-3-5-sonnet-20241022")
-        self.max_tokens_analysis = max_tokens_analysis
-        self.max_tokens_planning = max_tokens_planning
+        
+        # Validate model and adjust token limits
+        validate_model_config(self.model)
+        self.max_tokens_analysis = get_safe_max_tokens(self.model, max_tokens_analysis)
+        self.max_tokens_planning = get_safe_max_tokens(self.model, max_tokens_planning)
+        self.max_tokens_synthesis = get_safe_max_tokens(self.model, max_tokens_synthesis)
         self.default_max_tool_calls = default_max_tool_calls
         self.prompts = CMOPrompts()
+        
+        # Log the adjusted token limits
+        logger.info(f"CMO Agent initialized with model: {self.model}")
+        logger.info(f"Adjusted max_tokens - analysis: {self.max_tokens_analysis}, planning: {self.max_tokens_planning}, synthesis: {self.max_tokens_synthesis}")
+        
+        # Use the same client for streaming (traced or not)
         self.streaming_client = AnthropicStreamingClient(self.client)
+        
+        # Set up tracing collector if available
+        self.trace_collector = get_trace_collector() if TRACING_AVAILABLE else None
         
     async def analyze_query_with_tools(self, query: str) -> Tuple[QueryComplexity, str, Dict[str, Any]]:
         """
@@ -63,8 +96,32 @@ class CMOAgent:
         logger.info(f"Calling Anthropic API with {len(cmo_tools)} tools available")
         logger.info(f"Messages in conversation: {len(messages)}")
         
+        # Debug: Check if we have a trace context
+        if TRACING_AVAILABLE:
+            from services.tracing import TraceContextManager
+            context = TraceContextManager.get_context()
+            if context:
+                logger.debug(f"CMO: Trace context available: {context.trace_id}")
+            else:
+                logger.warning("CMO: No trace context found when making LLM call")
+        
+        # Set tracing metadata for this call
+        self.streaming_client.set_metadata(
+            agent_type="cmo",
+            stage="query_analysis",
+            prompt_file="1_gather_data_assess_complexity.txt"
+        )
+        
+        # Also update the trace context if available
+        if TRACING_AVAILABLE and self.trace_collector:
+            self.trace_collector.update_context(
+                current_agent="cmo",
+                current_stage="query_analysis",
+                current_prompt_file="1_gather_data_assess_complexity.txt"
+            )
+        
         try:
-            response = self.streaming_client.create_message_with_retry(
+            response = await self.streaming_client.create_message_with_retry_async(
                 model=self.model,
                 messages=messages,
                 max_tokens=self.max_tokens_analysis,
@@ -108,7 +165,14 @@ class CMOAgent:
                 })
                 
                 try:
+                    # Track start time for duration
+                    tool_start_time = time.time()
+                    
+                    # Execute the tool (tool invocation will be auto-traced by streaming client)
                     result = await self.tool_registry.execute_tool(tool_name, tool_input)
+                    
+                    # Calculate duration
+                    tool_duration_ms = (time.time() - tool_start_time) * 1000
                     
                     # Extract summary information
                     if isinstance(result, dict):
@@ -122,6 +186,40 @@ class CMOAgent:
                         else:
                             initial_data["summary"] = "No data found for the query"
                     
+                    # Trace tool result if tracing is enabled
+                    if TRACING_AVAILABLE and self.trace_collector:
+                        # Prepare result data - include actual results but limit size
+                        result_data_for_trace = {}
+                        if isinstance(result, dict):
+                            # Include key fields from result
+                            result_data_for_trace = {
+                                "query_successful": result.get("query_successful", False),
+                                "result_count": result.get("result_count", 0),
+                                "results": result.get("results", [])[:5],  # Limit to first 5 results
+                                "query": result.get("query", ""),
+                                "error": result.get("error")
+                            }
+                        
+                        await self.trace_collector.add_event(
+                            event_type=TraceEventType.TOOL_RESULT,
+                            agent_type="cmo",
+                            stage="query_analysis",
+                            data={
+                                "tool_name": tool_name,
+                                "tool_id": tool_id,
+                                "success": True,
+                                "result_summary": initial_data.get("summary", ""),
+                                "result_data": result_data_for_trace,
+                                "duration_ms": tool_duration_ms,
+                                "linked_tool_invocation_id": tool_id  # Link to invocation
+                            },
+                            duration_ms=tool_duration_ms,
+                            metadata={
+                                "tool_input": tool_input,
+                                "tool_output": result  # Store complete output
+                            }
+                        )
+                    
                     tool_results.append({
                         "tool_id": tool_id,
                         "tool": tool_name,
@@ -132,6 +230,23 @@ class CMOAgent:
                 except Exception as e:
                     logger.error(f"Tool execution failed: {str(e)}")
                     initial_data["summary"] = f"Tool execution failed: {str(e)}"
+                    
+                    # Trace tool error if tracing is enabled
+                    if TRACING_AVAILABLE and self.trace_collector:
+                        await self.trace_collector.add_event(
+                            event_type=TraceEventType.TOOL_RESULT,
+                            agent_type="cmo",
+                            stage="query_analysis",
+                            data={
+                                "tool_name": tool_name,
+                                "tool_id": tool_id,
+                                "success": False,
+                                "error": str(e),
+                                "error_type": type(e).__name__
+                            },
+                            metadata={"tool_input": tool_input}
+                        )
+                    
                     tool_results.append({
                         "tool_id": tool_id,
                         "tool": tool_name,
@@ -182,37 +297,90 @@ class CMOAgent:
             })
             
             logger.info(f"Added tool results to conversation. Total messages: {len(messages)}")
+            
+            # Update metadata for assessment response (still part of initial gathering)
+            self.streaming_client.set_metadata(
+                agent_type="cmo",
+                stage="query_analysis",
+                prompt_file="1_gather_data_assess_complexity.txt",
+                prompt_phase="assessment_after_tool"
+            )
+            
+            # Get the final response with initial assessment
+            assessment_response = await self.streaming_client.create_message_with_retry_async(
+                model=self.model,
+                messages=messages,
+                max_tokens=1000,
+                temperature=0.0
+            )
+            
+            # Extract complexity from initial assessment
+            assessment_text = assessment_response.content[0].text
+            complexity = self._extract_complexity(assessment_text)
+            # Update initial_data with key findings (don't overwrite)
+            key_findings_data = self._extract_key_findings(assessment_text)
+            initial_data.update(key_findings_data)
+            
+            # Add the assessment to messages
+            messages.append({
+                "role": "assistant",
+                "content": assessment_text
+            })
         else:
             # No tool calls, just add the assistant response
             messages.append({
                 "role": "assistant",
                 "content": response.content[0].text if response.content else ""
             })
+            # Extract complexity from the response
+            complexity = self._extract_complexity(response.content[0].text)
+            # Update initial_data with key findings (don't overwrite)
+            key_findings_data = self._extract_key_findings(response.content[0].text)
+            initial_data.update(key_findings_data)
         
-        # Now ask for the analysis summary
+        # Now ask for the analysis summary with the complexity already determined
+        summary_prompt = self.prompts.get_analysis_summary_prompt().replace("{{COMPLEXITY}}", complexity.value)
         messages.append({
             "role": "user",
-            "content": self.prompts.get_analysis_summary_prompt()
+            "content": summary_prompt
         })
         
-        summary_response = self.streaming_client.create_message_with_retry(
+        # Update metadata for analytical approach
+        self.streaming_client.set_metadata(
+            agent_type="cmo",
+            stage="query_analysis",
+            prompt_file="2_define_analytical_approach.txt"
+        )
+        
+        summary_response = await self.streaming_client.create_message_with_retry_async(
             model=self.model,
             messages=messages,
             max_tokens=1000,
             temperature=0.0
         )
         
-        # Parse complexity and approach from response
+        # Parse approach from response (complexity already extracted from step 1)
         response_text = summary_response.content[0].text
-        
-        complexity = self._extract_complexity(response_text)
         approach = self._extract_approach(response_text)
         
         logger.info(f"Query analysis complete - Complexity: {complexity.value}, Tool calls: {initial_data['tool_calls_made']}")
         
+        # Add stage end marker
+        if TRACING_AVAILABLE and self.trace_collector:
+            await self.trace_collector.add_event(
+                event_type=TraceEventType.STAGE_END,
+                agent_type="cmo",
+                stage="query_analysis",
+                data={
+                    "complexity": complexity.value,
+                    "approach": approach,
+                    "tool_calls_made": initial_data['tool_calls_made']
+                }
+            )
+        
         return complexity, approach, initial_data
     
-    def create_specialist_tasks(
+    async def create_specialist_tasks(
         self,
         query: str,
         complexity: QueryComplexity,
@@ -220,6 +388,18 @@ class CMOAgent:
         initial_data: Dict[str, Any]
     ) -> List[SpecialistTask]:
         """Create specific tasks for specialists based on analysis"""
+        
+        # Add stage start marker
+        if TRACING_AVAILABLE and self.trace_collector:
+            await self.trace_collector.add_event(
+                event_type=TraceEventType.STAGE_START,
+                agent_type="cmo",
+                stage="task_creation",
+                data={
+                    "complexity": complexity.value,
+                    "initial_data_summary": initial_data.get("summary", "")
+                }
+            )
         
         num_specialists = self._get_specialist_count(complexity)
         
@@ -244,7 +424,22 @@ class CMOAgent:
             tool_limit=tool_limit
         )
         
-        response = self.streaming_client.create_message_with_retry(
+        # Set tracing metadata for task creation
+        self.streaming_client.set_metadata(
+            agent_type="cmo",
+            stage="task_creation",
+            prompt_file="3_assign_specialist_tasks.txt"
+        )
+        
+        # Also update the trace context if available
+        if TRACING_AVAILABLE and self.trace_collector:
+            self.trace_collector.update_context(
+                current_agent="cmo",
+                current_stage="task_creation",
+                current_prompt_file="3_assign_specialist_tasks.txt"
+            )
+        
+        response = await self.streaming_client.create_message_with_retry_async(
             model=self.model,
             messages=[{"role": "user", "content": task_prompt}],
             max_tokens=self.max_tokens_planning,
@@ -257,6 +452,18 @@ class CMOAgent:
         tasks = self._parse_tasks_from_xml(tasks_text, complexity)
         
         logger.info(f"Created {len(tasks)} specialist tasks")
+        
+        # Add stage end marker
+        if TRACING_AVAILABLE and self.trace_collector:
+            await self.trace_collector.add_event(
+                event_type=TraceEventType.STAGE_END,
+                agent_type="cmo",
+                stage="task_creation",
+                data={
+                    "task_count": len(tasks),
+                    "specialists": [task.specialist.value for task in tasks]
+                }
+            )
         
         return tasks
     
@@ -286,6 +493,15 @@ class CMOAgent:
         if match:
             return match.group(1).strip()
         return "Standard medical analysis approach"
+    
+    def _extract_key_findings(self, text: str) -> Dict[str, Any]:
+        """Extract key findings from initial assessment"""
+        match = re.search(r'<key_findings>(.*?)</key_findings>', text, re.IGNORECASE | re.DOTALL)
+        key_findings = match.group(1).strip() if match else ""
+        
+        return {
+            "summary": key_findings
+        }
     
     def _parse_tasks_from_xml(self, xml_text: str, complexity: QueryComplexity) -> List[SpecialistTask]:
         """Parse specialist tasks from XML response"""
@@ -359,17 +575,13 @@ class CMOAgent:
     def _map_specialist_to_enum(self, specialist_name: str) -> Optional[MedicalSpecialty]:
         """Map specialist name string to enum"""
         mapping = {
-            "general_practice": MedicalSpecialty.GENERAL_PRACTICE,
-            "internal_medicine": MedicalSpecialty.GENERAL_PRACTICE,  # Common mistake
-            "primary_care": MedicalSpecialty.GENERAL_PRACTICE,      # Common mistake
             "cardiology": MedicalSpecialty.CARDIOLOGY,
             "endocrinology": MedicalSpecialty.ENDOCRINOLOGY,
             "laboratory_medicine": MedicalSpecialty.LABORATORY_MEDICINE,
             "lab_medicine": MedicalSpecialty.LABORATORY_MEDICINE,    # Common mistake
             "pharmacy": MedicalSpecialty.PHARMACY,
             "nutrition": MedicalSpecialty.NUTRITION,
-            "preventive_medicine": MedicalSpecialty.PREVENTIVE_MEDICINE,
-            "data_analysis": MedicalSpecialty.DATA_ANALYSIS
+            "preventive_medicine": MedicalSpecialty.PREVENTIVE_MEDICINE
         }
         
         clean_name = specialist_name.lower().strip()
@@ -388,3 +600,263 @@ class CMOAgent:
             QueryComplexity.COMPREHENSIVE: 8
         }
         return counts.get(complexity, 3)
+    
+    async def synthesize_findings(
+        self, 
+        query: str, 
+        specialist_findings: str,
+        stream: bool = False
+    ) -> Any:
+        """
+        Synthesize specialist findings into a comprehensive response
+        
+        Args:
+            query: Original patient query
+            specialist_findings: Formatted findings from all specialists
+            stream: Whether to stream the response
+            
+        Returns:
+            Either a complete synthesis string or a streaming response
+        """
+        # Get synthesis prompt
+        synthesis_prompt = self.prompts.get_synthesis_prompt(query, specialist_findings)
+        
+        # Create message
+        messages = [{"role": "user", "content": synthesis_prompt}]
+        
+        # Set tracing metadata for synthesis
+        self.streaming_client.set_metadata(
+            agent_type="cmo",
+            stage="synthesis",
+            prompt_file="4_synthesis.txt"
+        )
+        
+        # Also update the trace context if available
+        if TRACING_AVAILABLE and self.trace_collector:
+            self.trace_collector.update_context(
+                current_agent="cmo",
+                current_stage="synthesis",
+                current_prompt_file="4_synthesis.txt"
+            )
+        
+        if stream:
+            # Return streaming response for the orchestrator to handle
+            return await self.streaming_client.create_message_with_retry_async(
+                model=self.model,
+                messages=messages,
+                max_tokens=self.max_tokens_synthesis,
+                temperature=0.3,
+                stream=True
+            )
+        else:
+            # Return complete synthesis
+            response = await self.streaming_client.create_message_with_retry_async(
+                model=self.model,
+                messages=messages,
+                max_tokens=self.max_tokens_synthesis,
+                temperature=0.3,
+                stream=False
+            )
+            return response.content[0].text
+    
+    @classmethod
+    def get_metadata(cls) -> 'AgentMetadata':
+        """
+        Get core metadata for this agent.
+        
+        Returns basic agent information without evaluation-specific concepts.
+        """
+        from services.agents.metadata.core import AgentMetadata, PromptMetadata
+        
+        # Get prompt metadata from CMOPrompts class
+        prompts_metadata = CMOPrompts.get_prompt_metadata()
+        
+        # Convert to basic PromptMetadata (without evaluation dimensions)
+        basic_prompts = [
+            PromptMetadata(
+                filename=p.filename,
+                description=p.description,
+                purpose=p.purpose,
+                version=p.version
+            )
+            for p in prompts_metadata
+        ]
+        
+        return AgentMetadata(
+            agent_type="cmo",
+            agent_class="services.agents.cmo.CMOAgent",
+            description="Chief Medical Officer agent orchestrating multi-agent health analysis",
+            prompts=basic_prompts,
+            capabilities=["orchestration", "complexity_assessment", "task_delegation"],
+            supported_tools=["execute_health_query_v2"],
+            config={
+                "max_specialists": 8,
+                "complexity_levels": ["SIMPLE", "STANDARD", "COMPLEX", "COMPREHENSIVE"],
+                "tool_limit_per_task": 5,
+                "supported_specialists": [s.value for s in MedicalSpecialty]
+            }
+        )
+    
+    @classmethod
+    def get_evaluation_metadata(cls) -> 'AgentEvaluationMetadata':
+        """
+        Get evaluation metadata for this agent.
+        
+        This method defines the evaluation criteria, dimensions, and prompts
+        that are used to evaluate the CMO agent's performance.
+        """
+        # Import here to avoid circular dependency
+        from evaluation.core import (
+            AgentEvaluationMetadata,
+            EvaluationCriteria,
+            QualityComponent,
+            dimension_registry
+        )
+        from evaluation.core.dimensions import EvaluationMethod
+        from evaluation.agents import CMO_DIMENSIONS
+        
+        # Get core agent metadata
+        agent_metadata = cls.get_metadata()
+        
+        # Define evaluation criteria
+        evaluation_criteria = [
+            EvaluationCriteria(
+                dimension=CMO_DIMENSIONS["complexity_classification"],
+                description="Accuracy in classifying query complexity (SIMPLE/STANDARD/COMPLEX/COMPREHENSIVE)",
+                target_score=0.90,
+                weight=0.18,  # Reduced from 20% to 18%
+                evaluation_method=EvaluationMethod.DETERMINISTIC,
+                evaluation_description="Binary accuracy against expert-labeled complexity"
+            ),
+            EvaluationCriteria(
+                dimension=CMO_DIMENSIONS["specialty_selection"],
+                description="Precision in selecting appropriate medical specialists",
+                target_score=0.85,
+                weight=0.22,  # Reduced from 25% to 22%
+                evaluation_method=EvaluationMethod.HYBRID,
+                evaluation_description="Weighted combination of deterministic precision and LLM judge rationale"
+            ),
+            EvaluationCriteria(
+                dimension=dimension_registry.get("analysis_quality"),  # Common dimension
+                description="Comprehensiveness and quality of medical analysis orchestration",
+                target_score=0.80,
+                weight=0.23,  # Reduced from 25% to 23%
+                evaluation_method=EvaluationMethod.HYBRID,
+                evaluation_description="Weighted score across deterministic and LLM judge components"
+            ),
+            EvaluationCriteria(
+                dimension=dimension_registry.get("tool_usage"),  # Common dimension
+                description="Effectiveness of health data tool usage",
+                target_score=0.90,
+                weight=0.14,  # Reduced from 15% to 14%
+                evaluation_method=EvaluationMethod.HYBRID,
+                evaluation_description="Combination of success rate and relevance scoring"
+            ),
+            EvaluationCriteria(
+                dimension=dimension_registry.get("response_structure"),  # Common dimension
+                description="Compliance with expected XML response format",
+                target_score=0.95,
+                weight=0.13,  # Reduced from 15% to 13%
+                evaluation_method=EvaluationMethod.HYBRID,
+                evaluation_description="XML validation and required field presence"
+            ),
+            EvaluationCriteria(
+                dimension=CMO_DIMENSIONS["cost_efficiency"],
+                description="Efficiency in managing token usage and computational costs",
+                target_score=0.80,
+                weight=0.10,  # 10% of total evaluation
+                evaluation_method=EvaluationMethod.HYBRID,
+                evaluation_description="Token usage efficiency and cost optimization across agent interactions"
+            )
+        ]
+        
+        # Define quality components for complex dimensions
+        quality_components = {
+            dimension_registry.get("analysis_quality"): [
+                QualityComponent(
+                    name="data_gathering",
+                    description="Appropriate tool calls to gather health data",
+                    weight=0.20,
+                    evaluation_method=EvaluationMethod.DETERMINISTIC
+                ),
+                QualityComponent(
+                    name="context_awareness",
+                    description="Consideration of temporal context and patient history",
+                    weight=0.15,
+                    evaluation_method=EvaluationMethod.LLM_JUDGE
+                ),
+                QualityComponent(
+                    name="comprehensive_approach",
+                    description="Coverage of all relevant medical concepts",
+                    weight=0.25,
+                    evaluation_method=EvaluationMethod.LLM_JUDGE
+                ),
+                QualityComponent(
+                    name="concern_identification",
+                    description="Identification of health concerns and risks",
+                    weight=0.20,
+                    evaluation_method=EvaluationMethod.LLM_JUDGE
+                )
+            ],
+            # Complexity classification is deterministic - no components needed
+            CMO_DIMENSIONS["specialty_selection"]: [
+                QualityComponent(
+                    name="specialist_precision",
+                    description="Selected specialists match expected set",
+                    weight=0.75,
+                    evaluation_method=EvaluationMethod.DETERMINISTIC
+                ),
+                QualityComponent(
+                    name="specialist_rationale",
+                    description="Clear reasoning for specialist choices",
+                    weight=0.15,
+                    evaluation_method=EvaluationMethod.LLM_JUDGE
+                )
+            ],
+            dimension_registry.get("tool_usage"): [
+                QualityComponent(
+                    name="tool_success_rate",
+                    description="Percentage of successful tool calls",
+                    weight=0.5,
+                    evaluation_method=EvaluationMethod.DETERMINISTIC
+                )
+            ],
+            dimension_registry.get("response_structure"): [
+                QualityComponent(
+                    name="xml_validity",
+                    description="Valid XML structure in responses",
+                    weight=0.7,
+                    evaluation_method=EvaluationMethod.DETERMINISTIC
+                ),
+                QualityComponent(
+                    name="required_fields",
+                    description="Presence of all required XML fields",
+                    weight=0.3,
+                    evaluation_method=EvaluationMethod.DETERMINISTIC
+                )
+            ],
+            CMO_DIMENSIONS["cost_efficiency"]: [
+                QualityComponent(
+                    name="cost_threshold",
+                    description="Staying below cost threshold (Complex Queries: $1.20)",
+                    weight=0.5,
+                    evaluation_method=EvaluationMethod.DETERMINISTIC
+                ),
+                QualityComponent(
+                    name="token_efficiency",
+                    description="Efficient use of tokens relative to query complexity",
+                    weight=0.5,
+                    evaluation_method=EvaluationMethod.LLM_JUDGE
+                )
+            ]
+        }
+        
+        # Get core agent metadata
+        agent_metadata = cls.get_metadata()
+        
+        # Create the complete evaluation metadata
+        return AgentEvaluationMetadata(
+            agent_metadata=agent_metadata,
+            evaluation_criteria=evaluation_criteria,
+            quality_components=quality_components
+        )

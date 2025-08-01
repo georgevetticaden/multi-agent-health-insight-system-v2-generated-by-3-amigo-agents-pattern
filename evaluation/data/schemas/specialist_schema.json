@@ -1,0 +1,75 @@
+{
+  "type": "object",
+  "required": [
+    "id",
+    "agent_type",
+    "specialist_type",
+    "task"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "agent_type": {
+      "type": "string",
+      "enum": [
+        "specialist"
+      ]
+    },
+    "specialist_type": {
+      "type": "string"
+    },
+    "task": {
+      "type": "object",
+      "required": [
+        "objective",
+        "context",
+        "expected_output"
+      ],
+      "properties": {
+        "objective": {
+          "type": "string"
+        },
+        "context": {
+          "type": "string"
+        },
+        "expected_output": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "string"
+        },
+        "max_tool_calls": {
+          "type": "integer"
+        }
+      }
+    },
+    "expected_tools": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "expected_data_points": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "validation_criteria": {
+      "type": "object"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "created_by": {
+      "enum": [
+        "framework",
+        "studio"
+      ]
+    }
+  }
+}

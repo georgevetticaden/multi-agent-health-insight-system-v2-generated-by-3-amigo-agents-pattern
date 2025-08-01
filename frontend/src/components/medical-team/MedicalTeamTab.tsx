@@ -196,6 +196,10 @@ const MedicalTeamTab: React.FC<MedicalTeamTabProps> = ({
       
       // Update query status if team is complete
       if (teamUpdate.teamStatus === 'complete') {
+        console.log('🔍 [TRACE DEBUGGING] MedicalTeamTab - Team complete, updating query status');
+        console.log('🔍 [TRACE DEBUGGING] MedicalTeamTab - Team update has traceId:', teamUpdate.traceId);
+        console.log('🔍 [TRACE DEBUGGING] MedicalTeamTab - activeQueryId:', activeQueryId);
+        console.log('🔍 [TRACE DEBUGGING] MedicalTeamTab - Full teamUpdate:', teamUpdate);
         setQueries(prev => prev.map(q => 
           q.id === activeQueryId ? { ...q, status: 'complete' } : q
         ));
@@ -211,6 +215,17 @@ const MedicalTeamTab: React.FC<MedicalTeamTabProps> = ({
         completedAnalyses: activeQueryId === lastActiveQueryRef.current ? completedAnalyses : [], 
         agentStreamingContent: activeQueryId === lastActiveQueryRef.current ? agentStreamingContent : {} 
       };
+      
+  // Debug logging
+  console.log('🔍 [TRACE DEBUGGING] MedicalTeamTab - Display data:', {
+    activeQueryId,
+    teamStatus: displayData.teamUpdate?.teamStatus,
+    traceId: displayData.teamUpdate?.traceId,
+    showTraceLink: displayData.teamUpdate?.teamStatus === 'complete' && displayData.teamUpdate?.traceId,
+    fullDisplayData: displayData,
+    queryDataMap: queryDataMap,
+    currentTeamUpdate: teamUpdate
+  });
 
   // Find active agent from display data
   const activeAgent = displayData.teamUpdate?.members.find(
@@ -461,7 +476,34 @@ const MedicalTeamTab: React.FC<MedicalTeamTabProps> = ({
       >
         {/* Section Header */}
         <div className="px-4 pt-4 pb-2 sticky top-0 bg-gray-50 z-10">
-          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Analysis Results</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Analysis Results</h3>
+            {(() => {
+              const shouldShowTrace = displayData.teamUpdate?.teamStatus === 'complete' && displayData.teamUpdate?.traceId;
+              console.log('🔍 [TRACE DEBUGGING] Trace button check:', {
+                teamStatus: displayData.teamUpdate?.teamStatus,
+                traceId: displayData.teamUpdate?.traceId,
+                shouldShowTrace: shouldShowTrace
+              });
+              
+              return shouldShowTrace ? (
+                <button
+                  onClick={() => {
+                    const url = `/test-case-management/${displayData.teamUpdate.traceId}`;
+                    console.log('🔍 [TRACE DEBUGGING] Opening test case management dashboard:', url);
+                    window.open(url, '_blank');
+                  }}
+                  className="text-sm px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-md transition-colors flex items-center gap-1"
+                  title="Create and manage test cases for this health query"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                  </svg>
+                  Create Test Case
+                </button>
+              ) : null;
+            })()}
+          </div>
         </div>
         
         {/* Scrollable Content */}

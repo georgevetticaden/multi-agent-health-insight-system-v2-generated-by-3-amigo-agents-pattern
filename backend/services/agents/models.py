@@ -9,14 +9,12 @@ class QueryComplexity(Enum):
     COMPREHENSIVE = "comprehensive"
 
 class MedicalSpecialty(Enum):
-    GENERAL_PRACTICE = "general_practice"
     ENDOCRINOLOGY = "endocrinology"
     CARDIOLOGY = "cardiology"
     NUTRITION = "nutrition"
     PREVENTIVE_MEDICINE = "preventive_medicine"
     LABORATORY_MEDICINE = "laboratory_medicine"
     PHARMACY = "pharmacy"
-    DATA_ANALYSIS = "data_analysis"
 
 @dataclass
 class SpecialistTask:

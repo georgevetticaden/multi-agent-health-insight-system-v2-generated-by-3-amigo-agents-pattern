@@ -9,6 +9,27 @@ The Multi-Agent Health Insight System has been successfully implemented based on
 1. **Part 1: System Creation Guide (Historical Reference)** - How the system was built
 2. **Part 2: Enhancement & Feature Development Guide (Active)** - How to extend and improve the system
 
+## System Architecture Highlights
+
+### Multi-Agent Health System
+- **Orchestrator-Worker Pattern**: CMO agent orchestrates 8 medical specialists
+- **SSE Streaming**: Real-time updates with proper event handling
+- **Visualization Engine**: Generates self-contained React components with embedded data
+- **Tool Integration**: Pre-built Snowflake Cortex tools for health data queries
+
+### Evaluation Framework
+- **Metadata-Driven Architecture**: BaseEvaluator provides generic, extensible foundation
+- **Hybrid Evaluation Methods**: Combines deterministic rules with LLM Judge evaluation
+- **Unified Data Storage**: All evaluation data in centralized `/evaluation/data/` directory
+- **Multi-Agent Support**: Separate test schemas and evaluators for CMO, Specialist, and Visualization agents
+- **Subprocess Execution**: Clean separation between web UI and evaluation framework
+
+### Trace Viewer Features
+- **Hierarchical Event Display**: Clear visualization of multi-agent execution flow
+- **Smart Content Formatting**: Automatic detection and formatting of LLM responses, tool calls, and data
+- **Timeline Navigation**: Click on execution stages to jump to corresponding agent analysis
+- **Standalone HTML Viewer**: View traces without backend server running
+
 ---
 
 # Part 1: System Creation Guide (Historical Reference)
@@ -564,25 +585,33 @@ async def test_new_specialist():
 - XSS protection
 - CORS configuration
 
-## Future Enhancement Ideas
+## Recent Updates
 
-### **Near-term (Next Sprint)**
+### **Evaluation Framework (Completed)**
+- Comprehensive evaluation system with metadata-driven architecture
+- CMOEvaluator and SpecialistEvaluator fully implemented
+- LLM Judge integration for intelligent failure analysis
+- HTML reports with drill-down capabilities
+- Eval Dev Studio UI for test case management
+- Subprocess execution pattern for clean separation
+- Persistent event storage and streaming
+
+## Primary Focus Areas
+
+### **Immediate Priorities**
+1. **Fix Failed Evaluation Tests**: Apply LLM Judge recommendations to improve agent prompts
+2. **Build New Features**: Implement health-focused enhancements from the backlog
+3. **Maintain System Quality**: Ensure all new features pass evaluation tests
+
+### **Feature Backlog**
 - Health trend notifications
 - Medication reminder integration
 - Lab result explanations
 - Wellness recommendations
-
-### **Medium-term (Next Quarter)**
 - Predictive health insights
 - Integration with wearables
 - Family health tracking
 - Telemedicine integration
-
-### **Long-term (Next Year)**
-- AI health coach
-- Genomic data analysis
-- Clinical trial matching
-- Population health insights
 
 ## Getting Help
 
@@ -602,3 +631,221 @@ async def test_new_specialist():
 - Provide use cases
 - Consider implementation impact
 - Suggest testing approach
+
+---
+
+# Part 3: Evaluation System Architecture
+
+## Startup Check for Failed Evaluations
+
+When starting a new session, I'll check for any recently failed evaluation test cases. If found, I'll offer to apply the LLM Judge's recommended fixes to improve the system.
+
+### Recent Failed Test Cases
+- **Location**: `evaluation/data/test-suites/studio-generated/`
+- **Detection**: Look for evaluations with failing dimensions in recent runs
+- **Offer**: "I detected a failed evaluation test case at [path]. The LLM Judge identified specific improvements for [dimensions]. Would you like me to apply these fixes?"
+
+## Applying LLM Judge Recommendations
+
+When the user provides LLM Judge diagnostic results with root causes and recommendations:
+
+### Process for Applying Fixes
+1. **Minimal Changes**: Make the least invasive changes possible to avoid regressions
+2. **Preview Changes**: Always summarize proposed changes BEFORE applying them
+3. **User Review**: Wait for user approval before making any modifications
+4. **Test Reference**: Use the test's actual name (e.g., "hba1c_metformin_weight_test") not the full path
+5. **Run Instructions**: After applying changes, provide CLI commands to re-run the specific test
+
+### Example Workflow
+```
+User: "The LLM Judge says complexity classification failed because..."
+
+Claude: "I'll review the recommended changes for the hba1c_metformin_weight_test. The recommendations suggest:
+1. Modifying STANDARD rule to exclude medication impact analysis
+2. Adding COMPLEX indicators for medication effectiveness assessment
+3. Including specific examples for HbA1c + medication queries
+
+These minimal changes will help properly classify diabetes management queries. Shall I apply these updates?"
+
+User: "Yes, please apply the changes"
+
+Claude: "Changes applied successfully! To re-run the hba1c_metformin_weight_test:
+
+cd /path/to/project/root
+python -m evaluation.cli.run_evaluation --agent cmo --test all --test-ids hba1c_metformin_weight_test
+
+Note: Use the test's 'id' field value from the JSON file, not the filename.
+```
+
+## System Overview
+- **QE Agent**: Fully operational with "run" and "details" commands for test case management
+- **Evaluation Engine**: Comprehensive scoring across 5 dimensions with metadata-driven architecture
+- **HTML Reports**: Beautiful reports with CLI-style drill-downs and LLM Judge analysis
+- **Eval Dev Studio**: Three-panel UI for test case management and evaluation
+- **Unified Storage**: All evaluation data in centralized `/evaluation/data/` directory
+
+### Evaluation Data Architecture
+
+```
+evaluation/
+├── agents/                       # Agent-specific evaluation code
+├── cli/                          # Command-line interface
+├── core/                         # Core types and interfaces
+├── framework/                    # Evaluation framework components
+└── data/                         # All evaluation data artifacts
+    ├── config.py                 # Central configuration
+    ├── test_loader.py            # Multi-agent test loader
+    ├── schemas/                  # Agent-specific test schemas
+    │   ├── cmo_schema.json
+    │   ├── specialist_schema.json
+    │   └── visualization_schema.json
+    ├── traces/                   # Health query traces
+    ├── test-suites/              # All test cases in JSON
+    │   ├── framework/            # Organized by agent type
+    │   └── studio-generated/     # User-created tests
+    └── runs/                     # Evaluation results
+        └── [date]/eval_[id]/
+            ├── metadata.json     # Run metadata
+            ├── events/*.json     # Persistent lifecycle events
+            ├── result.json       # Evaluation result
+            └── report/index.html # HTML report
+```
+
+### Key Architecture Benefits
+1. **Multi-Agent Support**: Each agent type has its own JSON schema and test organization
+2. **Persistent Events**: Evaluation lifecycle events survive server reloads
+3. **Unified Format**: All test cases use JSON format (framework and studio-generated)
+4. **No Duplication**: Single result file per evaluation
+5. **Configurable Storage**: Redirect paths via environment variables
+6. **Clean Separation**: Framework code vs data storage
+7. **LLM Judge Analysis**: Automatic failure diagnosis with specific improvement recommendations
+
+### Running Evaluation Tests
+
+#### Framework Tests (Built-in)
+```bash
+# Run a specific framework test by its ID
+python -m evaluation.cli.run_evaluation --agent cmo --test all --test-ids demo_test_1
+```
+
+#### Studio-Generated Tests
+```bash
+# Run a studio-generated test using the 'id' field from the JSON file
+python -m evaluation.cli.run_evaluation --agent cmo --test all --test-ids hba1c_metformin_weight_test
+
+# Important: Use the test's 'id' field value from inside the JSON file, NOT the filename
+# Example: For file f31fc246-c1cc-48e1-9386-49d1868dd6c1.json with "id": "hba1c_metformin_weight_test"
+# Use: --test-ids hba1c_metformin_weight_test
+```
+
+## Eval Dev Studio UI
+
+### Three-Panel Layout
+
+#### **Left Panel: QE/Evaluation Agent Interface**
+- QE Agent chat interface for test case creation and evaluation commands
+- Real-time status of running evaluations
+- Agent conversation history and context
+- Quick actions (run evaluation, view details, reset)
+
+#### **Middle Panel: Test Case & Trace Viewer**
+- **Test Case List**: Grid view with ID, query preview, complexity, status
+- **Detail View**: Full test case parameters, trace viewer integration
+- **Quick Actions**: Run, view report, edit, duplicate
+- **Evaluation History**: Timeline of all evaluations for a test case
+
+#### **Right Panel: Multi-Tab Information**
+- **📊 Evaluation Reports** - Interactive HTML reports with drill-downs
+- **📈 Performance Analytics** - Charts and metrics across test cases
+- **🔍 Test Case Details** - Detailed breakdown of selected test case
+- **📋 Evaluation History** - Timeline of all evaluations
+- **⚙️ Test Management** - Bulk operations, import/export
+
+### Test Case Lifecycle
+1. **Creation**: Generate via QE Agent or manual input
+2. **Organization**: Categories, tags, complexity grouping
+3. **Execution**: Run single or batch evaluations
+4. **Analysis**: View results, compare runs, identify patterns
+5. **Iteration**: Edit, refine, and re-run test cases
+
+# Part 4: Evaluation Framework Integration
+
+## Architecture Overview
+
+The evaluation framework consists of two integrated systems:
+
+### 1. Main Evaluation Framework (`/evaluation`)
+- **Purpose**: Comprehensive evaluation system implementing Anthropic's best practices
+- **Components**: CMOEvaluator, SpecialistEvaluator, test cases, dimensions, LLM Judge
+- **Access**: CLI (`python -m evaluation.cli.run_evaluation`) or direct import
+- **Features**: Metadata-driven architecture, hybrid evaluation methods, component-based scoring
+
+### 2. Backend Integration Layer (`/backend/eval_integration`)
+- **Purpose**: Bridges web UI with main evaluation framework
+- **Components**: subprocess_evaluator.py, cli_evaluator_adapter.py, trace_parser.py
+- **Access**: Called by backend services for Studio evaluations
+- **Features**: Subprocess execution, event streaming, mock agents for trace replay
+
+## Subprocess Execution Pattern
+
+The framework uses subprocess execution to maintain clean separation:
+
+```python
+# Avoids module conflicts between backend and evaluation paths
+result = run_evaluation_subprocess(test_case, trace_data, api_key, event_callback)
+```
+
+Benefits:
+- Clean separation between systems
+- No import path conflicts
+- Independent dependencies
+- Real-time event streaming
+
+## Evaluation Lifecycle Events
+
+The ~30 second evaluation process reports these lifecycle events:
+
+1. **trace_load** - "🔍 Loading execution trace"
+2. **test_case_ready** - "📋 Test case prepared"
+3. **dimension_start** - "📏 Evaluating [Dimension Name]"
+4. **dimension_evaluation** - "📊 Evaluating all dimensions"
+5. **llm_judge_eval** - "🤖 LLM-as-Judge evaluating..."
+6. **dimension_result** - "✅/❌ [dimension]: [score]"
+7. **diagnostic** - "🔍 LLM-as-Judge diagnosing..."
+8. **diagnostic_complete** - "💡 LLM-as-Judge generated N recommendations"
+9. **overall_score** - "📊 Evaluation complete: Overall Score X.XXX"
+10. **evaluation_complete** - "✅ Evaluation analysis finished"
+
+### Event API
+```python
+GET /api/evaluation/events/{evaluation_id}?start_index=0
+
+# Response format
+{
+    "evaluation_id": "...",
+    "status": "running",
+    "events": [{"type": "...", "message": "...", "timestamp": "..."}],
+    "total_events": 15,
+    "has_more": false
+}
+```
+
+## Integration Points
+
+- **Test Case Flow**: QE Agent → JSON → Backend → Subprocess → Evaluator
+- **Trace Processing**: Health Query → Trace → Extractor → MockAgent → Evaluation
+- **Event Streaming**: Subprocess → Parser → Storage → API → Frontend
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+
+## Update Guidelines
+When making updates to the codebase:
+- NO BACKWARD COMPATIBILITY REQUIRED - Feel free to make breaking changes when they improve the system
+- UPDATE README.md - When making significant changes, update the README to reflect the CURRENT STATE
+- MAINTAIN EXISTING STRUCTURE - Keep the existing outline/structure of documentation
+- DOCUMENT CURRENT STATE - Don't track incremental updates or maintain change logs
+- FOCUS ON "WHAT IS" - Documentation should describe how the system works NOW, not its history

@@ -16,7 +16,16 @@ from anthropic import Anthropic
 
 from services.agents.specialist.specialist_agent import SpecialistResult
 from services.agents.visualization.prompts import VisualizationPrompts
-from utils.anthropic_streaming import AnthropicStreamingClient, StreamingMode
+from utils.anthropic_client import AnthropicStreamingClient
+from utils.anthropic_streaming import StreamingMode
+from config.model_config import get_safe_max_tokens, validate_model_config
+
+# Import tracing components
+try:
+    from services.tracing import get_trace_collector, TraceEventType
+    TRACING_AVAILABLE = True
+except ImportError:
+    TRACING_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -39,9 +48,16 @@ class MedicalVisualizationAgent:
     ):
         self.client = anthropic_client
         self.model = model
-        self.max_tokens = max_tokens
+        
+        # Validate model and adjust token limits
+        validate_model_config(self.model)
+        self.max_tokens = get_safe_max_tokens(self.model, max_tokens)
         self.prompts = VisualizationPrompts()
         self.streaming_client = AnthropicStreamingClient(anthropic_client)
+        
+        # Log the adjusted token limits
+        logger.info(f"Visualization Agent initialized with model: {self.model}")
+        logger.info(f"Adjusted max_tokens: {self.max_tokens}")
         
     async def stream_visualization(
         self,
@@ -50,6 +66,17 @@ class MedicalVisualizationAgent:
         synthesis_text: str = ""
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Stream self-contained visualization code with embedded data"""
+        
+        # Add stage start marker if tracing is enabled
+        if TRACING_AVAILABLE:
+            trace_collector = get_trace_collector()
+            if trace_collector:
+                await trace_collector.add_event(
+                    event_type=TraceEventType.STAGE_START,
+                    agent_type="visualization",
+                    stage="visualization_generation",
+                    data={"stage": "visualization_generation"}
+                )
         
         # Extract key data points from specialist results and synthesis
         key_data_points = self._extract_key_data_points(specialist_results, synthesis_text)
@@ -81,14 +108,32 @@ class MedicalVisualizationAgent:
         logger.info(prompt[:1000] + "..." if len(prompt) > 1000 else prompt)
         logger.info("=" * 80 + "\n")
 
-        # Use streaming utility for visualization generation
+        # Set tracing metadata for visualization
+        self.streaming_client.set_metadata(
+            agent_type="visualization",
+            stage="visualization_generation",
+            prompt_file="visualization_generation.txt"
+        )
+        
+        # Use the original streaming approach that handles visualization properly
         async for chunk in self.streaming_client.stream_visualization(
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=self.max_tokens,
-            context_label="Visualization generation"
+            context_label="Visualization Generation"
         ):
             yield chunk
+        
+        # Add stage end marker when complete
+        if TRACING_AVAILABLE:
+            trace_collector = get_trace_collector()
+            if trace_collector:
+                await trace_collector.add_event(
+                    event_type=TraceEventType.STAGE_END,
+                    agent_type="visualization",
+                    stage="visualization_generation",
+                    data={"stage": "visualization_generation"}
+                )
     
     def _extract_key_data_points(
         self, 

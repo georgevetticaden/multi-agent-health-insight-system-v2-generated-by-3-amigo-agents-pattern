@@ -1,0 +1,66 @@
+{
+  "type": "object",
+  "required": [
+    "id",
+    "agent_type",
+    "query",
+    "expected_complexity",
+    "expected_specialties"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "agent_type": {
+      "type": "string",
+      "enum": [
+        "cmo"
+      ]
+    },
+    "query": {
+      "type": "string"
+    },
+    "expected_complexity": {
+      "enum": [
+        "SIMPLE",
+        "STANDARD",
+        "COMPLEX",
+        "CRITICAL"
+      ]
+    },
+    "expected_specialties": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "key_data_points": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "expected_cost_threshold": {
+      "type": "number",
+      "description": "Expected maximum cost in dollars for this query complexity"
+    },
+    "category": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "created_by": {
+      "enum": [
+        "framework",
+        "studio"
+      ]
+    }
+  }
+}

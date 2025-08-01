@@ -1,0 +1,41 @@
+Example: Refinement with Specific Count
+
+Initial Test Case:
+```python
+TestCase(
+    id="complex_diabetes_correlation_005",
+    query="How has my HbA1c level changed since I started taking metformin...",
+    expected_complexity="COMPLEX",
+    actual_complexity="STANDARD",
+    expected_specialties={"endocrinology", "pharmacy", "nutrition"},
+    actual_specialties={"endocrinology", "pharmacy", "nutrition"},
+    category="complexity_classification",
+    notes="Incorrectly classified as STANDARD"
+)
+```
+
+Developer Feedback: "Given that it's a complex query with correlations, the CMO agent should have created a team of 5 specialists. We need to add the following two specialists: laboratory medicine and preventive medicine."
+
+CORRECT Response:
+The developer specified:
+- Total team size: 5 specialists
+- Specialists to add: laboratory_medicine, preventive_medicine
+
+Starting with actual 3 specialists, adding the 2 mentioned = exactly 5 specialists
+
+```python
+TestCase(
+    id="complex_diabetes_correlation_006",
+    query="How has my HbA1c level changed since I started taking metformin...",
+    expected_complexity="COMPLEX",
+    actual_complexity="STANDARD",
+    expected_specialties={"endocrinology", "pharmacy", "nutrition", "laboratory_medicine", "preventive_medicine"},
+    actual_specialties={"endocrinology", "pharmacy", "nutrition"},
+    category="specialist_selection",
+    notes="Requires team of 5 specialists. Missing: laboratory_medicine, preventive_medicine"
+)
+```
+
+WRONG Response (DO NOT DO THIS):
+Adding data_analysis without being asked:
+expected_specialties={"endocrinology", "pharmacy", "nutrition", "laboratory_medicine", "preventive_medicine", "data_analysis"}  # 6 specialists - WRONG!

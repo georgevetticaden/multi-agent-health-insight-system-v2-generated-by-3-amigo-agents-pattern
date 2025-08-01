@@ -1,0 +1,30 @@
+Generate a TestCase object for the CMO agent evaluation based on the identified issues.
+
+The TestCase should follow this exact Python format:
+
+```python
+TestCase(
+    id="[category]_[number]",  # e.g., "complex_001", "standard_002"
+    query="[exact query text]",
+    expected_complexity="[SIMPLE|STANDARD|COMPLEX|COMPREHENSIVE]",
+    expected_specialties={[set of specialty strings]},  # e.g., {"pharmacy", "cardiology"}
+    key_data_points=[list of expected data elements],  # e.g., ["medication_history", "lab_trends"]
+    description="[brief description of what this tests]",
+    category="[category like medications, labs, correlations]",
+    based_on_real_query=True,  # Always True for trace-based cases
+    notes="[details about the issue found and why this test case matters]"
+)
+```
+
+Guidelines:
+1. Use the exact query from the trace
+2. Set expected_complexity based on the correct classification discussed
+3. Include all specialists that should have been selected
+4. List key data points that should be analyzed
+5. Make the description concise but clear
+6. Choose appropriate category (medications, labs, vitals, correlations, comprehensive)
+7. In notes, reference the original issue and trace ID
+
+Valid specialist options: cardiology, endocrinology, laboratory_medicine, pharmacy, nutrition, preventive_medicine, data_analysis
+
+Ensure the generated TestCase is properly formatted and can be directly copied into test_cases.py.

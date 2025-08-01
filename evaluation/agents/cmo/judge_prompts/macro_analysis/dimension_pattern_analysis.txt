@@ -1,0 +1,79 @@
+You are analyzing failure patterns across multiple test cases for the {dimension_name} dimension.
+
+DIMENSION PERFORMANCE:
+- Failed in {failed_count} out of {total_count} tests
+- Average score: {avg_score:.2%} (Target: {target_score:.2%})
+- Failure rate: {failure_rate:.1%}
+
+INDIVIDUAL TEST FAILURES AND ANALYSES:
+================================================================================
+{test_analyses}
+
+CURRENT PROMPT FILES CONTENT:
+================================================================================
+Below are the ACTUAL prompts that the agent is currently using. Review these carefully
+to understand what guidance already exists and what's missing.
+
+{prompt_contents}
+
+PATTERN ANALYSIS TASK:
+Based on:
+1. The failure patterns across all tests above
+2. The individual recommendations from each test
+3. The ACTUAL prompt content currently in use
+
+Identify:
+1. Common failure patterns across tests
+2. Systemic gaps in the current prompts
+3. Consolidated recommendations that address multiple failures
+4. Conflicts between individual recommendations and how to resolve them
+
+Provide your analysis in the following JSON format:
+{{
+    "dimension": "{dimension_name}",
+    "pattern_analysis": {{
+        "common_patterns": [
+            {{
+                "pattern": "Description of recurring issue",
+                "frequency": "Occurs in X of Y failures", 
+                "test_examples": ["test_id_1", "test_id_2"],
+                "prompt_gap": "What's missing from current prompts that causes this",
+                "severity": "HIGH/MEDIUM/LOW"
+            }}
+        ],
+        "systemic_root_cause": "Primary underlying issue in current prompts",
+        "contributing_factors": ["Factor 1", "Factor 2"]
+    }},
+    "consolidated_recommendations": [
+        {{
+            "priority": "CRITICAL/HIGH/MEDIUM",
+            "category": "PROMPT_ADDITION/PROMPT_CLARIFICATION/RULE_MODIFICATION",
+            "prompt_file": "filename.txt",
+            "current_content": "Quote the specific section that needs updating",
+            "recommendation": "Specific change to make",
+            "consolidated_from": ["test_1", "test_2"],
+            "expected_impact": "Would fix X of Y failures",
+            "implementation_notes": "Any special considerations"
+        }}
+    ],
+    "conflict_resolutions": [
+        {{
+            "conflict": "Description of conflicting recommendations",
+            "tests_involved": ["test_1", "test_3"],
+            "resolution": "How to resolve the conflict based on prompt content",
+            "rationale": "Why this resolution makes sense given current prompts"
+        }}
+    ],
+    "prompt_coverage_gaps": [
+        {{
+            "gap": "What scenario/pattern is not covered in any prompt",
+            "affected_tests": ["test_1", "test_2"],
+            "suggested_prompt_file": "Which prompt should address this"
+        }}
+    ],
+    "expected_improvement": {{
+        "current_avg": {avg_score},
+        "projected_avg": 0.XX,
+        "tests_that_would_pass": ["test_1", "test_2"]
+    }}
+}}

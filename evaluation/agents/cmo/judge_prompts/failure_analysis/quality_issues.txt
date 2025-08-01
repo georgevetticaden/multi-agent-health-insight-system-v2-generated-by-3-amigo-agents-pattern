@@ -1,0 +1,113 @@
+You are an expert at evaluating CMO (Chief Medical Officer) agent performance in a multi-agent health system.
+
+The CMO agent's primary role is to:
+1. Analyze query complexity
+2. Identify required medical specialties
+3. Create comprehensive task plans for specialist agents
+4. Perform data analysis and trend identification (previously handled by data_analysis specialist)
+5. Synthesize findings from all specialists into a cohesive response
+
+A CMO agent's orchestration quality scored poorly:
+
+Query: {query}
+Overall Quality Score: {quality_score:.2f} (target: 0.80)
+Quality Breakdown: {quality_breakdown}
+Expected Key Data Points: {key_data_points}
+
+The CMO's initial assessment and task planning approach was:
+{approach_text}
+
+Weak components (scored < 0.5):
+{weak_components}
+
+Analyze why the orchestration quality is low. Consider:
+1. Did the CMO identify all key aspects that specialists need to investigate?
+2. Were the right specialists selected for comprehensive coverage?
+3. Was the task decomposition thorough enough to guide specialists?
+4. Did the CMO miss any critical data points that should be delegated to specialists?
+
+Here are the ACTUAL CMO PROMPTS for reference:
+```json
+{relevant_prompts}
+```
+
+Based on your analysis of the actual prompts above, evaluate EACH prompt for potential improvements using structured recommendation categories.
+
+**RECOMMENDATION CATEGORIES:**
+1. **PROMPT ADDITIONS**: New content to add (format: "ADD to [Section]: '[Exact text]'")
+2. **PROMPT CLARIFICATIONS**: Modify existing content (format: "CLARIFY in [Section]: Change '[current]' to '[new]'")
+3. **STRUCTURAL CHANGES**: Reorganization needed (format: "RESTRUCTURE: [Specific change]")
+4. **EXAMPLE ADDITIONS**: Add concrete examples (format: "ADD EXAMPLE to [Section]: '[Example]'")
+5. **RULE MODIFICATIONS**: Change decision logic (format: "MODIFY RULE in [Section]: [Change]")
+
+Provide your analysis in the following JSON format. Output ONLY valid JSON with no additional text before or after:
+{{
+    "overall_issue_description": "Clear description of the orchestration quality issue",
+    "weak_components": {{
+        "component_name": "Specific reason why this component scored low"
+    }},
+    "prompt_improvements": {{
+        "1_gather_data_assess_complexity.txt": {{
+            "needs_update": true/false,
+            "issues": ["Issue 1 with this prompt", "Issue 2"],
+            "recommendations": [
+                {{
+                    "category": "PROMPT_ADDITION",
+                    "location": "Complexity Assessment Rules section",
+                    "current_state": "No guidance on temporal analysis",
+                    "recommendation": "ADD to Complexity Rules: 'If query involves comparing data across time periods (e.g., trends, changes, progression), increase complexity by one level. Examples: trending up/down, over the past X months, compared to last year.'",
+                    "rationale": "CMO missed temporal context in multiple test cases",
+                    "expected_impact": "Will correctly identify temporal queries in 90%+ of cases"
+                }}
+            ],
+            "priority": "high/medium/low"
+        }},
+        "2_define_analytical_approach.txt": {{
+            "needs_update": true/false,
+            "issues": ["Issue 1 with this prompt"],
+            "recommendations": [
+                {{
+                    "category": "EXAMPLE_ADDITION",
+                    "location": "Analytical Approach Examples",
+                    "current_state": "Limited examples of multi-faceted analysis",
+                    "recommendation": "ADD EXAMPLE: 'For diabetes management queries - Approach should include: 1) Blood glucose trends, 2) Medication effectiveness, 3) Lifestyle factors, 4) Complication screening'",
+                    "rationale": "Current examples don't show comprehensive analysis planning",
+                    "expected_impact": "Better task decomposition for complex health conditions"
+                }}
+            ],
+            "priority": "high/medium/low"
+        }},
+        "3_assign_specialist_tasks.txt": {{
+            "needs_update": true/false,
+            "issues": ["Issue 1 with this prompt"],
+            "recommendations": [
+                {{
+                    "category": "PROMPT_CLARIFICATION",
+                    "location": "Specialist Selection Criteria",
+                    "current_state": "Consider including relevant specialists",
+                    "recommendation": "CLARIFY: Change to 'MUST include ALL specialists whose expertise directly addresses query components. When in doubt, include rather than exclude.'",
+                    "rationale": "Current wording allows CMO to skip relevant specialists",
+                    "expected_impact": "Reduce missed specialist selections by 80%"
+                }}
+            ],
+            "priority": "high/medium/low"
+        }},
+        "4_synthesis.txt": {{
+            "needs_update": true/false,
+            "issues": ["Issue 1 with this prompt"],
+            "recommendations": [
+                {{
+                    "category": "STRUCTURAL_CHANGE",
+                    "location": "Synthesis Structure",
+                    "current_state": "General synthesis guidance",
+                    "recommendation": "RESTRUCTURE: Add mandatory synthesis components: 1) Direct answer to user question (first paragraph), 2) Supporting evidence from specialists, 3) Identified patterns/trends, 4) Actionable recommendations",
+                    "rationale": "Current structure doesn't ensure user question is directly answered",
+                    "expected_impact": "All syntheses will directly address user's primary concern"
+                }}
+            ],
+            "priority": "high/medium/low"
+        }}
+    }},
+    "expected_impact": "How these improvements will enhance CMO's orchestration effectiveness",
+    "overall_priority": "high/medium/low"
+}}

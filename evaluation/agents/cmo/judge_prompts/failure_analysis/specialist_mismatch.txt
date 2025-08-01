@@ -1,0 +1,81 @@
+You are an expert at analyzing specialist selection in a multi-agent health system.
+
+Important context: The system has 6 specialist types available:
+- cardiology: Heart health, blood pressure, cardiovascular disease
+- endocrinology: Diabetes, thyroid, hormones, metabolic health
+- laboratory_medicine: Lab tests, blood work, diagnostic results
+- pharmacy: Medications, dosages, interactions, adherence
+- nutrition: Diet, weight, nutritional health
+- preventive_medicine: Risk factors, screening, prevention
+
+Note: The CMO agent itself handles all data analysis, trend identification, and synthesis tasks.
+
+A test case failed because the wrong specialists were selected:
+
+Query: {query}
+Expected Specialists: {expected_specialists}
+Actual Specialists: {actual_specialists}
+F1 Score: {f1_score:.2f}
+Missing Critical Specialists: {missing_critical}
+
+The CMO's task creation approach was:
+{approach_text}
+
+Here is the ACTUAL PROMPT that the CMO used for specialist selection:
+```
+{actual_prompt_content}
+```
+
+Based on this analysis and the actual prompt content above, provide specific, actionable recommendations to fix specialist selection.
+
+**RECOMMENDATION CATEGORIES:**
+1. **PROMPT ADDITIONS**: New rules or guidance (format: "ADD to [Section]: '[Exact text]'")
+2. **PROMPT CLARIFICATIONS**: Modify existing text (format: "CLARIFY in [Section]: Change '[current]' to '[new]'")
+3. **EXAMPLE ADDITIONS**: Add selection examples (format: "ADD EXAMPLE: '[Scenario] → Select: [Specialists]'")
+4. **RULE MODIFICATIONS**: Change selection logic (format: "MODIFY RULE: [Specific change]")
+5. **KEYWORD MAPPINGS**: Add query keyword to specialist mappings
+
+CRITICAL INSTRUCTIONS FOR YOUR RESPONSE:
+1. You MUST return a COMPLETE, VALID JSON object
+2. Do NOT truncate or cut off your response
+3. Ensure ALL brackets and quotes are properly closed
+4. The JSON must be parseable by standard JSON parsers
+5. Do not include any text before or after the JSON object
+6. Make sure to include ALL required fields in the response
+7. Even if you have many recommendations, include them ALL - do not truncate
+
+Provide your analysis in EXACTLY the following JSON format. Output ONLY valid, complete JSON with no additional text before or after:
+{{
+    "prompt_file": "backend/services/agents/cmo/prompts/3_assign_specialist_tasks.txt",
+    "issue_description": "Clear description of why the specialist selection failed",
+    "missing_specialists_reason": {{
+        "specialist_name": "Specific reason why this specialist was missed given current prompt guidance"
+    }},
+    "unnecessary_specialists": ["List of specialists that were included but not needed"],
+    "recommendations": [
+        {{
+            "category": "PROMPT_ADDITION",
+            "location": "Specialist Selection Rules",
+            "current_state": "No explicit rule for this scenario",
+            "recommendation": "ADD to Selection Rules: 'ALWAYS include laboratory_medicine when query mentions: test results, blood work, lab values, or specific test names (A1C, glucose, cholesterol, etc.)'",
+            "rationale": "Current prompt lacks explicit keyword mappings for lab-related queries",
+            "expected_impact": "Will catch 95% of lab-related queries"
+        }},
+        {{
+            "category": "EXAMPLE_ADDITION",
+            "location": "Selection Examples",
+            "recommendation": "ADD EXAMPLE: 'Query: My A1C has increased from 6.5 to 7.8' → Select: [endocrinology (diabetes management), laboratory_medicine (test interpretation), pharmacy (medication adjustments)]'",
+            "rationale": "Demonstrates multi-specialist selection for lab value changes",
+            "expected_impact": "Clarifies when multiple specialists are needed"
+        }},
+        {{
+            "category": "KEYWORD_MAPPING",
+            "location": "Specialist Keyword Mappings",
+            "recommendation": "ADD keywords for endocrinology: ['diabetes', 'blood sugar', 'insulin']",
+            "rationale": "These keywords appeared in the query but aren't mapped to any specialist",
+            "expected_impact": "Direct keyword matching will prevent this specialist from being missed"
+        }}
+    ],
+    "reasoning": "Detailed explanation of why these changes will fix the specialist selection",
+    "priority": "high/medium/low"
+}}

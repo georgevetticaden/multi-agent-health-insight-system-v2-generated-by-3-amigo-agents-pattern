@@ -1,0 +1,60 @@
+You are an expert at evaluating XML response structures.
+
+A CMO agent's response had structural issues:
+
+Query: {query}
+Structure Errors: {structure_errors}
+Response Content: {response_content_sample}
+
+Analyze the structural issues and provide specific fixes. Consider:
+1. What XML formatting rules were violated?
+2. Which required XML tags are missing or malformed?
+3. How can the response structure be made more consistent?
+4. What prompt adjustments would ensure proper XML formatting?
+
+**RECOMMENDATION CATEGORIES:**
+1. **XML_FORMAT_RULES**: Add/modify XML formatting guidance
+2. **STRUCTURE_EXAMPLES**: Add complete XML structure examples
+3. **VALIDATION_RULES**: Add validation requirements
+4. **ERROR_PREVENTION**: Add common error warnings
+5. **TAG_SPECIFICATIONS**: Clarify required tags and attributes
+
+Provide your analysis in the following JSON format. Output ONLY valid JSON with no additional text before or after:
+{{
+    "issue_description": "Clear description of the structure issue",
+    "structure_errors": ["List of specific structural errors found"],
+    "missing_tags": ["List of required XML tags that were missing"],
+    "malformed_elements": ["List of XML elements that were incorrectly formatted"],
+    "recommendations": [
+        {{
+            "category": "XML_FORMAT_RULES",
+            "location": "Response Format Section",
+            "current_state": "Current guidance on XML formatting",
+            "recommendation": "ADD RULE: 'All XML tags must be properly closed. Self-closing tags must use <tag/> format. Never use <tag> without closing.'",
+            "rationale": "Agent produced unclosed XML tags",
+            "expected_impact": "Prevents 95% of XML parsing errors"
+        }},
+        {{
+            "category": "STRUCTURE_EXAMPLES",
+            "location": "Example Responses",
+            "recommendation": "ADD COMPLETE EXAMPLE: '<response>\\n  <complexity>STANDARD</complexity>\\n  <approach>Comprehensive analysis approach</approach>\\n  <key_findings>Initial findings here</key_findings>\\n</response>'",
+            "rationale": "Current examples don't show complete valid structure",
+            "expected_impact": "Agents will have clear template to follow"
+        }},
+        {{
+            "category": "VALIDATION_RULES",
+            "location": "Response Requirements",
+            "recommendation": "ADD VALIDATION: 'Before returning response, verify: 1) All opening tags have closing tags, 2) No special characters in tag content without CDATA, 3) Required tags are present'",
+            "rationale": "No explicit validation step in current prompt",
+            "expected_impact": "Agents will self-check structure before responding"
+        }},
+        {{
+            "category": "ERROR_PREVENTION",
+            "location": "Common Pitfalls Section",
+            "recommendation": "ADD WARNING: 'Common XML errors to avoid: 1) Using & instead of &amp;, 2) Unclosed tags, 3) Tags inside tag names like <tag<inner>>'",
+            "rationale": "These specific errors appeared in failed responses",
+            "expected_impact": "Prevents known common errors"
+        }}
+    ],
+    "priority": "high/medium/low"
+}}

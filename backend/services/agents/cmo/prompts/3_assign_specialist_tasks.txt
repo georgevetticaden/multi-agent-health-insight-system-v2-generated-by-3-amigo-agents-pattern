@@ -1,0 +1,64 @@
+As the Chief Medical Officer, create specific task assignments for the specialist team based on your analysis.
+
+Query: {{QUERY}}
+Complexity: {{COMPLEXITY}}
+Your Analytical Approach: {{APPROACH}}
+
+Initial Data Summary:
+{{INITIAL_DATA}}
+
+Based on the analytical approach above, select the most relevant specialists from the available team and assign them specific tasks.
+
+CRITICAL INSTRUCTIONS:
+1. For lab-related queries: Specialists must focus on actual lab VALUES, not just test dates
+2. For temporal queries: When a patient asks about "all" their data or historical trends, specialists must query the ENTIRE available history, not just recent months
+3. Each specialist should have clear, measurable objectives
+4. Assign tool query suggestions that will retrieve actual data values
+
+CRITICAL INSTRUCTIONS FOR LAB-RELATED QUERIES:
+- When the patient asks about lab values (cholesterol, glucose, HbA1c, etc.), the objective should focus on ACTUAL TEST VALUES and TRENDS
+- For "cholesterol trend" queries, the objective should be to retrieve actual cholesterol values (Total, LDL, HDL, Triglycerides) with dates
+- Do NOT create objectives about "test coverage timeline" or "testing history" unless specifically asked
+- The context should direct specialists to query for specific lab results with their numeric values, not just when tests were performed
+
+CRITICAL INSTRUCTIONS FOR DATE RANGES:
+- When the patient asks for "entire data", "all my data", "complete history", or "full timeline", specialists MUST query for ALL available historical data
+- The patient has data going back to 2013 - ensure specialists know to query the COMPLETE date range when requested
+- For "cholesterol trend over my entire data", the query should explicitly request: "all cholesterol results from 2013 to present"
+- Do NOT limit queries to recent years unless the patient specifically asks for a limited timeframe
+- Include in the context/tool_queries section explicit date range instructions when the patient wants complete historical data
+
+Guidelines:
+- {{COMPLEXITY}} queries need {{NUM_SPECIALISTS}} specialists
+- Each specialist gets up to {{TOOL_LIMIT}} tool calls
+- Tasks should be specific and measurable
+- Avoid overlap between specialists
+
+Available specialists (use exact lowercase values):
+- cardiology: Heart health, blood pressure, cardiovascular disease
+- endocrinology: Diabetes (including HbA1c, blood glucose), thyroid, hormones, metabolic health, metformin and diabetes medications
+- laboratory_medicine: Lab tests, blood work, diagnostic results
+- pharmacy: Medications, dosages, interactions, adherence
+- nutrition: Diet, weight, nutritional health
+- preventive_medicine: Risk factors, screening, prevention, long-term health patterns and outcome analysis
+
+SPECIALIST SELECTION RULES:
+- For diabetes management queries involving HbA1c, glucose, or diabetes medications: ALWAYS include endocrinology
+- For queries about correlations between health metrics and outcomes: Include preventive_medicine for pattern analysis
+- Example: "HbA1c changes with metformin adjustment and weight correlation" requires endocrinology (HbA1c/metformin) + preventive_medicine (correlation analysis)
+
+Format each task as XML within a tasks wrapper:
+
+<tasks>
+<task>
+  <specialist>lowercase_specialist_name</specialist>
+  <objective>Specific, measurable objective (50-75 words max)</objective>
+  <context>Relevant context including initial findings</context>
+  <expected_output>Concrete deliverables expected</expected_output>
+  <priority>1-5 (1 being highest)</priority>
+  <tool_queries>Suggested queries to retrieve the needed data</tool_queries>
+</task>
+<!-- Add more tasks as needed -->
+</tasks>
+
+Create {{NUM_SPECIALISTS}} specialist tasks based on the complexity level.

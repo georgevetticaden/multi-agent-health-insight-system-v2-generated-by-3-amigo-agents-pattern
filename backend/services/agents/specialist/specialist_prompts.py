@@ -1,7 +1,11 @@
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List, TYPE_CHECKING
+
+# Avoid circular import
+if TYPE_CHECKING:
+    from services.agents.metadata.core import PromptMetadata, EvaluationDimension
 
 class SpecialistPrompts:
     """Manages prompts for specialist agents"""
@@ -9,14 +13,12 @@ class SpecialistPrompts:
     def __init__(self):
         self.prompt_dir = Path(__file__).parent / "prompts"
         self.specialty_file_map = {
-            "general_practice": "system_general_practice.txt",
             "endocrinology": "system_endocrinology.txt",
             "cardiology": "system_cardiology.txt",
             "nutrition": "system_nutrition.txt",
             "preventive_medicine": "system_preventive_medicine.txt",
             "laboratory_medicine": "system_laboratory_medicine.txt",
-            "pharmacy": "system_pharmacy.txt",
-            "data_analysis": "system_data_analysis.txt"
+            "pharmacy": "system_pharmacy.txt"
         }
         self._load_prompts()
     
@@ -69,3 +71,40 @@ class SpecialistPrompts:
     def get_final_analysis_prompt(self) -> str:
         """Get final analysis prompt"""
         return self.prompts["2_final_analysis"]
+    
+    @classmethod
+    def get_prompt_metadata(cls, specialty: str) -> List['PromptMetadata']:
+        """
+        Get metadata about prompts used by a specific specialist.
+        
+        Args:
+            specialty: The medical specialty
+            
+        Returns:
+            List of PromptMetadata for the specialist
+        """
+        # Import here to avoid circular dependency
+        from services.agents.metadata.core import PromptMetadata
+        
+        # Common prompts used by all specialists
+        common_prompts = [
+            PromptMetadata(
+                filename="1_task_execution.txt",
+                description="Executes specific medical analysis tasks with tool usage",
+                purpose="task_execution"
+            ),
+            PromptMetadata(
+                filename="2_final_analysis.txt",
+                description="Structures final analysis with findings and recommendations",
+                purpose="final_analysis"
+            )
+        ]
+        
+        # Specialty-specific system prompt
+        specialty_prompt = PromptMetadata(
+            filename=f"system_{specialty}.txt",
+            description=f"System prompt defining {specialty} specialist role and expertise",
+            purpose="system"
+        )
+        
+        return [specialty_prompt] + common_prompts

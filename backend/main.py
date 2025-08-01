@@ -1,21 +1,29 @@
 import os
+import sys
 import logging
+from pathlib import Path
 from dotenv import load_dotenv
+
+# Add project root to Python path to enable evaluation module imports
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
 
 # Load environment variables before any other imports
 load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from api.chat import router as chat_router
+from api.tracing import router as tracing_router
+from api.qe_chat import router as qe_chat_router
+from api.evaluation import router as evaluation_router
+from api.test_case import router as test_case_router
+from utils.logging_config import setup_backend_logging
 
-# Configure logging with proper formatting
-logging.basicConfig(
-    level=getattr(logging, os.getenv("LOG_LEVEL", "INFO")),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    force=True  # Force reconfiguration
-)
+# Configure logging with both console and file output
+setup_backend_logging(service_name="fastapi")
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
@@ -41,6 +49,10 @@ app.add_middleware(
 
 # Include routers
 app.include_router(chat_router)
+app.include_router(tracing_router)
+app.include_router(qe_chat_router)
+app.include_router(evaluation_router)
+app.include_router(test_case_router)
 
 @app.get("/api/health")
 async def health_check():
@@ -60,10 +72,15 @@ async def get_specialists():
             {"id": "analytics", "name": "Dr. Analytics", "specialty": "Data Analysis", "icon": "📊"},
             {"id": "prevention", "name": "Dr. Prevention", "specialty": "Preventive Medicine", "icon": "🛡️"},
             {"id": "pharma", "name": "Dr. Pharma", "specialty": "Pharmacy", "icon": "💊"},
-            {"id": "nutrition", "name": "Dr. Nutrition", "specialty": "Nutrition", "icon": "🥗"},
-            {"id": "primary", "name": "Dr. Primary", "specialty": "General Practice", "icon": "👨‍⚕️"}
+            {"id": "nutrition", "name": "Dr. Nutrition", "specialty": "Nutrition", "icon": "🥗"}
         ]
     }
+
+# Mount static files for test case management app
+# This will serve the frontend for /test-case-management/* routes
+frontend_dist_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+if os.path.exists(frontend_dist_path):
+    app.mount("/test-case-management", StaticFiles(directory=frontend_dist_path, html=True), name="test-case-management")
 
 if __name__ == "__main__":
     import uvicorn

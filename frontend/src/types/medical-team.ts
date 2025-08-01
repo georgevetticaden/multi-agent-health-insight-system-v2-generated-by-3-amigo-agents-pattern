@@ -17,6 +17,7 @@ export interface TeamUpdate {
   members: TeamMember[];
   overallProgress: number;
   cmoMessage?: string;
+  traceId?: string;
 }
 
 export type AppState = 

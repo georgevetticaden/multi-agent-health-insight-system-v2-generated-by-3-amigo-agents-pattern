@@ -1,0 +1,25 @@
+Evaluate the token usage efficiency for this health query.
+
+Query: {{QUERY}}
+Complexity: {{COMPLEXITY}}
+Tokens Used: {{TOKENS_USED}}
+Expected Range: {{MIN_TOKENS}} - {{MAX_TOKENS}} tokens
+Approach: {{APPROACH_TEXT}}
+
+Score the efficiency from 0.0 to 1.0 based on:
+1. Whether token usage is appropriate for the complexity
+2. If the approach justifies the token count
+3. Evidence of conciseness vs verbosity
+4. Efficient use of tool calls and data gathering
+5. Quality of output relative to tokens consumed
+
+Return a score where:
+- 1.0 = Highly efficient, tokens well-utilized for the query complexity
+- 0.7-0.9 = Good efficiency with minor verbosity or appropriate detail
+- 0.4-0.6 = Moderate efficiency, some unnecessary verbosity
+- 0.0-0.3 = Poor efficiency, excessive token usage without corresponding value
+
+Consider that complex medical queries requiring multiple specialist consultations and data analysis naturally require more tokens. The goal is not minimal token usage, but optimal token usage for comprehensive, accurate health insights.
+
+<score>[0.0-1.0]</score>
+<reasoning>[Your detailed reasoning explaining the score]</reasoning>

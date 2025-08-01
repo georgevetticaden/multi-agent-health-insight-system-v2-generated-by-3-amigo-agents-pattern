@@ -16,9 +16,22 @@ from services.agents import (
     SpecialistTask,
     SpecialistResult
 )
-from services.agents.cmo.cmo_agent_simple import CMOAgentSimple
 from tools.tool_registry import ToolRegistry
 from utils.anthropic_client import AnthropicStreamingClient
+from config.model_config import validate_model_config
+
+# Import tracing components
+try:
+    from services.tracing import (
+        get_trace_collector, 
+        TraceEventType, 
+        TraceContextManager,
+        TRACING_ENABLED
+    )
+    TRACING_AVAILABLE = True
+except ImportError:
+    TRACING_AVAILABLE = False
+    TRACING_ENABLED = False
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +43,7 @@ SPECIALIST_EMOJIS = {
     "data_analysis": "📊",
     "preventive_medicine": "🛡️",
     "pharmacy": "💊",
-    "nutrition": "🥗",
-    "general_practice": "👨‍⚕️"
+    "nutrition": "🥗"
 }
 
 # Specialist display names
@@ -42,14 +54,13 @@ SPECIALIST_NAMES = {
     "data_analysis": "Data Analysis",
     "preventive_medicine": "Preventive Medicine",
     "pharmacy": "Pharmacy",
-    "nutrition": "Nutrition",
-    "general_practice": "General Practice"
+    "nutrition": "Nutrition"
 }
 
 class HealthAnalystService:
     """Orchestrates the multi-agent health analysis system with rich event streaming"""
     
-    def __init__(self):
+    def __init__(self, enable_tracing: bool = None):
         self.sse_manager = SSEManager()
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
@@ -58,31 +69,47 @@ class HealthAnalystService:
         self.anthropic_client = Anthropic(api_key=api_key)
         self.tool_registry = ToolRegistry()
         
+        # Set up tracing
+        if enable_tracing is None:
+            enable_tracing = TRACING_ENABLED
+        self.tracing_enabled = enable_tracing and TRACING_AVAILABLE
+        self.trace_collector = get_trace_collector() if self.tracing_enabled else None
+        
         # Model configuration
         self.visualization_model = os.getenv("VISUALIZATION_MODEL", "claude-3-5-sonnet-20241022")
         self.cmo_model = os.getenv("CMO_MODEL", self.visualization_model)
         self.specialist_model = os.getenv("SPECIALIST_MODEL", self.visualization_model)
         
-        # Token limits
+        # Validate all models on startup
+        logger.info("Validating model configurations...")
+        validate_model_config(self.visualization_model)
+        validate_model_config(self.cmo_model)
+        validate_model_config(self.specialist_model)
+        logger.info(f"Models validated - Visualization: {self.visualization_model}, CMO: {self.cmo_model}, Specialist: {self.specialist_model}")
+        
+        # Token limits (these will be adjusted by agents based on model capabilities)
         self.max_tokens_synthesis = int(os.getenv("MAX_TOKENS_SYNTHESIS", "16384"))
         self.max_tokens_cmo_analysis = int(os.getenv("MAX_TOKENS_CMO_ANALYSIS", "4000"))
         self.max_tokens_task_planning = int(os.getenv("MAX_TOKENS_TASK_PLANNING", "6000"))
         self.max_tokens_specialist = int(os.getenv("MAX_TOKENS_SPECIALIST", "4000"))
         
-        # Initialize agents - use simplified CMO to avoid tool issues
-        self.cmo_agent = CMOAgentSimple(
+        # Initialize CMO agent with tool calling capabilities
+        self.cmo_agent = CMOAgent(
             anthropic_client=self.anthropic_client,
             tool_registry=self.tool_registry,
             model=self.cmo_model,
             max_tokens_analysis=self.max_tokens_cmo_analysis,
-            max_tokens_planning=self.max_tokens_task_planning
+            max_tokens_planning=self.max_tokens_task_planning,
+            max_tokens_synthesis=self.max_tokens_synthesis,
+            enable_tracing=self.tracing_enabled
         )
         
         self.specialist_agent = SpecialistAgent(
             anthropic_client=self.anthropic_client,
             tool_registry=self.tool_registry,
             model=self.specialist_model,
-            max_tokens=self.max_tokens_specialist
+            max_tokens=self.max_tokens_specialist,
+            enable_tracing=self.tracing_enabled
         )
         
         self.visualization_agent = MedicalVisualizationAgent(
@@ -109,14 +136,26 @@ class HealthAnalystService:
         logger.info(f"  Specialist: {self.max_tokens_specialist}")
         logger.info(f"="*60)
     
-    async def process_health_query(self, query: str) -> AsyncIterator[Dict[str, Any]]:
+    async def process_health_query(self, query: str, session_id: Optional[str] = None) -> AsyncIterator[Dict[str, Any]]:
         """Process a health query through the multi-agent system with rich events"""
         
         logger.info(f"="*80)
         logger.info(f"PROCESS HEALTH QUERY START")
         logger.info(f"Query: {query[:100]}...")
         logger.info(f"Timestamp: {datetime.now().isoformat()}")
+        logger.info(f"Tracing enabled: {self.tracing_enabled}")
         logger.info(f"="*80)
+        
+        # Start trace if tracing is enabled
+        trace_id = None
+        if self.tracing_enabled and self.trace_collector:
+            trace_id = await self.trace_collector.start_trace(
+                source="production",
+                initial_input=query,
+                session_id=session_id,
+                metadata={"component": "health_analyst_service"}
+            )
+            logger.info(f"Started trace: {trace_id}")
         
         try:
             # Step 1: CMO initial analysis with rich formatting
@@ -132,8 +171,29 @@ class HealthAnalystService:
             }
             
             try:
-                complexity, approach, initial_data = await self.cmo_agent.analyze_query_simple(query)
+                # Record CMO analysis start
+                if self.tracing_enabled and self.trace_collector:
+                    self.trace_collector.update_context(
+                        current_agent="cmo",
+                        current_stage="query_analysis"
+                    )
+                
+                complexity, approach, initial_data = await self.cmo_agent.analyze_query_with_tools(query)
                 logger.info(f"CMO Analysis Complete - Complexity: {complexity.value}, Approach: {approach[:50]}...")
+                
+                # Record CMO analysis completion
+                if self.tracing_enabled and self.trace_collector:
+                    await self.trace_collector.add_event(
+                        event_type=TraceEventType.STAGE_END,
+                        agent_type="cmo",
+                        stage="query_analysis",
+                        data={
+                            "complexity": complexity.value,
+                            "approach": approach[:100],
+                            "tool_calls_made": initial_data.get("tool_calls_made", 0),
+                            "data_available": initial_data.get("data_available", False)
+                        }
+                    )
                 
                 # Success message
                 yield {
@@ -167,7 +227,26 @@ class HealthAnalystService:
             }
             
             # Create specialist tasks
+            if self.tracing_enabled and self.trace_collector:
+                self.trace_collector.update_context(
+                    current_agent="cmo", 
+                    current_stage="task_creation"
+                )
+            
             tasks = await self.cmo_agent.create_specialist_tasks(query, complexity, approach, initial_data)
+            
+            # Record task creation
+            if self.tracing_enabled and self.trace_collector:
+                await self.trace_collector.add_event(
+                    event_type=TraceEventType.STAGE_END,
+                    agent_type="cmo",
+                    stage="task_creation",
+                    data={
+                        "task_count": len(tasks),
+                        "specialists": [task.specialist.value for task in tasks],
+                        "complexity": complexity.value
+                    }
+                )
             
             # Step 3: Announce team assembly with specialist list
             specialist_intro = f"""👥 **Medical Team Assembled**
@@ -211,15 +290,64 @@ Your consultation will include:"""
                     max_retries = 3
                     retry_delay = 2
                     
+                    # Record specialist task start
+                    if self.tracing_enabled and self.trace_collector:
+                        self.trace_collector.update_context(
+                            current_agent=task.specialist.value,
+                            current_stage="specialist_analysis"
+                        )
+                        await self.trace_collector.add_event(
+                            event_type=TraceEventType.STAGE_START,
+                            agent_type=task.specialist.value,
+                            stage="specialist_analysis",
+                            data={
+                                "objective": task.objective,
+                                "priority": task.priority,
+                                "max_tool_calls": task.max_tool_calls
+                            }
+                        )
+                    
                     for attempt in range(max_retries):
                         try:
-                            return await self.specialist_agent.execute_task(task)
+                            result = await self.specialist_agent.execute_task(task)
+                            
+                            # Record successful completion
+                            if self.tracing_enabled and self.trace_collector and result:
+                                await self.trace_collector.add_event(
+                                    event_type=TraceEventType.STAGE_END,
+                                    agent_type=task.specialist.value,
+                                    stage="specialist_analysis",
+                                    data={
+                                        "success": True,
+                                        "confidence_level": result.confidence_level,
+                                        "tool_calls_made": result.tool_calls_made,
+                                        "data_points_found": len(result.data_points) if result.data_points else 0,
+                                        "findings_length": len(result.findings),
+                                        "recommendations_count": len(result.recommendations) if result.recommendations else 0
+                                    }
+                                )
+                            
+                            return result
                         except Exception as e:
                             if attempt < max_retries - 1:
                                 logger.warning(f"Specialist {task.specialist.value} failed (attempt {attempt + 1}), retrying...")
                                 await asyncio.sleep(retry_delay * (2 ** attempt))
                             else:
                                 logger.error(f"Specialist {task.specialist.value} failed after {max_retries} attempts: {str(e)}")
+                                
+                                # Record failure
+                                if self.tracing_enabled and self.trace_collector:
+                                    await self.trace_collector.add_event(
+                                        event_type=TraceEventType.ERROR,
+                                        agent_type=task.specialist.value,
+                                        stage="specialist_analysis",
+                                        data={
+                                            "error_type": type(e).__name__,
+                                            "error_message": str(e),
+                                            "attempts_made": max_retries
+                                        }
+                                    )
+                                
                                 return None
                 
                 # Run all tasks in this priority group
@@ -263,11 +391,40 @@ Your consultation will include:"""
 ⏳ Preparing comprehensive report..."""
             }
             
+            # Record synthesis start
+            if self.tracing_enabled and self.trace_collector:
+                self.trace_collector.update_context(
+                    current_agent="cmo",
+                    current_stage="synthesis"
+                )
+                await self.trace_collector.add_event(
+                    event_type=TraceEventType.STAGE_START,
+                    agent_type="cmo",
+                    stage="synthesis",
+                    data={
+                        "specialist_count": len(all_results),
+                        "total_data_points": total_data_points,
+                        "specialists_included": list(all_results.keys())
+                    }
+                )
+            
             synthesis = {}
             async for chunk in self._stream_synthesis_with_cmo(query, all_results):
                 yield chunk
                 if chunk.get("type") == "synthesis_complete":
                     synthesis = chunk.get("synthesis", {})
+                    
+                    # Record synthesis completion
+                    if self.tracing_enabled and self.trace_collector:
+                        await self.trace_collector.add_event(
+                            event_type=TraceEventType.STAGE_END,
+                            agent_type="cmo",
+                            stage="synthesis",
+                            data={
+                                "synthesis_length": len(synthesis.get("content", "")),
+                                "synthesis_generated": bool(synthesis)
+                            }
+                        )
             
             # Step 6: Generate visualization if needed
             if self._should_generate_visualization(query, synthesis):
@@ -275,6 +432,23 @@ Your consultation will include:"""
                 logger.info(f"Query: {query}")
                 logger.info(f"Has synthesis: {bool(synthesis)}")
                 logger.info(f"Specialist results count: {len(all_results)}")
+                
+                # Record visualization start
+                if self.tracing_enabled and self.trace_collector:
+                    self.trace_collector.update_context(
+                        current_agent="visualization",
+                        current_stage="visualization_generation"
+                    )
+                    await self.trace_collector.add_event(
+                        event_type=TraceEventType.STAGE_START,
+                        agent_type="visualization",
+                        stage="visualization_generation",
+                        data={
+                            "query": query,
+                            "has_synthesis": bool(synthesis),
+                            "specialist_results_count": len(all_results)
+                        }
+                    )
                 
                 yield {
                     "type": "thinking",
@@ -284,6 +458,15 @@ Your consultation will include:"""
                 async for chunk in self._stream_visualization(query, synthesis, all_results):
                     logger.info(f"Streaming chunk type: {chunk.get('type')}, content length: {len(chunk.get('content', ''))}")
                     yield chunk
+                
+                # Record visualization completion
+                if self.tracing_enabled and self.trace_collector:
+                    await self.trace_collector.add_event(
+                        event_type=TraceEventType.STAGE_END,
+                        agent_type="visualization",
+                        stage="visualization_generation",
+                        data={"visualization_completed": True}
+                    )
                     
                 logger.info("=== VISUALIZATION GENERATION COMPLETE ===")
             
@@ -293,12 +476,50 @@ Your consultation will include:"""
                 "content": "✅ **Medical Team Consultation Complete**\n\nYour health analysis has been delivered. The team remains available for follow-up questions."
             }
             
+            # Record final completion
+            if self.tracing_enabled and self.trace_collector:
+                await self.trace_collector.add_event(
+                    event_type=TraceEventType.STAGE_END,
+                    agent_type="health_analyst_service",
+                    stage="consultation_complete",
+                    data={
+                        "specialists_executed": len(all_results),
+                        "synthesis_generated": bool(synthesis),
+                        "visualization_generated": self._should_generate_visualization(query, synthesis),
+                        "total_data_points": total_data_points
+                    }
+                )
+            
             # Step 8: Done
-            yield {"type": "done", "conversation_id": str(int(time.time()))}
+            conversation_id = str(int(time.time()))
+            yield {"type": "done", "conversation_id": conversation_id, "trace_id": trace_id}
             
         except Exception as e:
             logger.error(f"Error processing health query: {str(e)}")
-            yield {"type": "error", "content": f"An error occurred: {str(e)}"}
+            
+            # Record error in trace
+            if self.tracing_enabled and self.trace_collector:
+                await self.trace_collector.add_event(
+                    event_type=TraceEventType.ERROR,
+                    agent_type="health_analyst_service",
+                    stage="error_handling",
+                    data={
+                        "error_type": type(e).__name__,
+                        "error_message": str(e)
+                    }
+                )
+            
+            yield {"type": "error", "content": f"An error occurred: {str(e)}", "trace_id": trace_id}
+        
+        finally:
+            # Always end the trace
+            if self.tracing_enabled and self.trace_collector and trace_id:
+                try:
+                    completed_trace = await self.trace_collector.end_trace(trace_id)
+                    if completed_trace:
+                        logger.info(f"Trace completed: {trace_id} (duration: {completed_trace.total_duration_ms}ms)")
+                except Exception as trace_error:
+                    logger.error(f"Error ending trace {trace_id}: {trace_error}")
     
     async def _stream_synthesis_with_cmo(
         self, 
@@ -330,29 +551,10 @@ Your consultation will include:"""
         
         specialist_findings = "\n".join(findings_text)
         
-        # Create synthesis prompt
-        synthesis_prompt = f"""As the Chief Medical Officer, provide a comprehensive response to the patient's question.
-
-Original Question: {query}
-
-Specialist Findings:
-{specialist_findings}
-
-Provide a direct, comprehensive answer that:
-1. Directly addresses the patient's specific question
-2. Integrates all specialist insights
-3. Highlights key findings and patterns
-4. Provides clear recommendations
-5. Flags any concerns requiring attention
-
-Use clear, patient-friendly language while maintaining medical accuracy."""
-        
-        # Stream the synthesis
-        response = self.streaming_client.create_message_with_retry(
-            model=self.cmo_model,
-            messages=[{"role": "user", "content": synthesis_prompt}],
-            max_tokens=self.max_tokens_synthesis,
-            temperature=0.3,
+        # Use CMO agent's synthesis method
+        response = await self.cmo_agent.synthesize_findings(
+            query=query,
+            specialist_findings=specialist_findings,
             stream=True
         )
         
@@ -458,3 +660,4 @@ Use clear, patient-friendly language while maintaining medical accuracy."""
                 "type": "error", 
                 "content": "Unable to generate visualization at this time."
             }
+    

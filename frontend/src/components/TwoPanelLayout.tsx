@@ -76,6 +76,32 @@ const TwoPanelLayout: React.FC = () => {
     localStorage.setItem('vizHistory', JSON.stringify(vizHistory));
   }, [vizHistory]);
   
+  // Debug teamUpdate state changes
+  useEffect(() => {
+    console.log('🔍 [TRACE DEBUGGING] teamUpdate state changed:', teamUpdate);
+  }, [teamUpdate]);
+  
+  // Debug isStreamingCode state changes
+  useEffect(() => {
+    console.log('🔍 [TRACE DEBUGGING] isStreamingCode state changed:', isStreamingCode);
+  }, [isStreamingCode]);
+  
+  // Debug panel visibility conditions
+  useEffect(() => {
+    const shouldShowPanel = isPanelOpen && activeThreadId && (teamUpdate || isStreamingCode || currentArtifactId || vizHistory[activeThreadId]?.items?.length > 0);
+    console.log('🔍 [TRACE DEBUGGING] Panel visibility check:', {
+      shouldShowPanel,
+      isPanelOpen,
+      activeThreadId,
+      hasTeamUpdate: !!teamUpdate,
+      teamUpdateValue: teamUpdate,
+      isStreamingCode,
+      currentArtifactId,
+      vizHistoryLength: activeThreadId ? vizHistory[activeThreadId]?.items?.length || 0 : 0,
+      vizHistoryForThread: activeThreadId ? vizHistory[activeThreadId] : null
+    });
+  }, [isPanelOpen, activeThreadId, teamUpdate, isStreamingCode, currentArtifactId, vizHistory]);
+  
   // Handle pending question after component mounts
   useEffect(() => {
     if (activeThreadId) {
@@ -165,8 +191,36 @@ const TwoPanelLayout: React.FC = () => {
 
   // Handle team updates from ChatInterface
   const handleTeamUpdate = (update: TeamUpdate) => {
-    console.log('[TwoPanelLayout] Received team update:', update);
-    setTeamUpdate(update);
+    console.log('🔍 [TRACE DEBUGGING] TwoPanelLayout received team update:', update);
+    console.log('🔍 [TRACE DEBUGGING] Update has traceId:', update.traceId);
+    console.log('🔍 [TRACE DEBUGGING] Update members length:', update.members.length);
+    console.log('🔍 [TRACE DEBUGGING] Current teamUpdate state:', teamUpdate);
+    
+    // If this update only contains traceId, we need to preserve existing team state
+    if (update.traceId && update.members.length === 0) {
+      console.log('🔍 [TRACE DEBUGGING] Update contains only traceId, need to preserve team state');
+      
+      // Get the latest team update from state
+      setTeamUpdate(prev => {
+        console.log('🔍 [TRACE DEBUGGING] Previous teamUpdate in setter:', prev);
+        if (prev) {
+          console.log('🔍 [TRACE DEBUGGING] Merging traceId with existing team update');
+          const mergedUpdate = {
+            ...prev,
+            traceId: update.traceId
+          };
+          console.log('🔍 [TRACE DEBUGGING] Merged team update:', mergedUpdate);
+          return mergedUpdate;
+        } else {
+          console.log('🔍 [TRACE DEBUGGING] No previous team update to merge with, using update as-is');
+          return update;
+        }
+      });
+    } else {
+      console.log('🔍 [TRACE DEBUGGING] Setting new team update (not merging)');
+      console.log('🔍 [TRACE DEBUGGING] New update value:', update);
+      setTeamUpdate(update);
+    }
     
     // Auto-switch to Medical Team tab when team activity starts
     if (update.teamStatus !== 'complete' && activeRightTab !== 'medical-team') {
@@ -295,10 +349,19 @@ const TwoPanelLayout: React.FC = () => {
   };
 
   const handleCodeStreamStart = () => {
+    console.log('🔍 [TRACE DEBUGGING] handleCodeStreamStart called');
     setIsStreamingCode(true);
     setIsPanelOpen(true);
     // Auto-switch to visualization tab when code streaming starts
     setActiveRightTab('visualization');
+    console.log('🔍 [TRACE DEBUGGING] Panel visibility conditions:', {
+      isPanelOpen: true,
+      activeThreadId,
+      teamUpdate,
+      isStreamingCode: true,
+      currentArtifactId,
+      vizHistoryLength: vizHistory[activeThreadId]?.items.length || 0
+    });
   };
 
   const handleMessageSend = (message: string) => {
@@ -449,7 +512,7 @@ const TwoPanelLayout: React.FC = () => {
         </div>
 
         {/* Resizer - Show when panel should be visible */}
-        {isPanelOpen && activeThreadId && (teamUpdate || isStreamingCode || currentArtifactId || vizHistory[activeThreadId]?.items.length > 0) && (
+        {isPanelOpen && activeThreadId && (teamUpdate || isStreamingCode || currentArtifactId || vizHistory[activeThreadId]?.items?.length > 0) && (
           <div
             className={`relative w-2 bg-gray-300 hover:bg-gray-400 cursor-col-resize group transition-colors ${
               isResizing ? 'bg-blue-500' : ''
@@ -463,7 +526,7 @@ const TwoPanelLayout: React.FC = () => {
         )}
 
         {/* Right Panel with Tabs */}
-        {isPanelOpen && activeThreadId && (teamUpdate || isStreamingCode || currentArtifactId || vizHistory[activeThreadId]?.items.length > 0) && (
+        {isPanelOpen && activeThreadId && (teamUpdate || isStreamingCode || currentArtifactId || vizHistory[activeThreadId]?.items?.length > 0) && (
           <div
             className="bg-white shadow-xl overflow-hidden flex flex-col"
             style={{ width: `${panelWidth}%` }}

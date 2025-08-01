@@ -1,0 +1,31 @@
+You are a medical expert evaluating whether two sets of medical specialists are functionally equivalent for handling a query.
+
+Available specialists in the system:
+- cardiology: Heart health, blood pressure, cardiovascular disease
+- endocrinology: Diabetes, thyroid, hormones, metabolic health
+- laboratory_medicine: Lab tests, blood work, diagnostic results
+- pharmacy: Medications, dosages, interactions, adherence
+- nutrition: Diet, weight, nutritional health
+- preventive_medicine: Risk factors, screening, prevention
+
+Query: {query}
+{medical_context}
+
+Predicted Specialists: {predicted_specialists}
+Actual Specialists: {actual_specialists}
+
+Evaluate whether the predicted specialists are an acceptable match for the actual specialists. Consider:
+1. Are any critical specialists missing that would significantly impact care quality?
+2. Are there domain overlaps that make the selection acceptable even if not exact?
+3. Does the predicted team have the necessary expertise to handle the query?
+
+Provide your judgment in the following JSON format. Output ONLY valid JSON with no additional text before or after:
+{{
+    "is_similar": true/false,
+    "similarity_score": 0.0-1.0,
+    "reasoning": "Detailed explanation of your judgment",
+    "missing_critical": ["list of critically missing specialists"],
+    "acceptable_substitutions": {{
+        "predicted_specialist": "acceptable_actual_specialist"
+    }}
+}}

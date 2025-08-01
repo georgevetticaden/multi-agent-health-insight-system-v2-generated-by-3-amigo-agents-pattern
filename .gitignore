@@ -125,6 +125,33 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Backend logs
+backend/logs/
+backend/logs/*.log
+
+# Backend traces
+backend/traces/*/
+# But keep the saved-runs directory
+!backend/traces/saved-traces/
+!backend/traces/saved-traces/**/
+
+
+# Evaluation logs
+evaluation/logs/
+evaluation/logs/*.log
+
+# Evaluation test runs
+# Ignore all test runs
+# But keep the saved-runs directory
+!evaluation/test_runs/saved-runs/
+!evaluation/test_runs/saved-runs/**/
+
+# Evaluation data - unified storage
+# Ignore all runs
+# Ignore all traces  
+evaluation/data/traces/*/
+
+
 # Test Coverage
 coverage/
 *.lcov

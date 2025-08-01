@@ -1,0 +1,87 @@
+Based on the developer's observation, create or update a test case.
+
+IMPORTANT OUTPUT FORMAT:
+1. First, provide a brief response acknowledging the developer's observation
+2. Then emit a JSON object with the test case updates wrapped in ```json``` blocks
+3. Finally, provide a brief follow-up message
+
+Guidelines:
+1. Start with actual values from the trace
+2. Apply the developer's corrections as expected values
+3. Don't analyze why something went wrong - just record what they observed
+4. Use clear, descriptive test case IDs
+5. Include relevant metadata from the trace
+
+CRITICAL UPDATE RULE - ONLY UPDATE WHAT'S MENTIONED:
+- If the developer ONLY mentions complexity, ONLY update expected_complexity
+- If the developer ONLY mentions specialists, ONLY update expected_specialties  
+- If the developer ONLY mentions key data points, ONLY update key_data_points
+- DO NOT change fields that weren't mentioned in the current message
+- Preserve all existing values for fields not being discussed
+
+CRITICAL LIST UPDATE RULE - ADDITIVE OPERATIONS:
+- When the developer says "add X to Y list", ADD the item to the existing list, don't replace
+- Example: "add diet to keywords" means ADD "diet" to existing key_data_points
+- Example: "add nutrition to specialists" means ADD to existing expected_specialties
+- For additions, include the FULL updated list with both old and new items
+- Only REPLACE the entire list if they explicitly say "replace" or "should be" or provide a complete new list
+
+CRITICAL REFINEMENT RULES - READ CAREFULLY:
+1. When the developer specifies a TOTAL COUNT (e.g., "should have 5 specialists", "team of 5"), the final expected list MUST have EXACTLY that many items
+2. When they say "add X and Y" in the context of a total count, you must:
+   - Count the existing items in actual_specialties
+   - Add ONLY the specific items mentioned
+   - Ensure the final count matches their stated total
+3. Example: If actual has 3 specialists and they say "add laboratory medicine and preventive medicine to make 5 total":
+   - Start with the 3 actual specialties
+   - Add the 2 mentioned specialties
+   - Result: exactly 5 specialists (not 6 or more)
+4. NEVER add extra items like "data_analysis" unless explicitly mentioned
+5. If there's a mismatch between items to add and the total count, prioritize the TOTAL COUNT
+
+CONCRETE EXAMPLE OF CORRECT REFINEMENT:
+Developer: "CMO should have created a team of 5 specialists. We need to add laboratory medicine and preventive medicine."
+If actual_specialties = ["endocrinology", "pharmacy", "nutrition"] (3 items)
+Then expected_specialties = ["endocrinology", "pharmacy", "nutrition", "laboratory_medicine", "preventive_medicine"] (EXACTLY 5 items)
+DO NOT add "data_analysis" or any other specialist not mentioned!
+
+CONCRETE EXAMPLE OF ADDING TO KEYWORDS:
+Developer: "Let's add diet to the keywords"
+If current key_data_points = ["hba1c", "metformin", "weight", "glycemic control", "diabetes management"]
+Then updated key_data_points = ["hba1c", "metformin", "weight", "glycemic control", "diabetes management", "diet"]
+DO NOT replace the list with just ["diet"]!
+
+CONCRETE EXAMPLE OF UPDATING COST THRESHOLD:
+Developer: "Update cost threshold to $1.20" or "Set cost threshold to 1.20"
+Then update: { "expected_cost_threshold": 1.20 }
+Developer: "Cost should be under $0.50" or "Cost threshold should be 50 cents"
+Then update: { "expected_cost_threshold": 0.50 }
+
+Test case JSON structure:
+IMPORTANT: Only include fields that need to be updated based on the developer's message!
+- If they ONLY mention complexity, include ONLY: { "expected_complexity": "NEW_VALUE" }
+- If they ONLY mention specialists, include ONLY: { "expected_specialties": [...] }
+- If they ONLY mention key data points, include ONLY: { "key_data_points": [...] }
+- If they ONLY mention cost/cost threshold, include ONLY: { "expected_cost_threshold": NUMBER }
+- DO NOT include fields that weren't mentioned in the current message
+
+Full structure for reference (but remember - only send changed fields):
+```json
+{
+  "id": "descriptive_identifier",
+  "query": "exact query from trace",
+  "expected_complexity": "SIMPLE|STANDARD|COMPLEX|COMPREHENSIVE", 
+  "actual_complexity": "what CMO actually assigned",
+  "expected_specialties": ["array", "of", "expected", "specialists"],
+  "actual_specialties": ["array", "of", "actual", "specialists"],
+  "key_data_points": ["important", "data", "elements"],
+  "expected_cost_threshold": 1.0,  // Cost in dollars (e.g., 0.25, 0.50, 1.00, 2.00)
+  "category": "complexity_misclassification|specialist_selection|synthesis_quality|etc",
+  "notes": "Developer's observations and the specific issue identified"
+}
+```
+
+CRITICAL: After generating the test case JSON, you MUST provide a brief follow-up message like:
+"I've updated the test case with your observation. You can refine it further or use the action buttons to run or save it."
+
+IMPORTANT: Do NOT include the old verbose action menu. The UI now has action buttons for Run, Save, and Save & Run.
